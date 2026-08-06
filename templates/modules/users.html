@@ -1,0 +1,30 @@
+{% extends "layout.html" %}
+{% block title %}Users{% endblock %}
+{% block page_title %}Users{% endblock %}
+{% block content %}{% include "partials/crud_shell.html" %}{% endblock %}
+{% block page_scripts %}
+<script>
+window.PAGE_CONFIG = {
+    title: "User",
+    endpoint: "users",
+    multipart: true,
+    columns: [
+        { key: "id", label: "ID" },
+        { key: "full_name", label: "Full Name" },
+        { key: "email", label: "Email" },
+        { key: "mobile_number", label: "Mobile" },
+        { key: "roles", label: "Roles", type: "list" },
+        { key: "is_active", label: "Status", type: "status" }
+    ],
+    fields: [
+        { name: "full_name", label: "Full Name", type: "text", required: true },
+        { name: "email", label: "Email", type: "email", required: true },
+        { name: "mobile_number", label: "Mobile Number", type: "mobile", required: true },
+        { name: "password", label: "Password", type: "password", required: true, createOnly: true },
+        { name: "profile_image", label: "Profile Image", type: "image" },
+        { name: "is_active", label: "Active", type: "checkbox", default: true }
+    ]
+};
+require("crud-page").init(window.PAGE_CONFIG);
+</script>
+{% endblock %}
