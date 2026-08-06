@@ -147,3 +147,36 @@
     .inv-auth-header h1 { font-size: 40px; line-height: 48px; }
     .inv-page-footer-inner { flex-direction: row; justify-content: space-between; }
 }
+
+
+
+
+.inv-auth-container{
+    display:flex;
+    width:100%;
+    min-height:100vh;
+}
+
+.inv-auth-left{
+    width:50%;
+    /* background:#f5f7fb; */
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
+.inv-auth-right{
+    width:50%;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    /* background:#ffffff; */
+}
+
+.inv-auth-card{
+    width:100%;
+    max-width:460px;
+}
