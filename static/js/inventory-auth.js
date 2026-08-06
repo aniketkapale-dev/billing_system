@@ -178,7 +178,13 @@ var InventoryAuth = (function () {
             body: JSON.stringify(body),
             cache: "no-store"
         }).then(function (res) {
-            return res.json();
+            return res.json().then(function (data) {
+                return {
+                    ok: res.ok,
+                    status: res.status,
+                    body: data
+                };
+            });
         });
     }
 
@@ -273,27 +279,19 @@ var InventoryAuth = (function () {
         redirectToHome(user);
     }
 
-    function redirectIfLoggedIn() {
-        if (!getToken()) return;
-
-        apiGet("/me/", true).then(function (body) {
-            if (body && body.isSuccess && body.data) {
-                if (!body.data.is_active && !isSuperAdmin(body.data)) return;
-                redirectToHome(body.data);
-            }
-        });
-    }
-
     function initLogin() {
         var form = document.getElementById("inventory-login-form");
         var btn = document.getElementById("login-submit");
 
         if (!form) return;
 
-        redirectIfLoggedIn();
+        // Always require fresh credentials on the login page.
+        clear();
 
-        window.addEventListener("pageshow", function () {
-            if (!getToken()) clear();
+        window.addEventListener("pageshow", function (e) {
+            if (e.persisted) {
+                clear();
+            }
         });
 
         var pwToggle = document.getElementById("password-toggle");
@@ -317,18 +315,25 @@ var InventoryAuth = (function () {
             e.preventDefault();
             var email = form.email.value.trim();
             var password = form.password.value;
+
+            if (!email || !password) {
+                notify("error", "Email and password are required.");
+                return;
+            }
+
             InventoryLoader.button(btn, true, "Signing in...");
 
             apiPost("/login/", { email: email, password: password })
-                .then(function (body) {
+                .then(function (result) {
                     InventoryLoader.button(btn, false);
-                    if (body && body.isSuccess) {
+                    var body = result.body;
+                    if (result.ok && body && body.isSuccess && body.data) {
                         setSession(body.data.tokens, body.data.user);
                         notify("success", "Login successful.");
                         redirectAfterLogin(body.data.user);
-                    } else {
-                        notify("error", body.message || "Login failed.");
+                        return;
                     }
+                    notify("error", (body && body.message) || "Invalid email or password.");
                 })
                 .catch(function () {
                     InventoryLoader.button(btn, false);
@@ -364,16 +369,17 @@ var InventoryAuth = (function () {
                 mobile_number: mobile,
                 password: form.password.value
             })
-                .then(function (body) {
+                .then(function (result) {
                     InventoryLoader.button(btn, false);
-                    if (body && body.isSuccess) {
+                    var body = result.body;
+                    if (result.ok && body && body.isSuccess) {
                         notify("success", body.message || "Registration submitted. Awaiting admin approval.");
                         form.reset();
-                    } else {
-                        var err = body.message || "Registration failed.";
-                        if (body.errors && body.errors.length) err = body.errors.join(" • ");
-                        notify("error", err);
+                        return;
                     }
+                    var err = (body && body.message) || "Registration failed.";
+                    if (body && body.errors && body.errors.length) err = body.errors.join(" • ");
+                    notify("error", err);
                 })
                 .catch(function () {
                     InventoryLoader.button(btn, false);

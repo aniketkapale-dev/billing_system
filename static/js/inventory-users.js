@@ -24,7 +24,7 @@ var InventoryUsers = (function () {
 
     function request(path, opts) {
         opts = opts || {};
-        return fetch(API + path, {
+        return fetch(InventoryApi.buildUrl(API, path), {
             method: opts.method || "GET",
             headers: authHeaders(),
             body: opts.body ? JSON.stringify(opts.body) : undefined,
@@ -137,7 +137,7 @@ var InventoryUsers = (function () {
     }
 
     function deleteUser(userId, btn) {
-        return fetch(API + "/" + userId + "/", {
+        return fetch(InventoryApi.buildUrl(API, "/" + userId + "/"), {
             method: "DELETE",
             headers: authHeaders(),
             cache: "no-store"

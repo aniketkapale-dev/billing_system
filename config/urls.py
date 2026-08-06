@@ -12,6 +12,9 @@ from apps.page_views import (
     superadmin_dashboard,
     superadmin_users,
     user_dashboard,
+    user_inventory,
+    user_products,
+    user_purchases,
 )
 
 urlpatterns = [
@@ -21,8 +24,15 @@ urlpatterns = [
     path("superadmin/dashboard/", superadmin_dashboard, name="superadmin-dashboard"),
     path("superadmin/users/", superadmin_users, name="superadmin-users"),
     path("dashboard/", user_dashboard, name="user-dashboard"),
+    path("dashboard/products/", user_products, name="user-products"),
+    path("dashboard/inventory/", user_inventory, name="user-inventory"),
+    path("dashboard/purchases/", user_purchases, name="user-purchases"),
     path("api/auth/", include("apps.accounts.urls")),
     path("api/users/", include("apps.users.urls")),
+    path("api/businesses/", include("apps.businesses.urls")),
+    path("api/products/", include("apps.products.urls")),
+    path("api/inventory/", include("apps.inventory.urls")),
+    path("api/purchases/", include("apps.purchases.urls")),
 ]
 
 if settings.DEBUG:

@@ -1,0 +1,110 @@
+{% extends "user_layout.html" %}
+{% load static %}
+{% block title %}Products - Billing System{% endblock %}
+
+{% block content %}
+<div class="inv-mgmt-page">
+    <div class="inv-mgmt-header">
+        <h2 class="inv-dashboard-greeting">Products</h2>
+        <button id="product-open-modal-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">
+            <span class="material-symbols-outlined">add</span>
+            Add Product
+        </button>
+    </div>
+
+    <div class="inv-mgmt-card">
+        <div class="inv-mgmt-toolbar">
+            <input type="search" id="products-search" class="inv-mgmt-search" placeholder="Search products..."/>
+        </div>
+
+        <div class="inv-mgmt-table-wrap">
+            <table class="inv-mgmt-table inv-mgmt-table--products">
+                <colgroup>
+                    <col class="inv-col-name"/>
+                    <col class="inv-col-sku"/>
+                    <col class="inv-col-unit"/>
+                    <col class="inv-col-qty"/>
+                    <col class="inv-col-buy"/>
+                    <col class="inv-col-sell"/>
+                    <col class="inv-col-action"/>
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th class="inv-col-name">Name</th>
+                        <th class="inv-col-sku">SKU</th>
+                        <th class="inv-col-unit">Unit</th>
+                        <th class="inv-col-qty">Qty</th>
+                        <th class="inv-col-buy">Purchase Price</th>
+                        <th class="inv-col-sell">Sale Price</th>
+                        <th class="inv-col-action">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="products-table-body">
+                    <tr><td colspan="7" class="inv-mgmt-empty">Loading products...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div id="products-pagination" class="inv-pagination"></div>
+    </div>
+</div>
+
+<div id="product-modal" class="inv-modal inv-hidden" aria-hidden="true">
+    <div class="inv-modal-backdrop" data-modal-close></div>
+    <div class="inv-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="product-modal-title">
+        <div class="inv-modal-header">
+            <h3 id="product-modal-title">Add Product</h3>
+            <button type="button" class="inv-modal-close" data-modal-close aria-label="Close">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="inv-modal-body">
+            <div class="inv-mgmt-form-grid" style="padding:0;">
+                <div class="inv-mgmt-field">
+                    <label for="product-name">Product Name</label>
+                    <input id="product-name" class="inv-mgmt-input" type="text" placeholder="Product name" required/>
+                </div>
+                <div class="inv-mgmt-field">
+                    <label for="product-sku">SKU</label>
+                    <input id="product-sku" class="inv-mgmt-input" type="text" placeholder="Optional SKU"/>
+                </div>
+                <div class="inv-mgmt-field">
+                    <label for="product-unit">Unit</label>
+                    <input id="product-unit" class="inv-mgmt-input" type="text" value="pcs"/>
+                </div>
+                <div class="inv-mgmt-field">
+                    <label for="product-quantity">Quantity</label>
+                    <input id="product-quantity" class="inv-mgmt-input" type="number" min="0" step="0.01" placeholder="0"/>
+                </div>
+                <div class="inv-mgmt-field inv-mgmt-field--full inv-mgmt-field--prices">
+                    <div class="inv-mgmt-price-row">
+                        <div class="inv-mgmt-field">
+                            <label for="product-purchase-price">Purchase Price</label>
+                            <input id="product-purchase-price" class="inv-mgmt-input" type="number" min="0" step="0.01" placeholder="0.00"/>
+                        </div>
+                        <div class="inv-mgmt-field">
+                            <label for="product-sale-price">Sale Price</label>
+                            <input id="product-sale-price" class="inv-mgmt-input" type="number" min="0" step="0.01" placeholder="0.00"/>
+                        </div>
+                    </div>
+                </div>
+                <div class="inv-mgmt-field inv-mgmt-field--full">
+                    <label for="product-description">Description</label>
+                    <textarea id="product-description" class="inv-mgmt-textarea" rows="3" placeholder="Optional description"></textarea>
+                </div>
+            </div>
+        </div>
+        <div class="inv-modal-footer">
+            <button type="button" class="inv-mgmt-btn" data-modal-close>Cancel</button>
+            <button id="product-save-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Save Product</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<link href="{% static 'css/inventory-mgmt.css' %}" rel="stylesheet"/>
+<script src="{% static 'js/inventory-api.js' %}"></script>
+<script src="{% static 'js/inventory-modal.js' %}"></script>
+<script src="{% static 'js/inventory-products.js' %}"></script>
+<script>InventoryProducts.init();</script>
+{% endblock %}

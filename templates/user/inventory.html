@@ -1,0 +1,60 @@
+{% extends "user_layout.html" %}
+{% load static %}
+{% block title %}Inventory - Billing System{% endblock %}
+
+{% block content %}
+<div class="inv-mgmt-page">
+    <div class="inv-mgmt-header">
+        <h2 class="inv-dashboard-greeting">Inventory Stock</h2>
+    </div>
+
+    <div class="inv-mgmt-flow">
+        <span class="inv-mgmt-flow-step">Add Product</span>
+        <span class="material-symbols-outlined">arrow_forward</span>
+        <span class="inv-mgmt-flow-step">Customer Purchase</span>
+        <span class="material-symbols-outlined">arrow_forward</span>
+        <span class="inv-mgmt-flow-step inv-mgmt-flow-step--active">Stock &amp; Profit</span>
+    </div>
+
+    <div class="inv-mgmt-card">
+        <div class="inv-mgmt-toolbar">
+            <input type="search" id="inventory-search" class="inv-mgmt-search" placeholder="Search inventory..."/>
+        </div>
+        <div class="inv-mgmt-table-wrap">
+            <table class="inv-mgmt-table inv-mgmt-table--inventory">
+                <colgroup>
+                    <col class="inv-col-name"/>
+                    <col class="inv-col-sku"/>
+                    <col class="inv-col-unit"/>
+                    <col class="inv-col-qty"/>
+                    <col class="inv-col-buy"/>
+                    <col class="inv-col-sell"/>
+                    <col class="inv-col-profit"/>
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th class="inv-col-name">Product</th>
+                        <th class="inv-col-sku">SKU</th>
+                        <th class="inv-col-unit">Unit</th>
+                        <th class="inv-col-qty">In Stock</th>
+                        <th class="inv-col-buy">Purchase Price</th>
+                        <th class="inv-col-sell">Sale Price</th>
+                        <th class="inv-col-profit">Profit (Stock)</th>
+                    </tr>
+                </thead>
+                <tbody id="inventory-table-body">
+                    <tr><td colspan="7" class="inv-mgmt-empty">Loading inventory...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div id="inventory-pagination" class="inv-pagination"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<link href="{% static 'css/inventory-mgmt.css' %}" rel="stylesheet"/>
+<script src="{% static 'js/inventory-api.js' %}"></script>
+<script src="{% static 'js/inventory-stock.js' %}"></script>
+<script>InventoryStock.init();</script>
+{% endblock %}

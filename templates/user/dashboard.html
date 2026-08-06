@@ -1,5 +1,30 @@
 {% extends "user_layout.html" %}
 {% block title %}Dashboard - Billing System{% endblock %}
 {% block content %}
-<p class="inv-dashboard-greeting">hello word</p>
+<div class="inv-mgmt-page">
+    <div class="inv-mgmt-header">
+        <h2 class="inv-dashboard-greeting">Business Dashboard</h2>
+    </div>
+
+    <div class="inv-mgmt-flow">
+        <span class="inv-mgmt-flow-step">Purchase</span>
+        <span class="material-symbols-outlined">arrow_forward</span>
+        <span class="inv-mgmt-flow-step">Purchase Items</span>
+        <span class="material-symbols-outlined">arrow_forward</span>
+        <span class="inv-mgmt-flow-step">Inventory Stock Updated</span>
+    </div>
+
+    <div class="inv-mgmt-card" style="padding:24px;">
+        <div class="inv-mgmt-actions">
+            <a href="/dashboard/products/" class="inv-mgmt-btn inv-mgmt-btn--primary">Products</a>
+            <a href="/dashboard/purchases/" class="inv-mgmt-btn inv-mgmt-btn--primary">Purchases</a>
+            <a href="/dashboard/inventory/" class="inv-mgmt-btn inv-mgmt-btn--primary">Inventory</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+{% load static %}
+<link href="{% static 'css/inventory-mgmt.css' %}" rel="stylesheet"/>
 {% endblock %}

@@ -196,6 +196,28 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
     letter-spacing: 0.05em;
 }
 
+.inv-required-mark {
+    font-weight: 700;
+    margin-left: 2px;
+}
+
+label.inv-label-required::after,
+.inv-field label:has(+ .inv-input-wrap [required])::after,
+.inv-field label:has(+ [required]:not(button))::after,
+.inv-mgmt-field label:has(+ [required]:not(button))::after,
+.inv-mgmt-field label:has(+ .inv-mgmt-input[required])::after,
+.inv-mgmt-field label:has(+ .inv-mgmt-select[required])::after,
+.inv-mgmt-field label:has(+ .inv-mgmt-textarea[required])::after {
+    content: " *";
+    color: var(--inv-error);
+    font-weight: 700;
+}
+
+.text-danger,
+.inv-required-mark {
+    color: var(--inv-error);
+}
+
 .inv-input-wrap { position: relative; }
 
 .inv-input-wrap > .material-symbols-outlined {

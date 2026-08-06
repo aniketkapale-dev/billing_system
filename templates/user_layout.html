@@ -10,6 +10,7 @@
     <title>{% block title %}Billing System - Dashboard{% endblock %}</title>
     {% include "partials/inventory_theme.html" %}
     <link href="{% static 'css/dashboard.css' %}" rel="stylesheet"/>
+    <link href="{% static 'css/inventory-mgmt.css' %}" rel="stylesheet"/>
 </head>
 <body class="inv-auth-pending inv-dashboard-body">
 {% include "partials/inventory_ui.html" %}
@@ -28,10 +29,37 @@
                 Dashboard
             </a>
         </li>
+        <li>
+            <a class="inv-nav-item{% if active_nav == 'products' %} inv-nav-item--active{% endif %}" href="/dashboard/products/">
+                <span class="material-symbols-outlined">inventory_2</span>
+                Products
+            </a>
+        </li>
+        <li>
+            <a class="inv-nav-item{% if active_nav == 'purchases' %} inv-nav-item--active{% endif %}" href="/dashboard/purchases/">
+                <span class="material-symbols-outlined">shopping_cart</span>
+                Purchases
+            </a>
+        </li>
+        <li>
+            <a class="inv-nav-item{% if active_nav == 'inventory' %} inv-nav-item--active{% endif %}" href="/dashboard/inventory/">
+                <span class="material-symbols-outlined">warehouse</span>
+                Inventory
+            </a>
+        </li>
     </ul>
 </nav>
 
 <header class="inv-dashboard-header">
+    <div class="inv-header-left">
+        <div class="inv-business-switcher">
+            <label class="inv-business-label" for="inv-business-select">Business</label>
+            <select id="inv-business-select" class="inv-business-select" aria-label="Select business"></select>
+            <button id="inv-business-add-btn" type="button" class="inv-business-add-btn" title="Add business" aria-label="Add business">
+                <span class="material-symbols-outlined">add</span>
+            </button>
+        </div>
+    </div>
     <div class="inv-profile">
         <div class="inv-profile-user">
             <div id="profile-avatar" class="inv-profile-avatar">
@@ -47,16 +75,54 @@
 </header>
 
 <main class="inv-dashboard-main">
+    <div id="inv-business-empty" class="inv-business-empty inv-hidden">
+        <p>Create your first business to manage products, purchases, and inventory.</p>
+        <button type="button" class="inv-mgmt-btn inv-mgmt-btn--primary" id="inv-business-empty-add-btn">
+            <span class="material-symbols-outlined">add</span>
+            Add Business
+        </button>
+    </div>
     {% block content %}{% endblock %}
 </main>
+
+<div id="business-modal" class="inv-modal inv-hidden" aria-hidden="true">
+    <div class="inv-modal-backdrop" data-modal-close></div>
+    <div class="inv-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="business-modal-title">
+        <div class="inv-modal-header">
+            <h3 id="business-modal-title">Add Business</h3>
+            <button type="button" class="inv-modal-close" data-modal-close aria-label="Close">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="inv-modal-body">
+            <div class="inv-mgmt-field">
+                <label for="business-name">Business Name</label>
+                <input id="business-name" class="inv-mgmt-input" type="text" placeholder="Business name" required/>
+            </div>
+        </div>
+        <div class="inv-modal-footer">
+            <button type="button" class="inv-mgmt-btn" data-modal-close>Cancel</button>
+            <button id="business-save-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Save Business</button>
+        </div>
+    </div>
+</div>
 
 <script src="{% static 'js/inventory-constants.js' %}"></script>
 <script src="{% static 'js/inventory-toast.js' %}"></script>
 <script src="{% static 'js/inventory-loader.js' %}"></script>
 <script src="{% static 'js/inventory-confirm.js' %}"></script>
 <script src="{% static 'js/inventory-pagination.js' %}"></script>
+<script src="{% static 'js/inventory-modal.js' %}"></script>
+<script src="{% static 'js/inventory-api.js' %}"></script>
+<script src="{% static 'js/inventory-business.js' %}"></script>
 <script src="{% static 'js/inventory-auth.js' %}"></script>
-<script>InventoryAuth.guardUser();</script>
+<script>
+InventoryAuth.guardUser();
+InventoryBusiness.init();
+document.getElementById("inv-business-empty-add-btn").addEventListener("click", function () {
+    document.getElementById("inv-business-add-btn").click();
+});
+</script>
 {% block page_scripts %}{% endblock %}
 </body>
 </html>

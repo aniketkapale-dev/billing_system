@@ -1,0 +1,323 @@
+/* Business owner inventory management pages */
+
+.inv-mgmt-page { max-width: 100%; }
+
+.inv-mgmt-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.inv-mgmt-header .inv-dashboard-greeting {
+    margin: 0;
+}
+
+.inv-mgmt-subtitle {
+    margin: 8px 0 0;
+    font-size: 14px;
+    color: var(--inv-secondary);
+}
+
+.inv-mgmt-card {
+    background: #FFFFFF;
+    border: none;
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(27, 33, 45, 0.06);
+    overflow: hidden;
+}
+
+.inv-mgmt-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px;
+    border-bottom: 1px solid #EEF0F4;
+    background: #FFFFFF;
+}
+
+.inv-mgmt-search,
+.inv-mgmt-input,
+.inv-mgmt-select,
+.inv-mgmt-textarea {
+    width: 100%;
+    padding: 10px 14px;
+    font-size: 14px;
+    font-family: inherit;
+    border: 1px solid var(--inv-input-border);
+    border-radius: var(--inv-radius);
+    background: #FFFFFF;
+}
+
+.inv-mgmt-search {
+    max-width: 360px;
+}
+
+.inv-mgmt-input:focus,
+.inv-mgmt-select:focus,
+.inv-mgmt-textarea:focus {
+    outline: none;
+    border-color: var(--inv-primary);
+    box-shadow: 0 0 0 1px var(--inv-primary);
+}
+
+.inv-mgmt-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.inv-mgmt-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: 14px;
+}
+
+.inv-mgmt-table th,
+.inv-mgmt-table td {
+    padding: 12px 14px;
+    text-align: left;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--inv-outline-variant);
+}
+
+.inv-mgmt-table th {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--inv-secondary);
+    background: #FAFBFC;
+    white-space: nowrap;
+}
+
+.inv-mgmt-table td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.inv-mgmt-table td.inv-col-name {
+    white-space: normal;
+    word-break: break-word;
+}
+
+/* Products table */
+.inv-mgmt-table--products {
+    min-width: 860px;
+}
+
+.inv-mgmt-table--products col.inv-col-name { width: 20%; }
+.inv-mgmt-table--products col.inv-col-sku { width: 12%; }
+.inv-mgmt-table--products col.inv-col-unit { width: 8%; }
+.inv-mgmt-table--products col.inv-col-qty { width: 8%; }
+.inv-mgmt-table--products col.inv-col-buy { width: 14%; }
+.inv-mgmt-table--products col.inv-col-sell { width: 14%; }
+.inv-mgmt-table--products col.inv-col-action { width: 24%; }
+
+.inv-mgmt-table--products td.inv-col-qty,
+.inv-mgmt-table--products td.inv-col-buy,
+.inv-mgmt-table--products td.inv-col-sell {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.inv-mgmt-table--products .inv-col-action {
+    text-align: center;
+}
+
+.inv-mgmt-table--products .inv-col-action .inv-mgmt-btn {
+    min-width: 72px;
+}
+
+.inv-mgmt-table td.inv-mgmt-cell--num,
+.inv-mgmt-table th.inv-mgmt-cell--num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.inv-mgmt-table td.inv-mgmt-cell--action,
+.inv-mgmt-table th.inv-mgmt-cell--action {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.inv-mgmt-table td.inv-mgmt-cell--name {
+    white-space: normal;
+    word-break: break-word;
+}
+
+.inv-mgmt-items-help {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: var(--inv-secondary);
+}
+
+.inv-mgmt-table--purchases col:nth-child(1) { width: 14%; }
+.inv-mgmt-table--purchases col:nth-child(2) { width: 18%; }
+.inv-mgmt-table--purchases col:nth-child(3) { width: 48%; }
+.inv-mgmt-table--purchases col:nth-child(4) { width: 20%; }
+
+.inv-mgmt-table--inventory col.inv-col-name { width: 18%; }
+.inv-mgmt-table--inventory col.inv-col-sku { width: 10%; }
+.inv-mgmt-table--inventory col.inv-col-unit { width: 8%; }
+.inv-mgmt-table--inventory col.inv-col-qty { width: 10%; }
+.inv-mgmt-table--inventory col.inv-col-buy { width: 14%; }
+.inv-mgmt-table--inventory col.inv-col-sell { width: 14%; }
+.inv-mgmt-table--inventory col.inv-col-profit { width: 16%; }
+
+.inv-mgmt-table--inventory td.inv-col-buy,
+.inv-mgmt-table--inventory td.inv-col-sell,
+.inv-mgmt-table--inventory td.inv-col-qty,
+.inv-mgmt-table--inventory td.inv-col-profit {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.inv-profit-positive {
+    color: var(--inv-success-text, #15803d);
+}
+
+.inv-profit-negative {
+    color: var(--inv-error);
+}
+
+.inv-mgmt-table tbody tr:hover { background: #f6f3f2; }
+
+.inv-mgmt-empty {
+    text-align: center;
+    color: var(--inv-secondary);
+    padding: 32px 16px !important;
+}
+
+.inv-mgmt-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    padding: 16px;
+}
+
+.inv-mgmt-form-grid .inv-mgmt-field--full {
+    grid-column: 1 / -1;
+}
+
+.inv-mgmt-field label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--inv-primary);
+}
+
+.inv-mgmt-price-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.inv-mgmt-field--prices {
+    margin-top: 0;
+}
+
+.inv-mgmt-field--prices > .inv-mgmt-field {
+    margin-bottom: 0;
+}
+
+.inv-mgmt-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.inv-mgmt-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: 1px solid #EEF0F4;
+    background: #FFFFFF;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--inv-primary);
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.inv-mgmt-btn:hover:not(:disabled) {
+    background: var(--inv-primary-container);
+    border-color: var(--inv-primary-container);
+}
+
+.inv-mgmt-btn--primary {
+    background: var(--inv-primary-container);
+    border-color: var(--inv-primary-container);
+    color: var(--inv-primary);
+}
+
+.inv-mgmt-btn--danger {
+    color: var(--inv-error);
+    border-color: var(--inv-error-container);
+    background: var(--inv-error-container);
+}
+
+.inv-mgmt-flow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 20px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: #FFFFFF;
+    box-shadow: 0 2px 8px rgba(27, 33, 45, 0.06);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--inv-secondary);
+}
+
+.inv-mgmt-flow-step {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #F7F8FA;
+    color: var(--inv-primary);
+}
+
+.inv-mgmt-flow-step--active {
+    background: var(--inv-primary-container);
+}
+
+.inv-mgmt-items-panel {
+    padding: 16px;
+    border-top: 1px solid #EEF0F4;
+    background: #FAFBFC;
+}
+
+.inv-mgmt-items-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.inv-mgmt-item-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr auto;
+    gap: 10px;
+    align-items: end;
+    margin-bottom: 10px;
+}
+
+@media (max-width: 900px) {
+    .inv-mgmt-form-grid,
+    .inv-mgmt-item-row {
+        grid-template-columns: 1fr;
+    }
+}

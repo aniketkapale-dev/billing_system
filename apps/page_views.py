@@ -40,3 +40,18 @@ def superadmin_users(request):
 def user_dashboard(request):
     return render(request, "user/dashboard.html", {"active_nav": "dashboard"})
 
+
+@never_cache
+def user_products(request):
+    return render(request, "user/products.html", {"active_nav": "products"})
+
+
+@never_cache
+def user_inventory(request):
+    return render(request, "user/inventory.html", {"active_nav": "inventory"})
+
+
+@never_cache
+def user_purchases(request):
+    return render(request, "user/purchases.html", {"active_nav": "purchases"})
+
