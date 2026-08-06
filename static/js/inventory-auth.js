@@ -89,6 +89,68 @@ var InventoryAuth = (function () {
         window.alert(message);
     }
 
+    function wireMobileInput(input) {
+        if (!input) return;
+
+        function sanitize(value) {
+            return String(value || "").replace(/\D/g, "").slice(0, 10);
+        }
+
+        function applyValue(value) {
+            var next = sanitize(value);
+            if (input.value !== next) {
+                input.value = next;
+            }
+        }
+
+        input.addEventListener("beforeinput", function (e) {
+            if (
+                e.inputType === "insertFromPaste" ||
+                e.inputType === "insertFromDrop" ||
+                e.inputType === "deleteContentBackward" ||
+                e.inputType === "deleteContentForward" ||
+                e.inputType === "deleteByCut"
+            ) {
+                return;
+            }
+            if (e.data && /\D/.test(e.data)) {
+                e.preventDefault();
+            }
+        });
+
+        input.addEventListener("input", function () {
+            applyValue(input.value);
+        });
+
+        input.addEventListener("keydown", function (e) {
+            if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+            var allowedKeys = [
+                "Backspace", "Delete", "Tab", "Escape", "Enter",
+                "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"
+            ];
+            if (allowedKeys.indexOf(e.key) !== -1) return;
+
+            if (e.key.length === 1 && !/\d/.test(e.key)) {
+                e.preventDefault();
+            }
+        });
+
+        input.addEventListener("paste", function (e) {
+            e.preventDefault();
+            var pasted = (e.clipboardData || window.clipboardData).getData("text") || "";
+            applyValue(pasted);
+        });
+
+        input.addEventListener("drop", function (e) {
+            e.preventDefault();
+        });
+    }
+
+    function isValidMobile(value) {
+        return /^[0-9]{10}$/.test(String(value || "").trim());
+    }
+
     function apiGet(path, withAuth) {
         var headers = {};
         if (withAuth) {
@@ -278,17 +340,28 @@ var InventoryAuth = (function () {
     function initRegister() {
         var form = document.getElementById("inventory-register-form");
         var btn = document.getElementById("register-submit");
+        var mobileInput = document.getElementById("mobile_number");
 
         if (!form) return;
 
+        wireMobileInput(mobileInput);
+
         form.addEventListener("submit", function (e) {
             e.preventDefault();
+
+            var mobile = form.mobile_number.value.trim();
+            if (!isValidMobile(mobile)) {
+                notify("error", "Enter a valid 10-digit mobile number.");
+                if (mobileInput) mobileInput.focus();
+                return;
+            }
+
             InventoryLoader.button(btn, true, "Registering...");
 
             apiPost("/register/", {
                 full_name: form.full_name.value.trim(),
                 email: form.email.value.trim(),
-                mobile_number: form.mobile_number.value.trim(),
+                mobile_number: mobile,
                 password: form.password.value
             })
                 .then(function (body) {

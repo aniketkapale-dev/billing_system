@@ -11,17 +11,17 @@
 }
 
 .inv-users-card {
-    background: var(--inv-surface);
-    border: 1px solid var(--inv-outline-variant);
-    border-radius: var(--inv-radius);
-    box-shadow: var(--inv-shadow);
+    background: #FFFFFF;
+    border: none;
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(27, 33, 45, 0.06);
     overflow: hidden;
 }
 
 .inv-users-toolbar {
     padding: 16px;
-    border-bottom: 1px solid var(--inv-outline-variant);
-    background: var(--inv-surface-bright);
+    border-bottom: 1px solid #EEF0F4;
+    background: #FFFFFF;
 }
 
 .inv-users-search {
@@ -61,7 +61,7 @@
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: var(--inv-secondary);
-    background: var(--inv-surface-bright);
+    background: #FAFBFC;
 }
 
 .inv-users-table tbody tr:hover { background: #f6f3f2; }

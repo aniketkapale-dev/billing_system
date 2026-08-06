@@ -14,8 +14,13 @@ class LoginSerializer(serializers.Serializer):
 class RegisterSerializer(serializers.Serializer):
     full_name = serializers.CharField(max_length=150)
     email = serializers.EmailField()
-    mobile_number = serializers.CharField(max_length=20)
+    mobile_number = serializers.CharField(min_length=10, max_length=10)
     password = serializers.CharField(min_length=8, write_only=True)
+
+    def validate_mobile_number(self, value):
+        from core.validators import validate_mobile_number
+
+        return validate_mobile_number(value)
 
 
 class RefreshSerializer(serializers.Serializer):

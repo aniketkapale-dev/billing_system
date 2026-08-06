@@ -32,7 +32,9 @@
                 </div>
                 <div class="inv-field">
                     <label for="mobile_number">Mobile Number</label>
-                    <input class="inv-input" id="mobile_number" name="mobile_number" required type="tel"/>
+                    <input class="inv-input" id="mobile_number" name="mobile_number" required type="text"
+                           inputmode="numeric" pattern="[0-9]{10}" maxlength="10" minlength="10"
+                           placeholder="10-digit mobile number" autocomplete="tel"/>
                 </div>
                 <div class="inv-field">
                     <label for="password">Password</label>

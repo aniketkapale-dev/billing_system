@@ -160,3 +160,10 @@ SESSION_COOKIE_NAME = "vrms_session"
 LOGIN_URL = "/login/"
 
 FRONTEND_URL = "http://127.0.0.1:8000"
+
+# System/admin accounts hidden from the superadmin business-owner user list.
+USER_MANAGEMENT_EXCLUDED_EMAILS = config(
+    "USER_MANAGEMENT_EXCLUDED_EMAILS",
+    default="aniket@gmail.com",
+    cast=Csv(),
+)
