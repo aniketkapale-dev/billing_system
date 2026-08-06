@@ -7,12 +7,36 @@ so these endpoints simply return the templates.
 """
 import logging
 
-from django import forms
-from django.core.paginator import Paginator
 from django.shortcuts import render
-from django.conf import settings
-from django.db import transaction
+from django.views.decorators.cache import never_cache
 
 logger = logging.getLogger(__name__)
 
+
+def landing(request):
+    return render(request, "landing.html")
+
+
+@never_cache
+def inventory_login(request):
+    return render(request, "inventory/login.html")
+
+
+def inventory_register(request):
+    return render(request, "inventory/register.html")
+
+
+@never_cache
+def superadmin_dashboard(request):
+    return render(request, "superadmin/dashboard.html", {"active_nav": "dashboard"})
+
+
+@never_cache
+def superadmin_users(request):
+    return render(request, "superadmin/users.html", {"active_nav": "users"})
+
+
+@never_cache
+def user_dashboard(request):
+    return render(request, "user/dashboard.html", {"active_nav": "dashboard"})
 

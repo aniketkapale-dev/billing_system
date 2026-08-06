@@ -11,6 +11,7 @@ from apps.accounts.serializers import (
     LoginSerializer,
     ProfileSerializer,
     RefreshSerializer,
+    RegisterSerializer,
     ResetPasswordSerializer,
 )
 from apps.accounts.services import AuthService
@@ -21,10 +22,21 @@ class AuthViewSet(ViewSet):
     service = AuthService()
 
     def get_permissions(self):
-        public = {"login", "refresh", "forgot_password", "reset_password"}
+        public = {"login", "register", "refresh", "forgot_password", "reset_password"}
         if self.action in public:
             return [AllowAny()]
         return [IsAuthenticated()]
+
+    @action(detail=False, methods=["post"])
+    def register(self, request):
+        serializer = RegisterSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        result = self.service.register(**serializer.validated_data)
+        return ApiResponse.success(
+            data={},
+            message=result["message"],
+            status_code=201,
+        )
 
     @action(detail=False, methods=["post"])
     def login(self, request):

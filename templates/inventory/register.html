@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Register - Billing System</title>
+    {% include "partials/inventory_theme.html" %}
+    {% load static %}
+    <link href="{% static 'css/auth.css' %}" rel="stylesheet"/>
+</head>
+<body class="inv-auth-body">
+{% include "partials/inventory_ui.html" %}
+<main class="inv-auth-main">
+    <div class="inv-back-wrap">{% include "partials/back_to_home.html" %}</div>
+    <div class="inv-auth-bg"></div>
+    <div class="inv-auth-card">
+        <div class="inv-auth-header">
+            <div class="inv-auth-header-inner">
+                <h1>Billing System</h1>
+                <p>Register Your Business</p>
+            </div>
+        </div>
+        <div class="inv-auth-body-inner">
+            <form id="inventory-register-form" class="inv-form inv-form--compact">
+                <div class="inv-field">
+                    <label for="full_name">Full Name</label>
+                    <input class="inv-input" id="full_name" name="full_name" required type="text"/>
+                </div>
+                <div class="inv-field">
+                    <label for="email">Work Email</label>
+                    <input class="inv-input" id="email" name="email" required type="email"/>
+                </div>
+                <div class="inv-field">
+                    <label for="mobile_number">Mobile Number</label>
+                    <input class="inv-input" id="mobile_number" name="mobile_number" required type="tel"/>
+                </div>
+                <div class="inv-field">
+                    <label for="password">Password</label>
+                    <input class="inv-input" id="password" name="password" required minlength="8" type="password"/>
+                </div>
+                <button id="register-submit" class="inv-btn inv-btn-primary inv-btn-block" type="submit">Register</button>
+            </form>
+            <p class="inv-auth-footer-text">
+                Already have an account? <a class="inv-link" href="/login/">Sign in</a>
+            </p>
+        </div>
+    </div>
+</main>
+{% load static %}
+<script src="{% static 'js/inventory-toast.js' %}"></script>
+<script src="{% static 'js/inventory-loader.js' %}"></script>
+<script src="{% static 'js/inventory-auth.js' %}"></script>
+<script>InventoryAuth.initRegister();</script>
+</body>
+</html>

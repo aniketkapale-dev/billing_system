@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Billing System - Billing Management Reimagined</title>
+    {% include "partials/inventory_theme.html" %}
+    {% load static %}
+    <link href="{% static 'css/landing.css' %}" rel="stylesheet"/>
+</head>
+<body>
+<nav aria-label="Top Navigation" class="inv-landing-nav">
+    <div class="inv-landing-brand">
+        <span class="material-symbols-outlined material-symbols-outlined--filled">inventory_2</span>
+        Billing System
+    </div>
+    <div class="inv-landing-links">
+        <a href="#features">Features</a>
+        <a href="#preview">Preview</a>
+    </div>
+    <div class="inv-landing-actions">
+        <a href="/login/" class="inv-landing-login">Login</a>
+        <a href="/register/" class="inv-landing-cta">Get Started</a>
+    </div>
+</nav>
+
+<main class="inv-landing-main">
+    <section class="inv-hero">
+        <div class="inv-hero-content">
+            <h1 class="inv-hero-title">
+                Billing Management, <br/>
+                <span class="inv-hero-badge">Reimagined.</span>
+            </h1>
+            <p class="inv-hero-text">Achieve precision and speed with Billing System. Modern interface for billing, orders, and analytics.</p>
+            <div class="inv-hero-actions">
+                <a href="/register/" class="inv-btn inv-btn-primary">Start Free Trial</a>
+                <a href="/login/" class="inv-btn inv-btn-outline">Sign In</a>
+            </div>
+        </div>
+    </section>
+
+    <section id="features" class="inv-features">
+        <div class="inv-feature-card">
+            <div class="inv-feature-icon inv-feature-icon--primary">
+                <span class="material-symbols-outlined">receipt_long</span>
+            </div>
+            <h3>Smart Invoicing</h3>
+            <p>Generate and manage invoices with professional presentation.</p>
+        </div>
+        <div class="inv-feature-card">
+            <div class="inv-feature-icon inv-feature-icon--outline">
+                <span class="material-symbols-outlined">bar_chart</span>
+            </div>
+            <h3>Real-time Analytics</h3>
+            <p>Monitor business health with clear metrics and charts.</p>
+        </div>
+        <div class="inv-feature-card">
+            <div class="inv-feature-icon inv-feature-icon--success">
+                <span class="material-symbols-outlined">add_circle</span>
+            </div>
+            <h3>Seamless Additions</h3>
+            <p>Quickly add stock with intuitive workflows.</p>
+        </div>
+    </section>
+
+    <section id="preview" class="inv-preview">
+        <div class="inv-preview-header">
+            <h2>Experience the Interface</h2>
+            <p>Built for speed and clarity.</p>
+        </div>
+        <div class="inv-preview-grid">
+            <div class="inv-stat-card">
+                <span class="inv-stat-label">Total Products</span>
+                <div class="inv-stat-value">—</div>
+            </div>
+            <div class="inv-stat-card">
+                <span class="inv-stat-label">Low Stock</span>
+                <div class="inv-stat-value">—</div>
+            </div>
+            <div class="inv-stat-card inv-stat-card--highlight inv-stat-card--wide">
+                <div>
+                    <span class="inv-stat-label">Current Stock Value</span>
+                    <div class="inv-stat-value">—</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="inv-cta-section">
+        <h2>Ready to optimize your billing?</h2>
+        <p>Join businesses that trust Billing System.</p>
+        <a href="/register/" class="inv-btn inv-btn-primary">Start Your Free Trial</a>
+    </section>
+</main>
+
+<footer class="inv-landing-footer">
+    <div class="inv-landing-footer-brand">
+        <span class="material-symbols-outlined material-symbols-outlined--filled">inventory_2</span>
+        Billing System
+    </div>
+    <div class="inv-landing-footer-copy">© 2026 Billing System</div>
+</footer>
+</body>
+</html>

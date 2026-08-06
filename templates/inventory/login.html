@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Login - Billing System</title>
+    {% include "partials/inventory_theme.html" %}
+    {% load static %}
+    <link href="{% static 'css/auth.css' %}" rel="stylesheet"/>
+</head>
+<body class="inv-auth-body">
+{% include "partials/inventory_ui.html" %}
+<main class="inv-auth-main">
+    <div class="inv-back-wrap">{% include "partials/back_to_home.html" %}</div>
+    <div class="inv-auth-bg"></div>
+    <div class="inv-auth-card">
+        <div class="inv-auth-header">
+            <div class="inv-auth-header-grid"></div>
+            <div class="inv-auth-header-inner">
+                <h1>Billing System</h1>
+                <p>Welcome Back</p>
+            </div>
+        </div>
+        <div class="inv-auth-body-inner">
+            <form id="inventory-login-form" class="inv-form">
+                <div class="inv-field">
+                    <label for="email">Work Email</label>
+                    <div class="inv-input-wrap">
+                        <span class="material-symbols-outlined">mail</span>
+                        <input class="inv-input" id="email" name="email" placeholder="name@company.com" required type="email"/>
+                    </div>
+                </div>
+                <div class="inv-field">
+                    <label for="password">Password</label>
+                    <div class="inv-input-wrap inv-input-wrap--password">
+                        <span class="material-symbols-outlined">lock</span>
+                        <input class="inv-input" id="password" name="password" placeholder="••••••••" required type="password"/>
+                        <button type="button" id="password-toggle" class="inv-password-toggle" aria-label="Show password">
+                            <span class="material-symbols-outlined">visibility</span>
+                        </button>
+                    </div>
+                </div>
+                <button id="login-submit" class="inv-btn inv-btn-primary inv-btn-block" type="submit">
+                    <span>Sign In</span>
+                    <span class="material-symbols-outlined">arrow_forward</span>
+                </button>
+            </form>
+            <div class="inv-auth-footer-text">
+                Don't have an account?
+                <a class="inv-link" href="/register/">Register your business</a>
+            </div>
+        </div>
+    </div>
+</main>
+<footer class="inv-page-footer">
+    <div class="inv-page-footer-inner">
+        <div class="inv-label-md">© 2026 Billing System</div>
+        <nav>
+            <a href="#">Privacy Policy</a>
+            <a href="#">Terms of Service</a>
+        </nav>
+    </div>
+</footer>
+{% load static %}
+<script src="{% static 'js/inventory-toast.js' %}"></script>
+<script src="{% static 'js/inventory-loader.js' %}"></script>
+<script src="{% static 'js/inventory-auth.js' %}"></script>
+<script>InventoryAuth.initLogin();</script>
+</body>
+</html>

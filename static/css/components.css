@@ -1,0 +1,316 @@
+/* Toast, loader, pagination — shared UI components */
+
+.inv-toast-container {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: min(360px, calc(100vw - 32px));
+}
+
+.inv-toast {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: var(--inv-radius);
+    box-shadow: var(--inv-shadow);
+    border: 1px solid var(--inv-outline-variant);
+    background: var(--inv-surface);
+    color: var(--inv-on-bg);
+    font-size: 14px;
+    line-height: 20px;
+    animation: inv-toast-in 0.2s ease;
+}
+
+@keyframes inv-toast-in {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.inv-toast--success { border-left: 4px solid var(--inv-success-text); }
+.inv-toast--error { border-left: 4px solid var(--inv-error); }
+.inv-toast--warning { border-left: 4px solid #f59e0b; }
+.inv-toast--info { border-left: 4px solid var(--inv-primary); }
+
+.inv-toast-icon { font-size: 20px; flex-shrink: 0; }
+.inv-toast--success .inv-toast-icon { color: var(--inv-success-text); }
+.inv-toast--error .inv-toast-icon { color: var(--inv-error); }
+.inv-toast--warning .inv-toast-icon { color: #f59e0b; }
+.inv-toast--info .inv-toast-icon { color: var(--inv-primary); }
+
+.inv-toast-text { flex: 1; }
+
+.inv-toast-close {
+    padding: 0;
+    color: var(--inv-secondary);
+    line-height: 1;
+}
+
+.inv-toast-close:hover { color: var(--inv-on-bg); }
+
+/* Loader overlay */
+.inv-loader {
+    position: fixed;
+    inset: 0;
+    z-index: 9998;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(245, 245, 245, 0.72);
+    backdrop-filter: blur(2px);
+}
+
+.inv-loader-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--inv-outline-variant);
+    border-top-color: var(--inv-primary);
+    border-radius: 50%;
+    animation: inv-spin 0.7s linear infinite;
+}
+
+@keyframes inv-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Pagination */
+.inv-pagination {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    border-top: 1px solid var(--inv-outline-variant);
+    background: var(--inv-surface-bright);
+}
+
+.inv-pagination-info {
+    font-size: 13px;
+    color: var(--inv-secondary);
+}
+
+.inv-pagination-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.inv-pagination-btn {
+    min-width: 36px;
+    height: 36px;
+    padding: 0 10px;
+    border: 1px solid var(--inv-outline-variant);
+    border-radius: var(--inv-radius);
+    background: var(--inv-surface);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--inv-primary);
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.inv-pagination-btn:hover:not(:disabled):not(.inv-pagination-btn--active) {
+    background: var(--inv-primary-container);
+    border-color: var(--inv-primary-container);
+}
+
+.inv-pagination-btn--active {
+    background: var(--inv-primary);
+    border-color: var(--inv-primary);
+    color: var(--inv-white);
+}
+
+.inv-pagination-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.inv-btn-spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    margin-right: 6px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    vertical-align: -2px;
+    animation: inv-spin 0.7s linear infinite;
+}
+
+/* Confirm dialog */
+body.inv-confirm-open { overflow: hidden; }
+
+.inv-confirm-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    background: rgba(27, 33, 45, 0.45);
+    backdrop-filter: blur(2px);
+    animation: inv-confirm-fade-in 0.2s ease;
+}
+
+.inv-confirm-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    z-index: 10001;
+    width: min(420px, calc(100vw - 32px));
+    padding: 28px 24px 24px;
+    border-radius: var(--inv-radius-xl);
+    border: 1px solid var(--inv-outline-variant);
+    background: var(--inv-surface);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    text-align: center;
+    transform: translate(-50%, -50%);
+    animation: inv-confirm-slide-in 0.2s ease;
+}
+
+@keyframes inv-confirm-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes inv-confirm-slide-in {
+    from { opacity: 0; transform: translate(-50%, calc(-50% + 12px)); }
+    to { opacity: 1; transform: translate(-50%, -50%); }
+}
+
+.inv-confirm-modal__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    margin-bottom: 16px;
+    border-radius: 50%;
+}
+
+.inv-confirm-modal__icon .material-symbols-outlined {
+    font-size: 28px;
+}
+
+.inv-confirm-modal__icon--danger {
+    background: var(--inv-error-container);
+    color: var(--inv-error);
+}
+
+.inv-confirm-modal__icon--primary {
+    background: var(--inv-primary-container);
+    color: var(--inv-primary);
+}
+
+.inv-confirm-modal__title {
+    margin: 0 0 8px;
+    font-family: var(--inv-font-display);
+    font-size: 20px;
+    line-height: 28px;
+    font-weight: 600;
+    color: var(--inv-on-bg);
+}
+
+.inv-confirm-modal__message {
+    margin: 0 0 24px;
+    font-size: 14px;
+    line-height: 22px;
+    color: var(--inv-secondary);
+}
+
+.inv-confirm-modal__actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.inv-confirm-btn {
+    min-width: 110px;
+    padding: 10px 16px;
+    border-radius: var(--inv-radius);
+    font-size: 14px;
+    font-weight: 600;
+    border: 1px solid transparent;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.inv-confirm-btn--cancel {
+    background: var(--inv-surface-bright);
+    border-color: var(--inv-outline-variant);
+    color: var(--inv-primary);
+}
+
+.inv-confirm-btn--cancel:hover {
+    background: var(--inv-surface-container);
+}
+
+.inv-confirm-btn--danger {
+    background: var(--inv-error);
+    color: var(--inv-white);
+}
+
+.inv-confirm-btn--danger:hover {
+    background: #9b1515;
+}
+
+.inv-confirm-btn--primary {
+    background: var(--inv-primary);
+    color: var(--inv-white);
+}
+
+.inv-confirm-btn--primary:hover {
+    background: #2a3344;
+}
+
+/* Tooltip */
+.inv-tooltip {
+    position: relative;
+}
+
+.inv-tooltip::before,
+.inv-tooltip::after {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    z-index: 20;
+}
+
+.inv-tooltip::after {
+    content: attr(data-tooltip);
+    bottom: calc(100% + 8px);
+    padding: 5px 10px;
+    border-radius: 6px;
+    background: var(--inv-primary);
+    color: var(--inv-white);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+    box-shadow: var(--inv-shadow);
+}
+
+.inv-tooltip::before {
+    content: "";
+    bottom: calc(100% + 2px);
+    border: 5px solid transparent;
+    border-top-color: var(--inv-primary);
+}
+
+.inv-tooltip:hover::before,
+.inv-tooltip:hover::after,
+.inv-tooltip:focus-visible::before,
+.inv-tooltip:focus-visible::after {
+    opacity: 1;
+}
+
+.inv-tooltip:focus-visible {
+    outline: 2px solid var(--inv-primary-container);
+    outline-offset: 2px;
+}

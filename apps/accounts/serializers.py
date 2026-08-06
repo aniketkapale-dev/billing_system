@@ -11,6 +11,13 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
 
 
+class RegisterSerializer(serializers.Serializer):
+    full_name = serializers.CharField(max_length=150)
+    email = serializers.EmailField()
+    mobile_number = serializers.CharField(max_length=20)
+    password = serializers.CharField(min_length=8, write_only=True)
+
+
 class RefreshSerializer(serializers.Serializer):
     refresh = serializers.CharField()
 
@@ -34,6 +41,7 @@ class ProfileSerializer(serializers.Serializer):
     full_name = serializers.CharField(read_only=True)
     email = serializers.EmailField(read_only=True)
     mobile_number = serializers.CharField(read_only=True)
+    is_active = serializers.BooleanField(read_only=True)
     profile_image = serializers.SerializerMethodField()
     roles = serializers.SerializerMethodField()
 

@@ -5,11 +5,11 @@ current-user profile. Views stay thin and delegate here.
 from django.db import transaction
 
 from apps.accounts.jwt_service import JWTService
+from apps.roles.models import Role
+from apps.user_roles.models import UserRole
 from apps.users.models import User
 from core.exceptions import AuthenticationException, NotFoundException, ValidationException
-
-from django.conf import settings
-from apps.email_templates.services.email_service import EmailService
+from core.validators import ensure_unique, validate_email_format, validate_mobile_number
 
 
 class AuthService:
@@ -30,6 +30,40 @@ class AuthService:
         tokens = JWTService.generate_tokens(user.id)
         return {"tokens": tokens, "user": user}
 
+    # -- register (business owner, pending admin approval) -----------------
+    @transaction.atomic
+    def register(self, full_name, email, mobile_number, password):
+        email = validate_email_format(email).lower()
+        mobile_number = validate_mobile_number(mobile_number)
+        self._validate_password(password)
+
+        if User.objects.filter(email__iexact=email).exists():
+            raise ValidationException("An account with this email already exists.")
+        if User.objects.filter(mobile_number=mobile_number).exists():
+            raise ValidationException("An account with this mobile number already exists.")
+
+        user = User.objects.create(
+            full_name=full_name.strip(),
+            email=email,
+            mobile_number=mobile_number,
+            is_active=False,
+        )
+        user.set_password(password)
+        user.save(update_fields=["password", "updated_at"])
+
+        role, _ = Role.objects.get_or_create(
+            role_name="Business Owner",
+            defaults={"description": "Business owner account"},
+        )
+        UserRole.objects.get_or_create(user=user, role=role)
+
+        return {
+            "message": (
+                "Registration successful. Your account is pending admin approval. "
+                "You can sign in with the same email and password once approved."
+            )
+        }
+
     # -- refresh -----------------------------------------------------------
     def refresh(self, refresh_token):
         if not refresh_token:
@@ -43,36 +77,10 @@ class AuthService:
         # Hook left here for a future server-side blacklist if required.
         return True
 
-    # -- forgot password ---------------------------------------------------
+    # -- forgot password (no email — SMTP removed) -------------------------
     def forgot_password(self, email):
-        try:
-            user = User.objects.get(email__iexact=(email or "").strip())
-        except User.DoesNotExist:
-            return {
-                "message": "If the account exists, a reset link was sent."
-            }
-
-        token = self._reset_token(user.id)
-
-        reset_url = (
-            f"{settings.FRONTEND_URL}/reset-password/?token={token}"
-        )
-
-        sent = EmailService().send_email(
-            recipient_email=user.email,
-            template_key="forgot_password",
-            first_name=user.full_name,
-            last_name="",
-            reset_url=reset_url,
-        )
-
-        if not sent:
-            raise ValidationException(
-                "Unable to send password reset email."
-            )
-
         return {
-            "message": "Password reset email sent."
+            "message": "If the account exists, a reset link was sent."
         }
 
     @staticmethod

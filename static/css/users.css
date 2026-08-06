@@ -1,0 +1,166 @@
+/* Superadmin users page */
+
+.inv-users-page { max-width: 100%; }
+
+.inv-users-header { margin-bottom: 24px; }
+
+.inv-users-subtitle {
+    margin: 8px 0 0;
+    font-size: 14px;
+    color: var(--inv-secondary);
+}
+
+.inv-users-card {
+    background: var(--inv-surface);
+    border: 1px solid var(--inv-outline-variant);
+    border-radius: var(--inv-radius);
+    box-shadow: var(--inv-shadow);
+    overflow: hidden;
+}
+
+.inv-users-toolbar {
+    padding: 16px;
+    border-bottom: 1px solid var(--inv-outline-variant);
+    background: var(--inv-surface-bright);
+}
+
+.inv-users-search {
+    width: 100%;
+    max-width: 360px;
+    padding: 10px 14px;
+    font-size: 14px;
+    font-family: inherit;
+    border: 1px solid var(--inv-input-border);
+    border-radius: var(--inv-radius);
+}
+
+.inv-users-search:focus {
+    outline: none;
+    border-color: var(--inv-primary);
+    box-shadow: 0 0 0 1px var(--inv-primary);
+}
+
+.inv-users-table-wrap { overflow-x: auto; }
+
+.inv-users-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.inv-users-table th,
+.inv-users-table td {
+    padding: 14px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--inv-outline-variant);
+}
+
+.inv-users-table th {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--inv-secondary);
+    background: var(--inv-surface-bright);
+}
+
+.inv-users-table tbody tr:hover { background: #f6f3f2; }
+
+.inv-users-empty {
+    text-align: center;
+    color: var(--inv-secondary);
+    padding: 32px 16px !important;
+}
+
+.inv-status-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.inv-status-badge--active {
+    background: var(--inv-success-bg);
+    color: var(--inv-success-text);
+}
+
+.inv-status-badge--inactive {
+    background: var(--inv-error-container);
+    color: var(--inv-on-error-container);
+}
+
+.inv-user-action-btn {
+    border-radius: var(--inv-radius);
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid var(--inv-outline-variant);
+    background: var(--inv-surface);
+    color: var(--inv-primary);
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.inv-user-action-btn--icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+}
+
+.inv-user-action-btn--icon .material-symbols-outlined {
+    font-size: 18px;
+}
+
+.inv-user-action-btn--activate {
+    color: var(--inv-success-text);
+    border-color: var(--inv-success-bg);
+    background: var(--inv-success-bg);
+}
+
+.inv-user-action-btn--activate:hover:not(:disabled) {
+    background: var(--inv-success-text);
+    color: var(--inv-white);
+    border-color: var(--inv-success-text);
+}
+
+.inv-user-action-btn--deactivate {
+    color: var(--inv-error);
+    border-color: var(--inv-error-container);
+    background: var(--inv-error-container);
+}
+
+.inv-user-action-btn--deactivate:hover:not(:disabled) {
+    background: var(--inv-error);
+    color: var(--inv-white);
+    border-color: var(--inv-error);
+}
+
+.inv-user-action-btn:hover:not(:disabled):not(.inv-user-action-btn--activate):not(.inv-user-action-btn--deactivate):not(.inv-user-action-btn--delete) {
+    background: var(--inv-primary-container);
+    border-color: var(--inv-primary-container);
+}
+
+.inv-user-action-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.inv-users-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.inv-user-action-btn--delete {
+    color: var(--inv-error);
+    border-color: var(--inv-error-container);
+    background: var(--inv-error-container);
+}
+
+.inv-user-action-btn--delete:hover:not(:disabled) {
+    background: var(--inv-error);
+    color: var(--inv-white);
+    border-color: var(--inv-error);
+}

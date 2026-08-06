@@ -1,0 +1,353 @@
+/**
+ * Reusable auth helpers for Billing System pages (login, register, superadmin).
+ * Uses the same localStorage keys as the existing auth module.
+ */
+var InventoryAuth = (function () {
+    "use strict";
+
+    var KEYS = {
+        TOKEN: "vrms_access_token",
+        REFRESH: "vrms_refresh_token",
+        USER: "vrms_user"
+    };
+
+    var ROUTES = {
+        LOGIN: "/login/",
+        REGISTER: "/register/",
+        SUPERADMIN: "/superadmin/dashboard/",
+        USER_DASHBOARD: "/dashboard/",
+        LANDING: "/"
+    };
+
+    var API = "/api/auth";
+    var logoutWired = false;
+
+    function getToken() {
+        return localStorage.getItem(KEYS.TOKEN);
+    }
+
+    function getUser() {
+        try {
+            return JSON.parse(localStorage.getItem(KEYS.USER));
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function setSession(tokens, user) {
+        if (tokens) {
+            if (tokens.access) localStorage.setItem(KEYS.TOKEN, tokens.access);
+            if (tokens.refresh) localStorage.setItem(KEYS.REFRESH, tokens.refresh);
+        }
+        if (user) localStorage.setItem(KEYS.USER, JSON.stringify(user));
+    }
+
+    function clear() {
+        localStorage.removeItem(KEYS.TOKEN);
+        localStorage.removeItem(KEYS.REFRESH);
+        localStorage.removeItem(KEYS.USER);
+    }
+
+    function goLogin() {
+        clear();
+        window.location.replace(ROUTES.LOGIN);
+    }
+
+    function goDashboard() {
+        window.location.replace(ROUTES.SUPERADMIN);
+    }
+
+    function goUserDashboard() {
+        window.location.replace(ROUTES.USER_DASHBOARD);
+    }
+
+    function normalizeRole(role) {
+        return String(role || "").trim().toLowerCase().replace(/\s+/g, " ");
+    }
+
+    function isSuperAdmin(user) {
+        if (!user || !user.roles || !user.roles.length) return false;
+        return user.roles.some(function (r) {
+            var role = normalizeRole(r);
+            return role === "super admin" || role === "superadmin" || role === "admin";
+        });
+    }
+
+    function getHomeRoute(user) {
+        return isSuperAdmin(user) ? ROUTES.SUPERADMIN : ROUTES.USER_DASHBOARD;
+    }
+
+    function redirectToHome(user) {
+        window.location.replace(getHomeRoute(user));
+    }
+
+    function notify(type, message) {
+        if (typeof InventoryToast !== "undefined") {
+            InventoryToast[type](message);
+            return;
+        }
+        window.alert(message);
+    }
+
+    function apiGet(path, withAuth) {
+        var headers = {};
+        if (withAuth) {
+            var token = getToken();
+            if (token) headers["Authorization"] = "Bearer " + token;
+        }
+        return fetch(API + path, {
+            method: "GET",
+            headers: headers,
+            cache: "no-store"
+        }).then(function (res) {
+            return res.json();
+        });
+    }
+
+    function apiPost(path, body, withAuth) {
+        var headers = { "Content-Type": "application/json" };
+        if (withAuth) {
+            var token = getToken();
+            if (token) headers["Authorization"] = "Bearer " + token;
+        }
+        return fetch(API + path, {
+            method: "POST",
+            headers: headers,
+            body: JSON.stringify(body),
+            cache: "no-store"
+        }).then(function (res) {
+            return res.json();
+        });
+    }
+
+    function paintProfile(user) {
+        var roleEl = document.getElementById("profile-role");
+        if (!roleEl) return;
+
+        if (user && user.roles && user.roles.length) {
+            roleEl.textContent = user.roles[0];
+            return;
+        }
+
+        roleEl.textContent = isSuperAdmin(user) ? "Super Admin" : "Business Owner";
+    }
+
+    function wireLogout() {
+        if (logoutWired) return;
+        logoutWired = true;
+
+        var logoutBtn = document.getElementById("inventory-logout-btn");
+        if (!logoutBtn) return;
+
+        logoutBtn.addEventListener("click", function () {
+            apiPost("/logout/", {}, true).finally(function () {
+                goLogin();
+            });
+        });
+    }
+
+    function verifySuperAdminSession() {
+        if (!getToken()) {
+            goLogin();
+            return Promise.resolve(false);
+        }
+
+        return apiGet("/me/", true).then(function (body) {
+            if (!body || !body.isSuccess || !body.data) {
+                goLogin();
+                return false;
+            }
+
+            if (!isSuperAdmin(body.data)) {
+                redirectToHome(body.data);
+                return false;
+            }
+
+            setSession(null, body.data);
+            document.body.classList.remove("inv-auth-pending");
+            paintProfile(body.data);
+            wireLogout();
+            return true;
+        }).catch(function () {
+            goLogin();
+            return false;
+        });
+    }
+
+    function verifyUserSession() {
+        if (!getToken()) {
+            goLogin();
+            return Promise.resolve(false);
+        }
+
+        return apiGet("/me/", true).then(function (body) {
+            if (!body || !body.isSuccess || !body.data) {
+                goLogin();
+                return false;
+            }
+
+            if (isSuperAdmin(body.data)) {
+                redirectToHome(body.data);
+                return false;
+            }
+
+            if (!body.data.is_active) {
+                goLogin();
+                return false;
+            }
+
+            setSession(null, body.data);
+            document.body.classList.remove("inv-auth-pending");
+            paintProfile(body.data);
+            wireLogout();
+            return true;
+        }).catch(function () {
+            goLogin();
+            return false;
+        });
+    }
+
+    function redirectAfterLogin(user) {
+        redirectToHome(user);
+    }
+
+    function redirectIfLoggedIn() {
+        if (!getToken()) return;
+
+        apiGet("/me/", true).then(function (body) {
+            if (body && body.isSuccess && body.data) {
+                if (!body.data.is_active && !isSuperAdmin(body.data)) return;
+                redirectToHome(body.data);
+            }
+        });
+    }
+
+    function initLogin() {
+        var form = document.getElementById("inventory-login-form");
+        var btn = document.getElementById("login-submit");
+
+        if (!form) return;
+
+        redirectIfLoggedIn();
+
+        window.addEventListener("pageshow", function () {
+            if (!getToken()) clear();
+        });
+
+        var pwToggle = document.getElementById("password-toggle");
+        if (pwToggle) {
+            pwToggle.addEventListener("click", function () {
+                var input = document.getElementById("password");
+                var icon = pwToggle.querySelector(".material-symbols-outlined");
+                if (input.type === "password") {
+                    input.type = "text";
+                    icon.textContent = "visibility_off";
+                    pwToggle.setAttribute("aria-label", "Hide password");
+                } else {
+                    input.type = "password";
+                    icon.textContent = "visibility";
+                    pwToggle.setAttribute("aria-label", "Show password");
+                }
+            });
+        }
+
+        form.addEventListener("submit", function (e) {
+            e.preventDefault();
+            var email = form.email.value.trim();
+            var password = form.password.value;
+            InventoryLoader.button(btn, true, "Signing in...");
+
+            apiPost("/login/", { email: email, password: password })
+                .then(function (body) {
+                    InventoryLoader.button(btn, false);
+                    if (body && body.isSuccess) {
+                        setSession(body.data.tokens, body.data.user);
+                        notify("success", "Login successful.");
+                        redirectAfterLogin(body.data.user);
+                    } else {
+                        notify("error", body.message || "Login failed.");
+                    }
+                })
+                .catch(function () {
+                    InventoryLoader.button(btn, false);
+                    notify("error", "Network error. Please try again.");
+                });
+        });
+    }
+
+    function initRegister() {
+        var form = document.getElementById("inventory-register-form");
+        var btn = document.getElementById("register-submit");
+
+        if (!form) return;
+
+        form.addEventListener("submit", function (e) {
+            e.preventDefault();
+            InventoryLoader.button(btn, true, "Registering...");
+
+            apiPost("/register/", {
+                full_name: form.full_name.value.trim(),
+                email: form.email.value.trim(),
+                mobile_number: form.mobile_number.value.trim(),
+                password: form.password.value
+            })
+                .then(function (body) {
+                    InventoryLoader.button(btn, false);
+                    if (body && body.isSuccess) {
+                        notify("success", body.message || "Registration submitted. Awaiting admin approval.");
+                        form.reset();
+                    } else {
+                        var err = body.message || "Registration failed.";
+                        if (body.errors && body.errors.length) err = body.errors.join(" • ");
+                        notify("error", err);
+                    }
+                })
+                .catch(function () {
+                    InventoryLoader.button(btn, false);
+                    notify("error", "Network error. Please try again.");
+                });
+        });
+    }
+
+    function guardSuperAdmin() {
+        function checkSession() {
+            verifySuperAdminSession();
+        }
+
+        checkSession();
+
+        window.addEventListener("pageshow", function (e) {
+            if (e.persisted) {
+                document.body.classList.add("inv-auth-pending");
+                checkSession();
+            }
+        });
+
+        window.addEventListener("popstate", checkSession);
+    }
+
+    function guardUser() {
+        function checkSession() {
+            verifyUserSession();
+        }
+
+        checkSession();
+
+        window.addEventListener("pageshow", function (e) {
+            if (e.persisted) {
+                document.body.classList.add("inv-auth-pending");
+                checkSession();
+            }
+        });
+
+        window.addEventListener("popstate", checkSession);
+    }
+
+    return {
+        initLogin: initLogin,
+        initRegister: initRegister,
+        guardSuperAdmin: guardSuperAdmin,
+        guardUser: guardUser,
+        clear: clear
+    };
+})();

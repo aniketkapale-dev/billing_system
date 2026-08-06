@@ -1,0 +1,68 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+    <meta http-equiv="Pragma" content="no-cache"/>
+    <meta http-equiv="Expires" content="0"/>
+    <title>{% block title %}Billing System - Superadmin{% endblock %}</title>
+    {% include "partials/inventory_theme.html" %}
+    <link href="{% static 'css/dashboard.css' %}" rel="stylesheet"/>
+</head>
+<body class="inv-auth-pending">
+{% include "partials/inventory_ui.html" %}
+<nav class="inv-sidebar">
+    <div class="inv-sidebar-brand">
+        <h1>
+            <span class="material-symbols-outlined material-symbols-outlined--filled">inventory_2</span>
+            Billing System
+        </h1>
+        <p>Super Admin Panel</p>
+    </div>
+    <ul class="inv-sidebar-nav">
+        <li>
+            <a class="inv-nav-item{% if active_nav == 'dashboard' %} inv-nav-item--active{% endif %}" href="/superadmin/dashboard/">
+                <span class="material-symbols-outlined">dashboard</span>
+                Dashboard
+            </a>
+        </li>
+        <li>
+            <a class="inv-nav-item{% if active_nav == 'users' %} inv-nav-item--active{% endif %}" href="/superadmin/users/">
+                <span class="material-symbols-outlined">group</span>
+                Users
+            </a>
+        </li>
+    </ul>
+</nav>
+
+<header class="inv-dashboard-header">
+    <div class="inv-profile">
+        <div class="inv-profile-user">
+            <div id="profile-avatar" class="inv-profile-avatar">
+                <span class="material-symbols-outlined">person</span>
+            </div>
+            <span id="profile-role" class="inv-profile-role">Super Admin</span>
+        </div>
+        <button id="inventory-logout-btn" type="button" class="inv-profile-logout-btn">
+            <span class="material-symbols-outlined">logout</span>
+            Logout
+        </button>
+    </div>
+</header>
+
+<main class="inv-dashboard-main">
+    {% block content %}{% endblock %}
+</main>
+
+<script src="{% static 'js/inventory-constants.js' %}"></script>
+<script src="{% static 'js/inventory-toast.js' %}"></script>
+<script src="{% static 'js/inventory-loader.js' %}"></script>
+<script src="{% static 'js/inventory-confirm.js' %}"></script>
+<script src="{% static 'js/inventory-pagination.js' %}"></script>
+<script src="{% static 'js/inventory-auth.js' %}"></script>
+<script>InventoryAuth.guardSuperAdmin();</script>
+{% block page_scripts %}{% endblock %}
+</body>
+</html>
