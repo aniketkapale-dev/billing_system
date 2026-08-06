@@ -10,95 +10,203 @@
 </head>
 <body>
 <nav aria-label="Top Navigation" class="inv-landing-nav">
-    <div class="inv-landing-brand">
-        <span class="material-symbols-outlined material-symbols-outlined--filled">inventory_2</span>
-        Billing System
-    </div>
+    <a href="/" class="inv-landing-brand" aria-label="Billing System home">
+        <span class="inv-brand-mark">
+            <span class="material-symbols-outlined material-symbols-outlined--filled">receipt_long</span>
+        </span>
+        <span>Billing System</span>
+    </a>
     <div class="inv-landing-links">
-        <a href="#features">Features</a>
-        <a href="#preview">Preview</a>
+        <a href="#about">About</a>
+        <a href="#faq">FAQ</a>
+        <a href="#pricing">Pricing</a>
     </div>
     <div class="inv-landing-actions">
         <a href="/login/" class="inv-landing-login">Login</a>
-        <a href="/register/" class="inv-landing-cta">Get Started</a>
+        <a href="/register/" class="inv-landing-cta">Signup</a>
     </div>
 </nav>
 
 <main class="inv-landing-main">
     <section class="inv-hero">
         <div class="inv-hero-content">
-            <h1 class="inv-hero-title">
-                Billing Management, <br/>
-                <span class="inv-hero-badge">Reimagined.</span>
-            </h1>
-            <p class="inv-hero-text">Achieve precision and speed with Billing System. Modern interface for billing, orders, and analytics.</p>
-            <div class="inv-hero-actions">
-                <a href="/register/" class="inv-btn inv-btn-primary">Start Free Trial</a>
-                <a href="/login/" class="inv-btn inv-btn-outline">Sign In</a>
+            <div class="inv-hero-kicker">
+                <span class="material-symbols-outlined material-symbols-outlined--filled">verified</span>
+                GST ready billing software
             </div>
+            <h1 class="inv-hero-title">
+                India's fastest billing and invoicing software.
+            </h1>
+            <p class="inv-hero-text">
+                Create invoices, manage inventory, track customers, and review business reports from one simple online workspace.
+            </p>
+            <div class="inv-hero-actions">
+                <a href="/register/" class="inv-btn inv-btn-primary">
+                    Start Online Billing
+                    <span class="material-symbols-outlined">arrow_forward</span>
+                </a>
+                <a href="#pricing" class="inv-btn inv-btn-outline">View Pricing</a>
+            </div>
+            <div class="inv-hero-proof" aria-label="Business highlights">
+                <span><strong>Free</strong> starter plan</span>
+                <span><strong>100%</strong> GST ready</span>
+                <span><strong>Fast</strong> invoice flow</span>
+            </div>
+        </div>
+
+        <div class="inv-hero-image-wrap" aria-label="Billing dashboard preview">
+            <img src="{% static 'images/webimage.webp' %}" alt="Billing dashboard on laptop and mobile" class="inv-hero-image"/>
         </div>
     </section>
 
-    <section id="features" class="inv-features">
-        <div class="inv-feature-card">
+    <section id="features" class="inv-features" aria-label="Core features">
+        <article class="inv-feature-card">
             <div class="inv-feature-icon inv-feature-icon--primary">
                 <span class="material-symbols-outlined">receipt_long</span>
             </div>
             <h3>Smart Invoicing</h3>
-            <p>Generate and manage invoices with professional presentation.</p>
-        </div>
-        <div class="inv-feature-card">
+            <p>Generate clean invoices, manage payments, and keep billing records easy to search.</p>
+        </article>
+        <article class="inv-feature-card">
             <div class="inv-feature-icon inv-feature-icon--outline">
-                <span class="material-symbols-outlined">bar_chart</span>
+                <span class="material-symbols-outlined">inventory_2</span>
             </div>
-            <h3>Real-time Analytics</h3>
-            <p>Monitor business health with clear metrics and charts.</p>
-        </div>
-        <div class="inv-feature-card">
+            <h3>Inventory Control</h3>
+            <p>Track stock, low inventory, product movement, and business value from one place.</p>
+        </article>
+        <article class="inv-feature-card">
             <div class="inv-feature-icon inv-feature-icon--success">
-                <span class="material-symbols-outlined">add_circle</span>
+                <span class="material-symbols-outlined">monitoring</span>
             </div>
-            <h3>Seamless Additions</h3>
-            <p>Quickly add stock with intuitive workflows.</p>
-        </div>
+            <h3>Clear Analytics</h3>
+            <p>Understand sales, orders, and inventory health with quick visual summaries.</p>
+        </article>
     </section>
 
-    <section id="preview" class="inv-preview">
-        <div class="inv-preview-header">
-            <h2>Experience the Interface</h2>
-            <p>Built for speed and clarity.</p>
+    <section id="workflow" class="inv-workflow">
+        <div class="inv-section-copy">
+            <span class="inv-section-label">Workflow</span>
+            <h2>Everything important stays close.</h2>
+            <p>Billing System keeps daily operations simple: add products, create bills, review performance, and move to the next customer without confusion.</p>
         </div>
-        <div class="inv-preview-grid">
-            <div class="inv-stat-card">
-                <span class="inv-stat-label">Total Products</span>
-                <div class="inv-stat-value">—</div>
-            </div>
-            <div class="inv-stat-card">
-                <span class="inv-stat-label">Low Stock</span>
-                <div class="inv-stat-value">—</div>
-            </div>
-            <div class="inv-stat-card inv-stat-card--highlight inv-stat-card--wide">
+        <div class="inv-workflow-list">
+            <div class="inv-workflow-item">
+                <span class="material-symbols-outlined">add_business</span>
                 <div>
-                    <span class="inv-stat-label">Current Stock Value</span>
-                    <div class="inv-stat-value">—</div>
+                    <h3>Add inventory</h3>
+                    <p>Register products with pricing and quantity details.</p>
+                </div>
+            </div>
+            <div class="inv-workflow-item">
+                <span class="material-symbols-outlined">point_of_sale</span>
+                <div>
+                    <h3>Create bill</h3>
+                    <p>Prepare invoices quickly with a focused checkout flow.</p>
+                </div>
+            </div>
+            <div class="inv-workflow-item">
+                <span class="material-symbols-outlined">insights</span>
+                <div>
+                    <h3>Review reports</h3>
+                    <p>Use clear summaries to spot growth and stock needs.</p>
                 </div>
             </div>
         </div>
     </section>
 
+    <section id="pricing" class="inv-pricing">
+        <div class="inv-section-copy">
+            <span class="inv-section-label">Pricing</span>
+            <h2>Simple plans for every business stage.</h2>
+            <p>Start free and upgrade when your billing volume grows.</p>
+        </div>
+        <div class="inv-pricing-grid">
+            <article class="inv-price-card">
+                <span class="inv-price-tag">Starter</span>
+                <h3>Free</h3>
+                <p>For small teams starting with digital billing.</p>
+                <a href="/register/" class="inv-btn inv-btn-outline">Get Started</a>
+            </article>
+            <article class="inv-price-card inv-price-card--featured">
+                <span class="inv-price-tag">Business</span>
+                <h3>Rs. 2999/year</h3>
+                <p>For growing businesses that need invoices, stock, and reports.</p>
+                <a href="/register/" class="inv-btn inv-btn-primary">Choose Plan</a>
+            </article>
+        </div>
+    </section>
+
+    <section id="about" class="inv-about">
+        <div class="inv-section-copy">
+            <span class="inv-section-label">About</span>
+            <h2>Built to make everyday billing easier.</h2>
+            <p>Billing System helps businesses prepare invoices, manage inventory, and keep financial activity easy to understand without complicated tools.</p>
+        </div>
+    </section>
+
+    <section id="faq" class="inv-faq">
+        <div class="inv-preview-header">
+            <span class="inv-section-label">FAQ</span>
+            <h2>Quick answers before you start.</h2>
+        </div>
+        <div class="inv-faq-grid">
+            <article>
+                <h3>Can I start for free?</h3>
+                <p>Yes. You can create an account and begin with the starter billing workflow.</p>
+            </article>
+            <article>
+                <h3>Does it support inventory?</h3>
+                <p>Yes. You can track products, low stock, and current stock value.</p>
+            </article>
+            <article>
+                <h3>Is login required?</h3>
+                <p>Yes. Register or login to access your secure dashboard.</p>
+            </article>
+        </div>
+    </section>
+
+    <section id="preview" class="inv-preview">
+        <div class="inv-preview-header">
+            <span class="inv-section-label">Preview</span>
+            <h2>Designed for speed and clarity.</h2>
+            <p>Important numbers are visible first, with enough structure for daily repeat work.</p>
+        </div>
+        <div class="inv-preview-grid">
+            <div class="inv-stat-card">
+                <span class="inv-stat-label">Total Products</span>
+                <div class="inv-stat-value">1,284</div>
+                <small>Across active inventory</small>
+            </div>
+            <div class="inv-stat-card">
+                <span class="inv-stat-label">Low Stock</span>
+                <div class="inv-stat-value">18</div>
+                <small>Needs reorder review</small>
+            </div>
+            <div class="inv-stat-card inv-stat-card--highlight inv-stat-card--wide">
+                <div>
+                    <span class="inv-stat-label">Current Stock Value</span>
+                    <div class="inv-stat-value">Rs. 12.4L</div>
+                    <small>Updated with latest entries</small>
+                </div>
+                <span class="material-symbols-outlined">trending_up</span>
+            </div>
+        </div>
+    </section>
+
     <section class="inv-cta-section">
-        <h2>Ready to optimize your billing?</h2>
-        <p>Join businesses that trust Billing System.</p>
-        <a href="/register/" class="inv-btn inv-btn-primary">Start Your Free Trial</a>
+        <span class="material-symbols-outlined material-symbols-outlined--filled">rocket_launch</span>
+        <h2>Ready to simplify your billing?</h2>
+        <p>Start with a clean dashboard built for invoices, products, and everyday business decisions.</p>
+        <a href="/register/" class="inv-btn inv-btn-primary">Create Account</a>
     </section>
 </main>
 
 <footer class="inv-landing-footer">
     <div class="inv-landing-footer-brand">
-        <span class="material-symbols-outlined material-symbols-outlined--filled">inventory_2</span>
+        <span class="material-symbols-outlined material-symbols-outlined--filled">receipt_long</span>
         Billing System
     </div>
-    <div class="inv-landing-footer-copy">© 2026 Billing System</div>
+    <div class="inv-landing-footer-copy">&copy; 2026 Billing System. All rights reserved.</div>
 </footer>
 </body>
 </html>
