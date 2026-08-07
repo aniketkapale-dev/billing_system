@@ -6,6 +6,8 @@ var InventoryPurchases = (function () {
     var PAGE_SIZE = (window.InventoryConstants && InventoryConstants.PAGE_SIZE) || 10;
     var currentPage = 1;
     var products = [];
+    var PURCHASES_LIST_PANEL = "purchases-list-panel";
+    var PURCHASES_FORM_PANEL = "purchases-form-panel";
 
     function request(path, opts) {
         return InventoryApi.request(API, path, opts);
@@ -303,7 +305,7 @@ var InventoryPurchases = (function () {
                 if (body && body.isSuccess) {
                     InventoryToast.success(body.message || "Sale saved. FIFO applied and profit calculated.");
                     resetForm();
-                    InventoryModal.close("purchase-modal");
+                    InventoryPagePanel.showList(PURCHASES_LIST_PANEL);
                     loadPurchases(1);
                 } else {
                     var err = body.message || "Unable to create sale.";
@@ -325,7 +327,9 @@ var InventoryPurchases = (function () {
     }
 
     function init() {
-        InventoryModal.wire("purchase-modal");
+        if (window.InventoryPagePanel) {
+            InventoryPagePanel.init();
+        }
 
         function boot() {
             if (!InventoryBusiness.getActiveId()) return;
@@ -347,7 +351,7 @@ var InventoryPurchases = (function () {
                     InventoryToast.warning("No products in stock. Add a purchase invoice first.");
                 }
                 resetForm();
-                InventoryModal.open("purchase-modal");
+                InventoryPagePanel.showPanel(PURCHASES_LIST_PANEL, PURCHASES_FORM_PANEL);
                 document.getElementById("purchase-customer").focus();
             });
         });

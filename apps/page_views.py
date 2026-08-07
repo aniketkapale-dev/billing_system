@@ -65,3 +65,33 @@ def user_stock_in(request):
 def user_business(request):
     return render(request, "user/business.html", {"active_nav": "business"})
 
+
+@never_cache
+def user_catalog_units(request):
+    return render(request, "user/catalog.html", {
+        "active_nav": "products-units",
+        "catalog_resource": "units",
+        "catalog_title": "Units",
+        "catalog_add_label": "Add Unit",
+    })
+
+
+@never_cache
+def user_catalog_categories(request):
+    return render(request, "user/catalog.html", {
+        "active_nav": "products-categories",
+        "catalog_resource": "categories",
+        "catalog_title": "Categories",
+        "catalog_add_label": "Add Category",
+    })
+
+
+@never_cache
+def user_catalog_brands(request):
+    return render(request, "user/catalog.html", {
+        "active_nav": "products-brands",
+        "catalog_resource": "brands",
+        "catalog_title": "Brands",
+        "catalog_add_label": "Add Brand",
+    })
+

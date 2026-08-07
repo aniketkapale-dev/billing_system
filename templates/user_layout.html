@@ -16,11 +16,7 @@
 {% include "partials/inventory_ui.html" %}
 <nav class="inv-sidebar">
     <div class="inv-sidebar-brand">
-        <h1>
-            <span class="material-symbols-outlined material-symbols-outlined--filled">inventory_2</span>
-            Billing System
-        </h1>
-        <p>Business Owner Panel</p>
+        <h1>Billing System</h1>
     </div>
     <ul class="inv-sidebar-nav">
         <li>
@@ -29,11 +25,38 @@
                 Dashboard
             </a>
         </li>
-        <li>
-            <a class="inv-nav-item{% if active_nav == 'products' %} inv-nav-item--active{% endif %}" href="/dashboard/products/">
+        <li class="inv-nav-group{% if active_nav == 'products' or active_nav == 'products-units' or active_nav == 'products-categories' or active_nav == 'products-brands' %} inv-nav-group--has-active-child{% endif %}{% if active_nav == 'products' or active_nav == 'products-units' or active_nav == 'products-categories' or active_nav == 'products-brands' %} inv-nav-group--open{% endif %}">
+            <button type="button" class="inv-nav-item inv-nav-group-toggle" aria-expanded="{% if active_nav == 'products' or active_nav == 'products-units' or active_nav == 'products-categories' or active_nav == 'products-brands' %}true{% else %}false{% endif %}">
                 <span class="material-symbols-outlined">inventory_2</span>
-                Products
-            </a>
+                Manage Products
+                <span class="material-symbols-outlined inv-nav-group-chevron">expand_more</span>
+            </button>
+            <ul class="inv-nav-sub">
+                <li>
+                    <a class="inv-nav-item inv-nav-item--sub{% if active_nav == 'products' %} inv-nav-item--active{% endif %}" href="/dashboard/products/">
+                        <span class="material-symbols-outlined">shopping_bag</span>
+                        Items
+                    </a>
+                </li>
+                <li>
+                    <a class="inv-nav-item inv-nav-item--sub{% if active_nav == 'products-units' %} inv-nav-item--active{% endif %}" href="/dashboard/units/">
+                        <span class="material-symbols-outlined">straighten</span>
+                        Units
+                    </a>
+                </li>
+                <li>
+                    <a class="inv-nav-item inv-nav-item--sub{% if active_nav == 'products-categories' %} inv-nav-item--active{% endif %}" href="/dashboard/categories/">
+                        <span class="material-symbols-outlined">category</span>
+                        Categories
+                    </a>
+                </li>
+                <li>
+                    <a class="inv-nav-item inv-nav-item--sub{% if active_nav == 'products-brands' %} inv-nav-item--active{% endif %}" href="/dashboard/brands/">
+                        <span class="material-symbols-outlined">sell</span>
+                        Brands
+                    </a>
+                </li>
+            </ul>
         </li>
         <li>
             <a class="inv-nav-item{% if active_nav == 'stock-in' %} inv-nav-item--active{% endif %}" href="/dashboard/stock-in/">
@@ -45,12 +68,6 @@
             <a class="inv-nav-item{% if active_nav == 'purchases' %} inv-nav-item--active{% endif %}" href="/dashboard/purchases/">
                 <span class="material-symbols-outlined">point_of_sale</span>
                 Sale
-            </a>
-        </li>
-        <li>
-            <a class="inv-nav-item{% if active_nav == 'inventory' %} inv-nav-item--active{% endif %}" href="/dashboard/inventory/">
-                <span class="material-symbols-outlined">warehouse</span>
-                Inventory &amp; Profit
             </a>
         </li>
         <li>
@@ -146,9 +163,11 @@
 <script src="{% static 'js/inventory-loader.js' %}"></script>
 <script src="{% static 'js/inventory-confirm.js' %}"></script>
 <script src="{% static 'js/inventory-pagination.js' %}"></script>
+<script src="{% static 'js/inventory-page-panel.js' %}"></script>
 <script src="{% static 'js/inventory-modal.js' %}"></script>
 <script src="{% static 'js/inventory-api.js' %}"></script>
 <script src="{% static 'js/inventory-business.js' %}"></script>
+<script src="{% static 'js/inventory-sidebar.js' %}"></script>
 <script src="{% static 'js/inventory-auth.js' %}"></script>
 <script>
 InventoryAuth.guardUser();

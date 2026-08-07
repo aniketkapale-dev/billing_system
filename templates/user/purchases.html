@@ -4,74 +4,76 @@
 
 {% block content %}
 <div class="inv-mgmt-page">
-    <div class="inv-mgmt-header">
-        <h2 class="inv-dashboard-greeting">Sale</h2>
-        <button id="purchase-open-modal-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">
-            <span class="material-symbols-outlined">add</span>
-            Add Sale
-        </button>
-    </div>
-
-    <div class="inv-mgmt-card">
-        <div class="inv-mgmt-table-wrap">
-            <table class="inv-mgmt-table inv-mgmt-table--purchases">
-                <colgroup>
-                    <col span="6" style="width:16.6667%"/>
-                </colgroup>
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Customer</th>
-                        <th>Products Sold</th>
-                        <th>Sale Amount</th>
-                        <th>FIFO Cost</th>
-                        <th>Profit</th>
-                    </tr>
-                </thead>
-                <tbody id="purchases-table-body">
-                    <tr><td colspan="6" class="inv-mgmt-empty">Loading sales...</td></tr>
-                </tbody>
-            </table>
-        </div>
-        <div id="purchases-pagination" class="inv-pagination"></div>
-    </div>
-</div>
-
-<div id="purchase-modal" class="inv-modal inv-hidden" aria-hidden="true">
-    <div class="inv-modal-backdrop" data-modal-close></div>
-    <div class="inv-modal-dialog inv-modal-dialog--wide" role="dialog" aria-modal="true" aria-labelledby="purchase-modal-title">
-        <div class="inv-modal-header">
-            <h3 id="purchase-modal-title">Add Sale</h3>
-            <button type="button" class="inv-modal-close" data-modal-close aria-label="Close">
-                <span class="material-symbols-outlined">close</span>
+    <div id="purchases-list-panel" class="inv-mgmt-page-panel">
+        <div class="inv-mgmt-header">
+            <h2 class="inv-dashboard-greeting">Sale</h2>
+            <button id="purchase-open-modal-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">
+                <span class="material-symbols-outlined">add</span>
+                Add Sale
             </button>
         </div>
-        <div class="inv-modal-body">
-            <div class="inv-mgmt-form-grid" style="padding:0;">
-                <div class="inv-mgmt-field">
-                    <label for="purchase-customer">Customer Name</label>
-                    <input id="purchase-customer" class="inv-mgmt-input" type="text" placeholder="Customer name" required/>
-                </div>
-                <div class="inv-mgmt-field">
-                    <label for="purchase-date">Sale Date</label>
-                    <input id="purchase-date" class="inv-mgmt-input" type="date"/>
-                </div>
-            </div>
 
-            <div class="inv-mgmt-items-panel" style="margin-top:16px;border-radius:12px;">
-                <div class="inv-mgmt-items-header">
-                    <div>
-                        <h4 style="margin:0;font-size:16px;font-weight:600;color:var(--inv-primary);">Products to Sell</h4>
-                        <p class="inv-mgmt-items-help">Step 2: Stock is deducted using FIFO (oldest purchase batch first). Profit = sale price − batch purchase cost.</p>
-                    </div>
-                    <button id="purchase-add-item-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Add Product Row</button>
-                </div>
-                <div id="purchase-items-container"></div>
+        <div class="inv-mgmt-card">
+            <div class="inv-mgmt-table-wrap">
+                <table class="inv-mgmt-table inv-mgmt-table--purchases">
+                    <colgroup>
+                        <col span="6" style="width:16.6667%"/>
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Customer</th>
+                            <th>Products Sold</th>
+                            <th>Sale Amount</th>
+                            <th>FIFO Cost</th>
+                            <th>Profit</th>
+                        </tr>
+                    </thead>
+                    <tbody id="purchases-table-body">
+                        <tr><td colspan="6" class="inv-mgmt-empty">Loading sales...</td></tr>
+                    </tbody>
+                </table>
             </div>
+            <div id="purchases-pagination" class="inv-pagination"></div>
         </div>
-        <div class="inv-modal-footer">
-            <button type="button" class="inv-mgmt-btn" data-modal-close>Cancel</button>
-            <button id="purchase-save-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Create Sale</button>
+    </div>
+
+    <div id="purchases-form-panel" class="inv-mgmt-page-panel inv-hidden">
+        <div class="inv-mgmt-panel-header">
+            <h2 class="inv-dashboard-greeting">Add Sale</h2>
+            <button type="button" class="inv-mgmt-btn inv-page-back-btn" data-page-back="purchases-list-panel">
+                <span class="material-symbols-outlined">arrow_back</span>
+                Back to List
+            </button>
+        </div>
+        <div class="inv-mgmt-card inv-mgmt-panel-card">
+            <div class="inv-mgmt-panel-body">
+                <div class="inv-mgmt-form-grid" style="padding:0;">
+                    <div class="inv-mgmt-field">
+                        <label for="purchase-customer">Customer Name</label>
+                        <input id="purchase-customer" class="inv-mgmt-input" type="text" placeholder="Customer name" required/>
+                    </div>
+                    <div class="inv-mgmt-field">
+                        <label for="purchase-date">Sale Date</label>
+                        <input id="purchase-date" class="inv-mgmt-input" type="date"/>
+                    </div>
+                </div>
+
+                <div class="inv-mgmt-items-panel" style="margin-top:16px;border-radius:12px;">
+                    <div class="inv-mgmt-items-header">
+                        <div>
+                            <h4 style="margin:0;font-size:16px;font-weight:600;color:var(--inv-primary);">Products to Sell</h4>
+                            <p class="inv-mgmt-items-help">Stock is deducted using FIFO. Profit = sale price − batch purchase cost.</p>
+                        </div>
+                        <button id="purchase-add-item-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Add Product Row</button>
+                    </div>
+                    <div id="purchase-items-container"></div>
+                </div>
+            </div>
+            <div class="inv-mgmt-panel-footer">
+                <button type="button" class="inv-mgmt-btn" data-page-back="purchases-list-panel">Cancel</button>
+                <button id="purchase-save-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Create Sale</button>
+            </div>
         </div>
     </div>
 </div>
@@ -80,7 +82,10 @@
 {% block page_scripts %}
 <link href="{% static 'css/inventory-mgmt.css' %}" rel="stylesheet"/>
 <script src="{% static 'js/inventory-api.js' %}"></script>
-<script src="{% static 'js/inventory-modal.js' %}"></script>
+<script src="{% static 'js/inventory-page-panel.js' %}"></script>
 <script src="{% static 'js/inventory-purchases.js' %}"></script>
-<script>InventoryPurchases.init();</script>
+<script>
+InventoryPagePanel.init();
+InventoryPurchases.init();
+</script>
 {% endblock %}

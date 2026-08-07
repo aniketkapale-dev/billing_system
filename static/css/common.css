@@ -207,6 +207,7 @@ label.inv-label-required::after,
 .inv-mgmt-field label:has(+ [required]:not(button))::after,
 .inv-mgmt-field label:has(+ .inv-mgmt-input[required])::after,
 .inv-mgmt-field label:has(+ .inv-mgmt-select[required])::after,
+.inv-mgmt-field label:has(+ .inv-field-inline [required]:not(button))::after,
 .inv-mgmt-field label:has(+ .inv-mgmt-textarea[required])::after {
     content: " *";
     color: var(--inv-error);

@@ -17,6 +17,9 @@ from apps.page_views import (
     user_purchases,
     user_stock_in,
     user_business,
+    user_catalog_units,
+    user_catalog_categories,
+    user_catalog_brands,
 )
 
 urlpatterns = [
@@ -27,6 +30,9 @@ urlpatterns = [
     path("superadmin/users/", superadmin_users, name="superadmin-users"),
     path("dashboard/", user_dashboard, name="user-dashboard"),
     path("dashboard/products/", user_products, name="user-products"),
+    path("dashboard/units/", user_catalog_units, name="user-catalog-units"),
+    path("dashboard/categories/", user_catalog_categories, name="user-catalog-categories"),
+    path("dashboard/brands/", user_catalog_brands, name="user-catalog-brands"),
     path("dashboard/inventory/", user_inventory, name="user-inventory"),
     path("dashboard/stock-in/", user_stock_in, name="user-stock-in"),
     path("dashboard/purchases/", user_purchases, name="user-purchases"),
@@ -35,6 +41,7 @@ urlpatterns = [
     path("api/users/", include("apps.users.urls")),
     path("api/businesses/", include("apps.businesses.urls")),
     path("api/catalog/", include("apps.catalog.urls")),
+    path("api/dashboard/", include("apps.dashboard.urls")),
     path("api/products/", include("apps.products.urls")),
     path("api/inventory/", include("apps.inventory.urls")),
     path("api/invoicing/", include("apps.invoicing.urls")),

@@ -1,7 +1,9 @@
 from rest_framework import status
 
+from apps.invoicing.models import InventoryBatch, PurchaseInvoice, PurchaseInvoiceItem
 from apps.invoicing.serializers import (
     InventoryBatchSerializer,
+    PurchaseInvoiceHeaderWriteSerializer,
     PurchaseInvoiceSerializer,
     PurchaseInvoiceWriteSerializer,
 )
@@ -42,18 +44,27 @@ class PurchaseInvoiceViewSet(BusinessScopedViewSetMixin, BaseViewSet):
 
     def update(self, request, pk=None):
         return ApiResponse.error(
-            message="Purchase invoice updates are not supported.",
+            message="Use PATCH to update purchase invoice details.",
             status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
         )
 
     def partial_update(self, request, pk=None):
-        return self.update(request, pk=pk)
+        serializer = PurchaseInvoiceHeaderWriteSerializer(
+            data=request.data,
+            partial=True,
+            context={"request": request},
+        )
+        serializer.is_valid(raise_exception=True)
+        instance = self.get_service().update_header(pk, serializer.validated_data)
+        payload = self.serializer_class(instance, context={"request": request}).data
+        return ApiResponse.success(
+            data=payload,
+            message="Purchase invoice updated.",
+        )
 
     def destroy(self, request, pk=None):
-        return ApiResponse.error(
-            message="Purchase invoice delete is not supported.",
-            status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
-        )
+        self.get_service().soft_delete(pk)
+        return ApiResponse.success(message="Purchase invoice deleted.")
 
 
 class InventoryBatchViewSet(BusinessScopedViewSetMixin, BaseViewSet):

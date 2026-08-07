@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from django.db import transaction
 
-from apps.invoicing.models import PurchaseInvoiceItem
+from apps.invoicing.models import InventoryBatch, PurchaseInvoiceItem
 from apps.invoicing.repositories import PurchaseInvoiceRepository
 from apps.inventory.batch_service import BatchInventoryService
 from apps.inventory.services import InventoryStockService
@@ -118,3 +118,70 @@ class PurchaseInvoiceService(BaseService):
             )
 
         return invoice
+
+    def update_header(self, pk, data):
+        invoice = self.repository.get_by_id(pk)
+        business_id = invoice.business_id
+        updates = {}
+
+        if "invoice_number" in data:
+            invoice_number = (data.get("invoice_number") or "").strip()
+            validate_required(invoice_number, "Invoice number")
+            if (
+                invoice_number != invoice.invoice_number
+                and self.repository.exists(
+                    business_id=business_id,
+                    invoice_number=invoice_number,
+                    is_deleted=False,
+                )
+            ):
+                raise ValidationException("Invoice number already exists for this business.")
+            updates["invoice_number"] = invoice_number
+
+        if "invoice_date" in data and data.get("invoice_date") is not None:
+            updates["invoice_date"] = data["invoice_date"]
+
+        if "remarks" in data:
+            updates["remarks"] = data.get("remarks") or ""
+
+        if not updates:
+            return invoice
+
+        return self.repository.update(invoice, **updates)
+
+    @transaction.atomic
+    def soft_delete(self, pk):
+        invoice = self.repository.get_by_id(pk)
+        business_id = invoice.business_id
+        items = invoice.items.filter(is_deleted=False)
+
+        for item in items:
+            batches = InventoryBatch.objects.filter(
+                purchase_invoice_item=item,
+                is_deleted=False,
+            )
+            for batch in batches:
+                purchased = Decimal(batch.purchased_quantity or 0)
+                available = Decimal(batch.available_quantity or 0)
+                if available < purchased:
+                    raise ValidationException(
+                        "Cannot delete this purchase because some stock has already been sold or used."
+                    )
+
+        for item in items:
+            batches = InventoryBatch.objects.filter(
+                purchase_invoice_item=item,
+                is_deleted=False,
+            )
+            for batch in batches:
+                qty = Decimal(batch.available_quantity or 0)
+                if qty > 0:
+                    self.inventory_service.deduct_stock(
+                        business_id,
+                        batch.product_id,
+                        qty,
+                    )
+                batch.soft_delete()
+            item.soft_delete()
+
+        return self.repository.soft_delete(invoice)

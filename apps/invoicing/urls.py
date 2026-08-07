@@ -10,7 +10,11 @@ urlpatterns = [
     ),
     path(
         "purchase-invoices/<int:pk>/",
-        PurchaseInvoiceViewSet.as_view({"get": "retrieve"}),
+        PurchaseInvoiceViewSet.as_view({
+            "get": "retrieve",
+            "patch": "partial_update",
+            "delete": "destroy",
+        }),
         name="purchase-invoice-detail",
     ),
     path(

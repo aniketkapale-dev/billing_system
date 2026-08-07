@@ -7,6 +7,10 @@ var InventoryStockIn = (function () {
     var currentPage = 1;
     var products = [];
     var pendingProductRow = null;
+    var editingInvoiceId = null;
+    var STOCKIN_LIST_PANEL = "stockin-list-panel";
+    var STOCKIN_FORM_PANEL = "stockin-form-panel";
+    var STOCKIN_VIEW_PANEL = "stockin-view-panel";
 
     function request(path, opts) {
         return InventoryApi.request(API, path, opts);
@@ -87,7 +91,9 @@ var InventoryStockIn = (function () {
             '<div class="inv-mgmt-field"><label>Buy Price</label><input class="inv-mgmt-input inv-item-buy" type="number" min="0" step="0.01" value="' + (data.purchase_price || 0) + '" required/></div>' +
             '<div class="inv-mgmt-field"><label>Batch No.</label><input class="inv-mgmt-input inv-item-batch" type="text" placeholder="B001" value="' + InventoryApi.escapeHtml(data.batch_number || "") + '"/></div>' +
             '<div class="inv-mgmt-field"><label>Expiry</label><input class="inv-mgmt-input inv-item-expiry" type="date" value="' + (data.expiry_date || "") + '"/></div>' +
-            '<div class="inv-mgmt-field"><label>&nbsp;</label><button type="button" class="inv-mgmt-btn inv-mgmt-btn--danger inv-item-remove">Remove</button></div>';
+            '<div class="inv-mgmt-item-row-remove">' +
+            '<button type="button" class="inv-row-action-btn inv-row-action-btn--delete inv-item-remove" title="Remove" aria-label="Remove product row">' +
+            '<span class="material-symbols-outlined">delete</span></button></div>';
 
         row.querySelector(".inv-item-remove").addEventListener("click", function () {
             row.remove();
@@ -105,6 +111,24 @@ var InventoryStockIn = (function () {
         return row;
     }
 
+    function actionButtons(item) {
+        return (
+            '<div class="inv-row-actions">' +
+            '<button type="button" class="inv-row-action-btn inv-row-action-btn--view inv-stockin-view" data-id="' + item.id + '" title="View" aria-label="View purchase">' +
+            '<span class="material-symbols-outlined">visibility</span></button>' +
+            '<button type="button" class="inv-row-action-btn inv-row-action-btn--edit inv-stockin-edit" data-id="' + item.id + '" title="Edit" aria-label="Edit purchase">' +
+            '<span class="material-symbols-outlined">edit</span></button>' +
+            '<button type="button" class="inv-row-action-btn inv-row-action-btn--delete inv-stockin-delete" data-id="' + item.id + '" title="Delete" aria-label="Delete purchase">' +
+            '<span class="material-symbols-outlined">delete</span></button>' +
+            "</div>"
+        );
+    }
+
+    function displayValue(value) {
+        if (value === null || value === undefined || String(value).trim() === "") return "—";
+        return InventoryApi.escapeHtml(String(value));
+    }
+
     function renderRows(items) {
         var tbody = document.getElementById("stockin-table-body");
         if (!tbody) return;
@@ -115,21 +139,203 @@ var InventoryStockIn = (function () {
         }
 
         tbody.innerHTML = items.map(function (item) {
-            var itemCount = (item.items || []).length;
-            var names = (item.items || []).slice(0, 3).map(function (line) {
-                return InventoryApi.escapeHtml(line.product_name);
-            }).join(", ");
-            if (itemCount > 3) names += " +" + (itemCount - 3) + " more";
             return (
                 "<tr>" +
                 "<td>" + InventoryApi.escapeHtml(item.invoice_date) + "</td>" +
                 "<td><strong>" + InventoryApi.escapeHtml(item.invoice_number) + "</strong></td>" +
-                "<td>" + (names || "—") + "</td>" +
                 "<td class=\"inv-mgmt-cell--num\">" + InventoryApi.formatMoney(item.subtotal) + "</td>" +
                 "<td class=\"inv-mgmt-cell--num\"><strong>" + InventoryApi.formatMoney(item.grand_total) + "</strong></td>" +
+                "<td class=\"inv-col-action\">" + actionButtons(item) + "</td>" +
                 "</tr>"
             );
         }).join("");
+    }
+
+    function fetchInvoice(id) {
+        return request("/" + id + "/").then(function (body) {
+            if (body && body.isSuccess && body.data) {
+                return body.data;
+            }
+            InventoryToast.error(body.message || "Failed to load purchase invoice.");
+            return null;
+        });
+    }
+
+    function renderViewDetails(invoice) {
+        var container = document.getElementById("stockin-view-body");
+        var itemsWrap = document.getElementById("stockin-view-items-wrap");
+        if (!container || !itemsWrap) return;
+
+        var rows = [
+            { label: "Invoice Number", value: displayValue(invoice.invoice_number) },
+            { label: "Purchase Date", value: displayValue(invoice.invoice_date) },
+            { label: "Subtotal", value: InventoryApi.formatMoney(invoice.subtotal) },
+            { label: "Grand Total", value: InventoryApi.formatMoney(invoice.grand_total) },
+            { label: "Remarks", value: displayValue(invoice.remarks), full: true }
+        ];
+
+        container.innerHTML = rows.map(function (row) {
+            var cls = row.full ? " inv-product-view-item--full" : "";
+            return (
+                '<div class="inv-product-view-item' + cls + '">' +
+                '<span class="inv-product-view-label">' + row.label + "</span>" +
+                '<div class="inv-product-view-value">' + row.value + "</div>" +
+                "</div>"
+            );
+        }).join("");
+
+        var lines = invoice.items || [];
+        if (!lines.length) {
+            itemsWrap.innerHTML = "";
+            return;
+        }
+
+        itemsWrap.innerHTML =
+            '<h4 class="inv-stockin-view-items-title">Purchase Items</h4>' +
+            '<div class="inv-mgmt-table-wrap">' +
+            '<table class="inv-mgmt-table">' +
+            "<thead><tr>" +
+            "<th>Product</th><th>SKU</th><th>Qty</th><th>Buy Price</th><th>Batch</th><th>Expiry</th><th>Line Total</th>" +
+            "</tr></thead><tbody>" +
+            lines.map(function (line) {
+                return (
+                    "<tr>" +
+                    "<td>" + displayValue(line.product_name) + "</td>" +
+                    "<td>" + displayValue(line.product_sku) + "</td>" +
+                    "<td class=\"inv-mgmt-cell--num\">" + displayValue(line.quantity) + "</td>" +
+                    "<td class=\"inv-mgmt-cell--num\">" + InventoryApi.formatMoney(line.purchase_price) + "</td>" +
+                    "<td>" + displayValue(line.batch_number) + "</td>" +
+                    "<td>" + displayValue(line.expiry_date) + "</td>" +
+                    "<td class=\"inv-mgmt-cell--num\">" + InventoryApi.formatMoney(line.line_total) + "</td>" +
+                    "</tr>"
+                );
+            }).join("") +
+            "</tbody></table></div>";
+    }
+
+    function setFormMode(mode) {
+        var titleEl = document.getElementById("stockin-form-title");
+        var saveBtn = document.getElementById("stockin-save-btn");
+        var addItemBtn = document.getElementById("stockin-add-item-btn");
+        var itemsPanel = document.querySelector("#stockin-form-panel .inv-mgmt-items-panel");
+
+        if (mode === "edit") {
+            if (titleEl) titleEl.textContent = "Edit Purchase";
+            if (saveBtn) saveBtn.textContent = "Update Purchase";
+            if (addItemBtn) addItemBtn.classList.add("inv-hidden");
+            if (itemsPanel) itemsPanel.classList.add("inv-stockin-items--readonly");
+        } else {
+            if (titleEl) titleEl.textContent = "Add Purchase";
+            if (saveBtn) saveBtn.textContent = "Save Purchase";
+            if (addItemBtn) addItemBtn.classList.remove("inv-hidden");
+            if (itemsPanel) itemsPanel.classList.remove("inv-stockin-items--readonly");
+        }
+    }
+
+    function setItemsEditable(editable) {
+        document.querySelectorAll("#stockin-items-container .inv-mgmt-item-row").forEach(function (row) {
+            row.querySelectorAll("input, select, button.inv-item-product-add, button.inv-item-remove").forEach(function (el) {
+                el.disabled = !editable;
+            });
+        });
+    }
+
+    function populateForm(invoice) {
+        document.getElementById("stockin-invoice-no").value = invoice.invoice_number || "";
+        document.getElementById("stockin-remarks").value = invoice.remarks || "";
+        var dateEl = document.getElementById("stockin-invoice-date");
+        if (dateEl) dateEl.value = invoice.invoice_date || "";
+
+        var container = document.getElementById("stockin-items-container");
+        container.innerHTML = "";
+        (invoice.items || []).forEach(function (line) {
+            container.appendChild(createItemRow({
+                product_id: line.product,
+                quantity: line.quantity,
+                purchase_price: line.purchase_price,
+                batch_number: line.batch_number,
+                expiry_date: line.expiry_date || ""
+            }));
+        });
+        setItemsEditable(false);
+    }
+
+    function resetForm() {
+        editingInvoiceId = null;
+        setFormMode("add");
+        document.getElementById("stockin-invoice-no").value = "";
+        document.getElementById("stockin-remarks").value = "";
+        var dateEl = document.getElementById("stockin-invoice-date");
+        if (dateEl) dateEl.value = new Date().toISOString().slice(0, 10);
+        var container = document.getElementById("stockin-items-container");
+        container.innerHTML = "";
+        container.appendChild(createItemRow());
+        setItemsEditable(true);
+    }
+
+    function openViewInvoice(id) {
+        InventoryLoader.show();
+        fetchInvoice(id)
+            .then(function (invoice) {
+                if (!invoice) return;
+                var viewTitle = document.getElementById("stockin-view-title");
+                if (viewTitle) viewTitle.textContent = invoice.invoice_number || "Purchase Details";
+                renderViewDetails(invoice);
+                InventoryPagePanel.showPanel(STOCKIN_LIST_PANEL, STOCKIN_VIEW_PANEL);
+            })
+            .catch(function () {
+                InventoryToast.error("Network error while loading purchase.");
+            })
+            .finally(function () {
+                InventoryLoader.hide();
+            });
+    }
+
+    function openEditInvoice(id) {
+        InventoryLoader.show();
+        loadProducts()
+            .then(function () {
+                return fetchInvoice(id);
+            })
+            .then(function (invoice) {
+                if (!invoice) return;
+                editingInvoiceId = invoice.id;
+                setFormMode("edit");
+                populateForm(invoice);
+                InventoryPagePanel.showPanel(STOCKIN_LIST_PANEL, STOCKIN_FORM_PANEL);
+                document.getElementById("stockin-invoice-no").focus();
+            })
+            .catch(function () {
+                InventoryToast.error("Network error while loading purchase.");
+            })
+            .finally(function () {
+                InventoryLoader.hide();
+            });
+    }
+
+    function deleteInvoice(id, btn) {
+        InventoryConfirm.delete({
+            title: "Delete purchase?",
+            message: "This will remove the purchase invoice and reverse its stock batches if none have been sold."
+        }).then(function (confirmed) {
+            if (!confirmed) return;
+            InventoryLoader.button(btn, true, "");
+            request("/" + id + "/", { method: "DELETE" })
+                .then(function (body) {
+                    if (body && body.isSuccess) {
+                        InventoryToast.success(body.message || "Purchase deleted.");
+                        loadInvoices(currentPage);
+                    } else {
+                        InventoryToast.error(body.message || "Unable to delete purchase.");
+                    }
+                })
+                .catch(function () {
+                    InventoryToast.error("Network error. Please try again.");
+                })
+                .finally(function () {
+                    InventoryLoader.button(btn, false);
+                });
+        });
     }
 
     function loadInvoices(page) {
@@ -164,16 +370,11 @@ var InventoryStockIn = (function () {
     }
 
     function openModal() {
-        document.getElementById("stockin-invoice-no").value = "";
-        document.getElementById("stockin-remarks").value = "";
-        var dateEl = document.getElementById("stockin-invoice-date");
-        if (dateEl) {
-            dateEl.value = new Date().toISOString().slice(0, 10);
-        }
-        var container = document.getElementById("stockin-items-container");
-        container.innerHTML = "";
-        container.appendChild(createItemRow());
-        InventoryModal.open("stockin-modal");
+        loadProducts().then(function () {
+            resetForm();
+            InventoryPagePanel.showPanel(STOCKIN_LIST_PANEL, STOCKIN_FORM_PANEL);
+            document.getElementById("stockin-invoice-no").focus();
+        });
     }
 
     function collectItems() {
@@ -201,25 +402,51 @@ var InventoryStockIn = (function () {
             return;
         }
 
+        var payload = {
+            invoice_number: invoiceNumber,
+            invoice_date: document.getElementById("stockin-invoice-date").value || undefined,
+            remarks: document.getElementById("stockin-remarks").value.trim()
+        };
+
+        if (editingInvoiceId) {
+            InventoryLoader.show();
+            request("/" + editingInvoiceId + "/", { method: "PATCH", body: payload })
+                .then(function (body) {
+                    if (body && body.isSuccess) {
+                        InventoryToast.success(body.message || "Purchase updated.");
+                        resetForm();
+                        InventoryPagePanel.showList(STOCKIN_LIST_PANEL);
+                        loadInvoices(currentPage);
+                    } else {
+                        var err = body.message || "Failed to update purchase.";
+                        if (body.errors && body.errors.length) err = body.errors.join(" • ");
+                        InventoryToast.error(err);
+                    }
+                })
+                .catch(function () {
+                    InventoryToast.error("Network error while saving invoice.");
+                })
+                .finally(function () {
+                    InventoryLoader.hide();
+                });
+            return;
+        }
+
         var items = collectItems();
         if (!items.length) {
             InventoryToast.error("Add at least one product row.");
             return;
         }
 
-        var payload = {
-            invoice_number: invoiceNumber,
-            invoice_date: document.getElementById("stockin-invoice-date").value || undefined,
-            remarks: document.getElementById("stockin-remarks").value.trim(),
-            items: items,
-        };
+        payload.items = items;
 
         InventoryLoader.show();
         request("/", { method: "POST", body: payload })
             .then(function (body) {
                 if (body && body.isSuccess) {
                     InventoryToast.success(body.message || "Purchase invoice saved.");
-                    InventoryModal.close("stockin-modal");
+                    resetForm();
+                    InventoryPagePanel.showList(STOCKIN_LIST_PANEL);
                     loadInvoices(1);
                 } else {
                     var err = body.message || "Failed to save invoice.";
@@ -236,11 +463,17 @@ var InventoryStockIn = (function () {
     }
 
     function init() {
-        InventoryModal.wire("stockin-modal");
+        if (document.getElementById("product-modal")) {
+            InventoryModal.wire("product-modal");
+        }
+        if (window.InventoryPagePanel) {
+            InventoryPagePanel.init();
+        }
 
         var openBtn = document.getElementById("stockin-open-modal-btn");
         var addItemBtn = document.getElementById("stockin-add-item-btn");
         var saveBtn = document.getElementById("stockin-save-btn");
+        var tbody = document.getElementById("stockin-table-body");
 
         function boot() {
             if (!InventoryBusiness.getActiveId()) return;
@@ -271,6 +504,25 @@ var InventoryStockIn = (function () {
             });
         }
         if (saveBtn) saveBtn.addEventListener("click", saveInvoice);
+
+        if (tbody) {
+            tbody.addEventListener("click", function (e) {
+                var viewBtn = e.target.closest(".inv-stockin-view");
+                if (viewBtn) {
+                    openViewInvoice(viewBtn.getAttribute("data-id"));
+                    return;
+                }
+                var editBtn = e.target.closest(".inv-stockin-edit");
+                if (editBtn) {
+                    openEditInvoice(editBtn.getAttribute("data-id"));
+                    return;
+                }
+                var deleteBtn = e.target.closest(".inv-stockin-delete");
+                if (deleteBtn) {
+                    deleteInvoice(deleteBtn.getAttribute("data-id"), deleteBtn);
+                }
+            });
+        }
     }
 
     return { init: init };

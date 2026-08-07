@@ -4,77 +4,102 @@
 
 {% block content %}
 <div class="inv-mgmt-page">
-    <div class="inv-mgmt-header">
-        <h2 class="inv-dashboard-greeting">Purchase (Stock In)</h2>
-        <button id="stockin-open-modal-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">
-            <span class="material-symbols-outlined">add</span>
-            Add Purchase
-        </button>
-    </div>
-
-    <div class="inv-mgmt-card">
-        <div class="inv-mgmt-table-wrap">
-            <table class="inv-mgmt-table inv-mgmt-table--stockin">
-                <colgroup>
-                    <col span="5" style="width:20%"/>
-                </colgroup>
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Invoice No.</th>
-                        <th>Items</th>
-                        <th>Subtotal</th>
-                        <th>Grand Total</th>
-                    </tr>
-                </thead>
-                <tbody id="stockin-table-body">
-                    <tr><td colspan="5" class="inv-mgmt-empty">Loading purchase invoices...</td></tr>
-                </tbody>
-            </table>
-        </div>
-        <div id="stockin-pagination" class="inv-pagination"></div>
-    </div>
-</div>
-
-<div id="stockin-modal" class="inv-modal inv-hidden" aria-hidden="true">
-    <div class="inv-modal-backdrop" data-modal-close></div>
-    <div class="inv-modal-dialog inv-modal-dialog--wide" role="dialog" aria-modal="true" aria-labelledby="stockin-modal-title">
-        <div class="inv-modal-header">
-            <h3 id="stockin-modal-title">Add Purchase</h3>
-            <button type="button" class="inv-modal-close" data-modal-close aria-label="Close">
-                <span class="material-symbols-outlined">close</span>
+    <div id="stockin-list-panel" class="inv-mgmt-page-panel">
+        <div class="inv-mgmt-header">
+            <h2 class="inv-dashboard-greeting">Purchase (Stock In)</h2>
+            <button id="stockin-open-modal-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">
+                <span class="material-symbols-outlined">add</span>
+                Add Purchase
             </button>
         </div>
-        <div class="inv-modal-body">
-            <div class="inv-mgmt-form-grid" style="padding:0;">
-                <div class="inv-mgmt-field">
-                    <label for="stockin-invoice-no">Invoice Number</label>
-                    <input id="stockin-invoice-no" class="inv-mgmt-input" type="text" placeholder="PI-001" required/>
+
+        <div class="inv-mgmt-card">
+            <div class="inv-mgmt-table-wrap">
+                <table class="inv-mgmt-table inv-mgmt-table--stockin">
+                    <colgroup>
+                        <col style="width:16%"/>
+                        <col style="width:22%"/>
+                        <col style="width:18%"/>
+                        <col style="width:18%"/>
+                        <col style="width:12%"/>
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Invoice No.</th>
+                            <th>Subtotal</th>
+                            <th>Grand Total</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stockin-table-body">
+                        <tr><td colspan="5" class="inv-mgmt-empty">Loading purchase invoices...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="stockin-pagination" class="inv-pagination"></div>
+        </div>
+    </div>
+
+    <div id="stockin-form-panel" class="inv-mgmt-page-panel inv-hidden">
+        <div class="inv-mgmt-panel-header">
+            <h2 id="stockin-form-title" class="inv-dashboard-greeting">Add Purchase</h2>
+            <button type="button" class="inv-mgmt-btn inv-page-back-btn" data-page-back="stockin-list-panel">
+                <span class="material-symbols-outlined">arrow_back</span>
+                Back to List
+            </button>
+        </div>
+        <div class="inv-mgmt-card inv-mgmt-panel-card">
+            <div class="inv-mgmt-panel-body">
+                <div class="inv-mgmt-form-grid inv-mgmt-form-grid--stockin-header" style="padding:0;">
+                    <div class="inv-mgmt-field">
+                        <label for="stockin-invoice-no">Invoice Number</label>
+                        <input id="stockin-invoice-no" class="inv-mgmt-input" type="text" placeholder="PI-001" required/>
+                    </div>
+                    <div class="inv-mgmt-field">
+                        <label for="stockin-invoice-date">Purchase Date</label>
+                        <input id="stockin-invoice-date" class="inv-mgmt-input" type="date"/>
+                    </div>
+                    <div class="inv-mgmt-field inv-mgmt-field--remarks">
+                        <label for="stockin-remarks">Remarks</label>
+                        <input id="stockin-remarks" class="inv-mgmt-input" type="text" placeholder="Optional notes"/>
+                    </div>
                 </div>
-                <div class="inv-mgmt-field">
-                    <label for="stockin-invoice-date">Purchase Date</label>
-                    <input id="stockin-invoice-date" class="inv-mgmt-input" type="date"/>
-                </div>
-                <div class="inv-mgmt-field inv-mgmt-field--full">
-                    <label for="stockin-remarks">Remarks</label>
-                    <input id="stockin-remarks" class="inv-mgmt-input" type="text" placeholder="Optional notes"/>
+
+                <div class="inv-mgmt-items-panel" style="margin-top:16px;border-radius:12px;">
+                    <div class="inv-mgmt-items-header">
+                        <div>
+                            <h4 style="margin:0;font-size:16px;font-weight:600;color:var(--inv-primary);">Purchase Items</h4>
+                            <p class="inv-mgmt-items-help">Each line creates an inventory batch. Stock is added and ready for FIFO sales.</p>
+                        </div>
+                        <button id="stockin-add-item-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Add Product Row</button>
+                    </div>
+                    <div id="stockin-items-container"></div>
                 </div>
             </div>
-
-            <div class="inv-mgmt-items-panel" style="margin-top:16px;border-radius:12px;">
-                <div class="inv-mgmt-items-header">
-                    <div>
-                        <h4 style="margin:0;font-size:16px;font-weight:600;color:var(--inv-primary);">Purchase Items</h4>
-                        <p class="inv-mgmt-items-help">Step 1: Each line creates an inventory batch. Stock is added and ready for FIFO sales.</p>
-                    </div>
-                    <button id="stockin-add-item-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Add Product Row</button>
-                </div>
-                <div id="stockin-items-container"></div>
+            <div class="inv-mgmt-panel-footer">
+                <button type="button" class="inv-mgmt-btn" data-page-back="stockin-list-panel">Cancel</button>
+                <button id="stockin-save-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Save Purchase</button>
             </div>
         </div>
-        <div class="inv-modal-footer">
-            <button type="button" class="inv-mgmt-btn" data-modal-close>Cancel</button>
-            <button id="stockin-save-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Save Purchase</button>
+    </div>
+
+    <div id="stockin-view-panel" class="inv-mgmt-page-panel inv-hidden">
+        <div class="inv-mgmt-panel-header">
+            <h2 id="stockin-view-title" class="inv-dashboard-greeting">Purchase Details</h2>
+            <button type="button" class="inv-mgmt-btn inv-page-back-btn" data-page-back="stockin-list-panel">
+                <span class="material-symbols-outlined">arrow_back</span>
+                Back to List
+            </button>
+        </div>
+        <div class="inv-mgmt-card inv-mgmt-panel-card">
+            <div class="inv-mgmt-panel-body">
+                <div id="stockin-view-body" class="inv-product-view-grid"></div>
+                <div id="stockin-view-items-wrap" class="inv-stockin-view-items"></div>
+            </div>
+            <div class="inv-mgmt-panel-footer">
+                <button type="button" class="inv-mgmt-btn inv-mgmt-btn--primary" data-page-back="stockin-list-panel">Close</button>
+            </div>
         </div>
     </div>
 </div>
@@ -86,9 +111,11 @@
 <link href="{% static 'css/inventory-mgmt.css' %}" rel="stylesheet"/>
 <script src="{% static 'js/inventory-api.js' %}"></script>
 <script src="{% static 'js/inventory-modal.js' %}"></script>
+<script src="{% static 'js/inventory-page-panel.js' %}"></script>
 <script src="{% static 'js/inventory-products.js' %}"></script>
 <script src="{% static 'js/inventory-stock-in.js' %}"></script>
 <script>
+InventoryPagePanel.init();
 InventoryProducts.init();
 InventoryStockIn.init();
 </script>

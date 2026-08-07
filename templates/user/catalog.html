@@ -1,0 +1,61 @@
+{% extends "user_layout.html" %}
+{% load static %}
+{% block title %}{{ catalog_title }} - Billing System{% endblock %}
+
+{% block content %}
+<div class="inv-mgmt-page" id="catalog-page"
+     data-resource="{{ catalog_resource }}"
+     data-title="{{ catalog_title }}"
+     data-list-panel="{{ catalog_resource }}-list-panel"
+     data-form-panel="{{ catalog_resource }}-form-panel">
+
+    <div id="{{ catalog_resource }}-list-panel" class="inv-mgmt-page-panel">
+        <div class="inv-mgmt-header">
+            <h2 class="inv-dashboard-greeting">{{ catalog_title }}</h2>
+            <button id="{{ catalog_resource }}-open-form-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">
+                <span class="material-symbols-outlined">add</span>
+                {{ catalog_add_label }}
+            </button>
+        </div>
+
+        <div class="inv-mgmt-card">
+            <div class="inv-mgmt-toolbar">
+                <input type="search" id="{{ catalog_resource }}-search" class="inv-mgmt-search" placeholder="Search {{ catalog_title|lower }}..."/>
+            </div>
+            <div class="inv-mgmt-table-wrap">
+                <table class="inv-mgmt-table">
+                    <thead id="{{ catalog_resource }}-table-head"></thead>
+                    <tbody id="{{ catalog_resource }}-table-body">
+                        <tr><td colspan="4" class="inv-mgmt-empty">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="{{ catalog_resource }}-pagination" class="inv-pagination"></div>
+        </div>
+    </div>
+
+    <div id="{{ catalog_resource }}-form-panel" class="inv-mgmt-page-panel inv-hidden">
+        <div class="inv-mgmt-panel-header">
+            <h2 id="{{ catalog_resource }}-form-title" class="inv-dashboard-greeting">{{ catalog_add_label }}</h2>
+            <button type="button" class="inv-mgmt-btn inv-page-back-btn" data-page-back="{{ catalog_resource }}-list-panel">
+                <span class="material-symbols-outlined">arrow_back</span>
+                Back to List
+            </button>
+        </div>
+        <div class="inv-mgmt-card inv-mgmt-panel-card">
+            <div class="inv-mgmt-panel-body">
+                <div class="inv-mgmt-form-grid" style="padding:0;" id="{{ catalog_resource }}-form-fields"></div>
+            </div>
+            <div class="inv-mgmt-panel-footer">
+                <button type="button" class="inv-mgmt-btn" data-page-back="{{ catalog_resource }}-list-panel">Cancel</button>
+                <button id="{{ catalog_resource }}-save-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script src="{% static 'js/inventory-catalog.js' %}"></script>
+<script>InventoryCatalog.init();</script>
+{% endblock %}

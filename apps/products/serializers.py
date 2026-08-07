@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from rest_framework import serializers
 
 from apps.catalog.models import Brand, Category, Unit
@@ -13,6 +15,9 @@ class ProductSerializer(BaseModelSerializer):
     unit_name = serializers.CharField(source="unit.name", read_only=True)
     unit_short_name = serializers.CharField(source="unit.short_name", read_only=True)
     quantity = serializers.SerializerMethodField()
+    opening_quantity = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
+    sold_quantity = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
+    has_sales = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
@@ -36,6 +41,9 @@ class ProductSerializer(BaseModelSerializer):
             "purchase_price",
             "sale_price",
             "quantity",
+            "opening_quantity",
+            "sold_quantity",
+            "has_sales",
             "is_active",
             "is_deleted",
             "created_at",
@@ -49,13 +57,19 @@ class ProductSerializer(BaseModelSerializer):
             return stocks[0].quantity
         return 0
 
+    def get_has_sales(self, obj):
+        sold = getattr(obj, "sold_quantity", None)
+        if sold is not None:
+            return Decimal(str(sold)) > 0
+        return False
+
 
 class ProductWriteSerializer(serializers.ModelSerializer):
     category_id = serializers.PrimaryKeyRelatedField(
         queryset=Category.objects.none(),
         source="category",
-        required=False,
-        allow_null=True,
+        required=True,
+        allow_null=False,
     )
     brand_id = serializers.PrimaryKeyRelatedField(
         queryset=Brand.objects.none(),
@@ -70,8 +84,11 @@ class ProductWriteSerializer(serializers.ModelSerializer):
     quantity = serializers.DecimalField(
         max_digits=12, decimal_places=2, min_value=0, required=False, default=0, write_only=True
     )
-    purchase_price = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=0, required=True)
-    sale_price = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=0, required=True)
+    purchase_price = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=0, required=False, default=0)
+    sale_price = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=0, required=False, default=0)
+
+    def validate_sku(self, value):
+        return (value or "").strip()
 
     class Meta:
         model = Product

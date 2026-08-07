@@ -51,6 +51,12 @@ class PurchaseInvoiceSerializer(BaseModelSerializer):
         )
 
 
+class PurchaseInvoiceHeaderWriteSerializer(serializers.Serializer):
+    invoice_number = serializers.CharField(max_length=50, required=False)
+    invoice_date = serializers.DateField(required=False, allow_null=True)
+    remarks = serializers.CharField(required=False, allow_blank=True, default="")
+
+
 class PurchaseInvoiceItemWriteSerializer(serializers.Serializer):
     product_id = serializers.IntegerField()
     quantity = serializers.DecimalField(max_digits=12, decimal_places=2)

@@ -1,0 +1,110 @@
+from django.db.models import Count, Q
+
+from apps.inventory.models import InventoryStock
+from apps.invoicing.models import PurchaseInvoice
+from apps.products.models import Product
+from apps.purchases.models import Purchase
+from core.business_scope import get_owned_business
+
+
+class DashboardService:
+    RECENT_LIMIT = 5
+
+    def get_stats(self, request):
+        business = get_owned_business(request)
+        business_id = business.id
+
+        totals = {
+            "products": Product.objects.filter(
+                business_id=business_id,
+                is_deleted=False,
+            ).count(),
+            "purchases": PurchaseInvoice.objects.filter(
+                business_id=business_id,
+                is_deleted=False,
+            ).count(),
+            "sales": Purchase.objects.filter(
+                business_id=business_id,
+                is_deleted=False,
+            ).count(),
+            "in_stock_products": InventoryStock.objects.filter(
+                business_id=business_id,
+                is_deleted=False,
+                quantity__gt=0,
+            )
+            .values("product_id")
+            .distinct()
+            .count(),
+        }
+
+        recent_purchases = self._recent_purchases(business_id)
+        recent_sales = self._recent_sales(business_id)
+
+        return {
+            "totals": totals,
+            "recent_purchases": recent_purchases,
+            "recent_sales": recent_sales,
+        }
+
+    def _recent_purchases(self, business_id):
+        invoices = (
+            PurchaseInvoice.objects.filter(
+                business_id=business_id,
+                is_deleted=False,
+            )
+            .annotate(
+                items_count=Count(
+                    "items",
+                    filter=Q(items__is_deleted=False),
+                )
+            )
+            .order_by("-invoice_date", "-created_at")[: self.RECENT_LIMIT]
+        )
+        return [
+            {
+                "id": invoice.id,
+                "date": invoice.invoice_date.isoformat() if invoice.invoice_date else "",
+                "invoice_number": invoice.invoice_number,
+                "amount": invoice.grand_total,
+                "items_count": invoice.items_count,
+            }
+            for invoice in invoices
+        ]
+
+    def _recent_sales(self, business_id):
+        sales = (
+            Purchase.objects.filter(
+                business_id=business_id,
+                is_deleted=False,
+            )
+            .prefetch_related("items__product")
+            .annotate(
+                items_count=Count(
+                    "items",
+                    filter=Q(items__is_deleted=False),
+                )
+            )
+            .order_by("-purchase_date", "-created_at")[: self.RECENT_LIMIT]
+        )
+        rows = []
+        for sale in sales:
+            product_names = [
+                item.product.name
+                for item in sale.items.all()
+                if not item.is_deleted and item.product
+            ]
+            summary = ", ".join(product_names[:2])
+            if len(product_names) > 2:
+                summary += f" +{len(product_names) - 2} more"
+            rows.append(
+                {
+                    "id": sale.id,
+                    "date": sale.purchase_date.isoformat() if sale.purchase_date else "",
+                    "customer_name": sale.customer_name,
+                    "reference_no": sale.reference_no or "",
+                    "amount": sale.total_amount,
+                    "items_count": sale.items_count,
+                    "products_summary": summary,
+                }
+            )
+        return rows

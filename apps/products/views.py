@@ -28,3 +28,8 @@ class ProductViewSet(BusinessScopedViewSetMixin, BaseViewSet):
             message="Record created",
             status_code=status.HTTP_201_CREATED,
         )
+
+    def next_sku(self, request):
+        business = self.get_active_business()
+        sku = self.get_service().get_next_sku(business.id)
+        return ApiResponse.success(data={"sku": sku})
