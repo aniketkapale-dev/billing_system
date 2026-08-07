@@ -74,6 +74,13 @@ class InventoryBatchSerializer(BaseModelSerializer):
     product_name = serializers.CharField(source="product.name", read_only=True)
     product_sku = serializers.CharField(source="product.sku", read_only=True)
     product_unit = serializers.CharField(source="product.unit.short_name", read_only=True)
+    product_sale_price = serializers.DecimalField(
+        source="product.sale_price",
+        max_digits=12,
+        decimal_places=2,
+        read_only=True,
+    )
+    unit_profit = serializers.SerializerMethodField()
     business_name = serializers.CharField(source="business.business_name", read_only=True)
     invoice_number = serializers.SerializerMethodField()
 
@@ -87,9 +94,11 @@ class InventoryBatchSerializer(BaseModelSerializer):
             "product_name",
             "product_sku",
             "product_unit",
+            "product_sale_price",
             "batch_number",
             "purchase_price",
             "selling_price",
+            "unit_profit",
             "purchased_quantity",
             "available_quantity",
             "manufacture_date",
@@ -99,6 +108,13 @@ class InventoryBatchSerializer(BaseModelSerializer):
             "created_at",
             "updated_at",
         )
+
+    def get_unit_profit(self, obj):
+        from decimal import Decimal
+
+        sale_price = Decimal(obj.product.sale_price or 0)
+        batch_cost = Decimal(obj.purchase_price or 0)
+        return sale_price - batch_cost
 
     def get_invoice_number(self, obj):
         item = obj.purchase_invoice_item

@@ -12,16 +12,6 @@
         </button>
     </div>
 
-    <div class="inv-mgmt-flow">
-        <span class="inv-mgmt-flow-step inv-mgmt-flow-step--active">1. Purchase</span>
-        <span class="material-symbols-outlined">arrow_forward</span>
-        <span class="inv-mgmt-flow-step">2. Sale</span>
-        <span class="material-symbols-outlined">arrow_forward</span>
-        <span class="inv-mgmt-flow-step">3. FIFO</span>
-        <span class="material-symbols-outlined">arrow_forward</span>
-        <span class="inv-mgmt-flow-step">4. Profit</span>
-    </div>
-
     <div class="inv-mgmt-card">
         <div class="inv-mgmt-table-wrap">
             <table class="inv-mgmt-table inv-mgmt-table--stockin">
@@ -88,12 +78,18 @@
         </div>
     </div>
 </div>
+
+{% include "partials/product_modal.html" %}
 {% endblock %}
 
 {% block page_scripts %}
 <link href="{% static 'css/inventory-mgmt.css' %}" rel="stylesheet"/>
 <script src="{% static 'js/inventory-api.js' %}"></script>
 <script src="{% static 'js/inventory-modal.js' %}"></script>
+<script src="{% static 'js/inventory-products.js' %}"></script>
 <script src="{% static 'js/inventory-stock-in.js' %}"></script>
-<script>InventoryStockIn.init();</script>
+<script>
+InventoryProducts.init();
+InventoryStockIn.init();
+</script>
 {% endblock %}

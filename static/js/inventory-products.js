@@ -359,7 +359,7 @@ var InventoryProducts = (function () {
     function buildQuery(search, page) {
         var params = new URLSearchParams();
         params.set("page", String(page || 1));
-        params.set("page_size", String(PAGE_SIZE));
+        params.set("page_size", String(InventoryPagination.getPageSize("products-pagination")));
         if (search) params.set("search", search);
         return "?" + params.toString();
     }
@@ -375,7 +375,11 @@ var InventoryProducts = (function () {
                     renderRows(body.data.items || []);
                     InventoryPagination.render("products-pagination", body.data.pagination, function (p) {
                         loadProducts(currentSearch, p);
-                    }, { label: "products" });
+                    }, {
+                        onPageSizeChange: function () {
+                            loadProducts(currentSearch, 1);
+                        }
+                    });
                 } else {
                     renderRows([]);
                     InventoryPagination.render("products-pagination", null, function () {});
@@ -394,16 +398,13 @@ var InventoryProducts = (function () {
     function setFormMode(mode) {
         var titleEl = document.getElementById("product-modal-title");
         var saveBtn = document.getElementById("product-save-btn");
-        var qtyField = document.getElementById("product-quantity-field");
 
         if (mode === "edit") {
             titleEl.textContent = "Edit Product";
             saveBtn.textContent = "Update Product";
-            if (qtyField) qtyField.classList.add("inv-hidden");
         } else {
             titleEl.textContent = "Add Product";
             saveBtn.textContent = "Save Product";
-            if (qtyField) qtyField.classList.remove("inv-hidden");
         }
     }
 
@@ -432,6 +433,7 @@ var InventoryProducts = (function () {
         document.getElementById("product-category").value = product.category || "";
         document.getElementById("product-brand").value = product.brand || "";
         document.getElementById("product-unit").value = product.unit || "";
+        document.getElementById("product-quantity").value = product.quantity != null ? product.quantity : "";
         document.getElementById("product-purchase-price").value = product.purchase_price != null ? product.purchase_price : "";
         document.getElementById("product-sale-price").value = product.sale_price != null ? product.sale_price : "";
         document.getElementById("product-description").value = product.description || "";
@@ -558,9 +560,7 @@ var InventoryProducts = (function () {
 
         if (categoryId) payload.category_id = Number(categoryId);
         if (brandId) payload.brand_id = Number(brandId);
-        if (!editingId) {
-            payload.quantity = parseNumber("product-quantity");
-        }
+        payload.quantity = parseNumber("product-quantity");
 
         var btn = document.getElementById("product-save-btn");
         InventoryLoader.button(btn, true, editingId ? "Updating..." : "Saving...");
@@ -571,10 +571,18 @@ var InventoryProducts = (function () {
         })
             .then(function (body) {
                 if (body && body.isSuccess) {
+                    var savedProduct = body.data;
                     InventoryToast.success(editingId ? "Product updated successfully." : "Product added successfully.");
                     resetForm();
                     InventoryModal.close("product-modal");
-                    loadProducts(currentSearch, editingId ? currentPage : 1);
+                    if (document.getElementById("products-table-body")) {
+                        loadProducts(currentSearch, editingId ? currentPage : 1);
+                    }
+                    if (savedProduct && !editingId) {
+                        window.dispatchEvent(new CustomEvent("inventory:product-created", {
+                            detail: { product: savedProduct }
+                        }));
+                    }
                 } else {
                     var err = body.message || "Unable to save product.";
                     if (body.errors && body.errors.length) err = body.errors.join(" • ");
@@ -713,5 +721,5 @@ var InventoryProducts = (function () {
         }
     }
 
-    return { init: init, loadProducts: loadProducts };
+    return { init: init, loadProducts: loadProducts, openAddModal: openAddModal };
 })();

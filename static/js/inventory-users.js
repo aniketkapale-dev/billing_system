@@ -83,7 +83,7 @@ var InventoryUsers = (function () {
     function buildQuery(search, page) {
         var params = new URLSearchParams();
         params.set("page", String(page || 1));
-        params.set("page_size", String(PAGE_SIZE));
+        params.set("page_size", String(InventoryPagination.getPageSize("users-pagination")));
         if (search) params.set("search", search);
         return "?" + params.toString();
     }
@@ -99,7 +99,11 @@ var InventoryUsers = (function () {
                     renderRows(body.data.items || []);
                     InventoryPagination.render("users-pagination", body.data.pagination, function (p) {
                         loadUsers(currentSearch, p);
-                    }, { label: "users" });
+                    }, {
+                        onPageSizeChange: function () {
+                            loadUsers(currentSearch, 1);
+                        }
+                    });
                 } else {
                     renderRows([]);
                     InventoryPagination.render("users-pagination", null, function () {});

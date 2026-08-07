@@ -6,6 +6,7 @@ var InventoryStockIn = (function () {
     var PAGE_SIZE = (window.InventoryConstants && InventoryConstants.PAGE_SIZE) || 10;
     var currentPage = 1;
     var products = [];
+    var pendingProductRow = null;
 
     function request(path, opts) {
         return InventoryApi.request(API, path, opts);
@@ -44,7 +45,32 @@ var InventoryStockIn = (function () {
 
     function applyProductToRow(row, product) {
         if (!product) return;
-        row.querySelector(".inv-item-buy").value = "";
+        var buyEl = row.querySelector(".inv-item-buy");
+        if (buyEl && product.purchase_price != null) {
+            buyEl.value = product.purchase_price;
+        }
+    }
+
+    function updateAllProductSelects(newProductId, focusRow) {
+        document.querySelectorAll("#stockin-items-container .inv-item-product").forEach(function (select) {
+            var row = select.closest(".inv-mgmt-item-row");
+            var selectedId = row === focusRow && newProductId
+                ? newProductId
+                : select.value;
+            select.innerHTML = productOptions(selectedId);
+            if (selectedId) {
+                select.value = String(selectedId);
+            }
+        });
+    }
+
+    function openAddProductModal(row) {
+        pendingProductRow = row || null;
+        if (window.InventoryProducts && typeof InventoryProducts.openAddModal === "function") {
+            InventoryProducts.openAddModal();
+            return;
+        }
+        InventoryToast.error("Product form is not available.");
     }
 
     function createItemRow(data) {
@@ -52,7 +78,11 @@ var InventoryStockIn = (function () {
         var row = document.createElement("div");
         row.className = "inv-mgmt-item-row inv-mgmt-item-row--stockin";
         row.innerHTML =
-            '<div class="inv-mgmt-field"><label>Product</label><select class="inv-mgmt-select inv-item-product" required>' + productOptions(data.product_id) + "</select></div>" +
+            '<div class="inv-mgmt-field"><label>Product</label>' +
+            '<div class="inv-field-inline">' +
+            '<select class="inv-mgmt-select inv-item-product" required>' + productOptions(data.product_id) + "</select>" +
+            '<button type="button" class="inv-inline-add-btn inv-item-product-add" title="Add product" aria-label="Add product">' +
+            '<span class="material-symbols-outlined">add</span></button></div></div>' +
             '<div class="inv-mgmt-field"><label>Quantity</label><input class="inv-mgmt-input inv-item-qty" type="number" min="0.01" step="0.01" value="' + (data.quantity || 1) + '" required/></div>' +
             '<div class="inv-mgmt-field"><label>Buy Price</label><input class="inv-mgmt-input inv-item-buy" type="number" min="0" step="0.01" value="' + (data.purchase_price || 0) + '" required/></div>' +
             '<div class="inv-mgmt-field"><label>Batch No.</label><input class="inv-mgmt-input inv-item-batch" type="text" placeholder="B001" value="' + InventoryApi.escapeHtml(data.batch_number || "") + '"/></div>' +
@@ -64,6 +94,9 @@ var InventoryStockIn = (function () {
         });
         row.querySelector(".inv-item-product").addEventListener("change", function () {
             applyProductToRow(row, getProduct(this.value));
+        });
+        row.querySelector(".inv-item-product-add").addEventListener("click", function () {
+            openAddProductModal(row);
         });
 
         if (data.product_id) {
@@ -104,13 +137,17 @@ var InventoryStockIn = (function () {
         InventoryLoader.show();
         var params = new URLSearchParams();
         params.set("page", String(currentPage));
-        params.set("page_size", String(PAGE_SIZE));
+        params.set("page_size", String(InventoryPagination.getPageSize("stockin-pagination")));
 
         return request("?" + params.toString())
             .then(function (body) {
                 if (body && body.isSuccess && body.data) {
                     renderRows(body.data.items || []);
-                    InventoryPagination.render("stockin-pagination", body.data.pagination, loadInvoices, { label: "invoices" });
+                    InventoryPagination.render("stockin-pagination", body.data.pagination, loadInvoices, {
+                        onPageSizeChange: function () {
+                            loadInvoices(1);
+                        }
+                    });
                 } else {
                     renderRows([]);
                     InventoryPagination.render("stockin-pagination", null, function () {});
@@ -214,6 +251,18 @@ var InventoryStockIn = (function () {
 
         InventoryBusiness.whenReady(boot);
         window.addEventListener("inventory:business-changed", boot);
+
+        window.addEventListener("inventory:product-created", function (e) {
+            var product = e.detail && e.detail.product;
+            var focusRow = pendingProductRow;
+            pendingProductRow = null;
+            loadProducts().then(function () {
+                updateAllProductSelects(product ? product.id : null, focusRow);
+                if (focusRow && product) {
+                    applyProductToRow(focusRow, product);
+                }
+            });
+        });
 
         if (openBtn) openBtn.addEventListener("click", openModal);
         if (addItemBtn) {

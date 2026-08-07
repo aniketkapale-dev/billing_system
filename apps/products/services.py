@@ -16,6 +16,7 @@ class ProductService(BaseService):
         self.batch_service = BatchInventoryService()
         self._initial_quantity = Decimal("0")
         self._business_id = None
+        self._update_quantity = None
 
     def before_create(self, data):
         user = get_current_user()
@@ -56,9 +57,55 @@ class ProductService(BaseService):
     def before_update(self, instance, data):
         data.pop("owner_id", None)
         data.pop("business_id", None)
-        data.pop("quantity", None)
+        qty = data.pop("quantity", None)
+        if qty is not None:
+            self._update_quantity = Decimal(str(qty))
+            if self._update_quantity < 0:
+                raise ValidationException("Quantity cannot be negative.")
+        else:
+            self._update_quantity = None
         self._validate_catalog_refs(data, instance.business_id, instance=instance)
         self._validate(data, exclude_pk=instance.pk, business_id=instance.business_id)
+
+    def after_update(self, instance):
+        if self._update_quantity is None:
+            return
+
+        business_id = instance.business_id
+        current = self.inventory_service.get_available_quantity(business_id, instance.id)
+        new_qty = self._update_quantity
+        if new_qty == current:
+            return
+
+        delta = new_qty - current
+        if delta > 0:
+            self.batch_service.create_opening_batch(
+                business_id=business_id,
+                product_id=instance.id,
+                quantity=delta,
+                purchase_price=Decimal(str(instance.purchase_price or 0)),
+                selling_price=Decimal(str(instance.sale_price or 0)),
+                batch_number="ADJ",
+            )
+            self.inventory_service.add_stock(business_id, instance.id, delta)
+            return
+
+        reduce_by = abs(delta)
+        try:
+            self.batch_service.consume_fifo(
+                business_id=business_id,
+                product_id=instance.id,
+                quantity=reduce_by,
+                reference_type="manual_adjustment",
+                reference_id=instance.id,
+            )
+            self.inventory_service.deduct_stock(business_id, instance.id, reduce_by)
+        except ValidationException:
+            raise
+        except Exception as exc:
+            raise ValidationException(
+                f"Cannot reduce quantity below available stock. Current stock: {current}."
+            ) from exc
 
     def _validate_catalog_refs(self, data, business_id, instance=None):
         category = data.get("category")

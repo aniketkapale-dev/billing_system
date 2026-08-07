@@ -54,12 +54,21 @@ var InventoryPurchases = (function () {
         return options;
     }
 
+    function defaultSalePrice(product) {
+        if (!product || product.sale_price == null || product.sale_price === "") {
+            return "";
+        }
+        return product.sale_price;
+    }
+
     function applyProductToRow(row, product) {
         var qtyInput = row.querySelector(".inv-item-qty");
         var priceInput = row.querySelector(".inv-item-price");
         if (!product) {
             qtyInput.removeAttribute("max");
             row.dataset.maxQty = "";
+            if (priceInput) priceInput.value = "";
+            updateRowTotal(row);
             return;
         }
         var available = Number(product.quantity || 0);
@@ -69,7 +78,9 @@ var InventoryPurchases = (function () {
         if (Number(qtyInput.value || 0) > available) {
             qtyInput.value = available > 0 ? available : "";
         }
-        priceInput.value = "";
+        if (priceInput) {
+            priceInput.value = defaultSalePrice(product);
+        }
         updateRowTotal(row);
     }
 
@@ -82,11 +93,11 @@ var InventoryPurchases = (function () {
     function createItemRow(data) {
         data = data || {};
         var row = document.createElement("div");
-        row.className = "inv-mgmt-item-row";
+        row.className = "inv-mgmt-item-row inv-mgmt-item-row--sale";
         row.innerHTML =
             '<div class="inv-mgmt-field"><label>Available Product</label><select class="inv-mgmt-select inv-item-product" required>' + productOptions(data.product_id) + "</select></div>" +
             '<div class="inv-mgmt-field"><label>Quantity</label><input class="inv-mgmt-input inv-item-qty" type="number" min="0.01" step="0.01" value="' + (data.quantity || 1) + '" required/></div>' +
-            '<div class="inv-mgmt-field"><label>Sale Price</label><input class="inv-mgmt-input inv-item-price" type="number" min="0" step="0.01" value="' + (data.unit_price || 0) + '" required/></div>' +
+            '<div class="inv-mgmt-field"><label>Sale Price</label><input class="inv-mgmt-input inv-item-price" type="number" min="0" step="0.01" placeholder="0.00" value="' + (data.unit_price != null && data.unit_price !== "" ? data.unit_price : "") + '" required/></div>' +
             '<div class="inv-mgmt-field"><label>Line Total</label><input class="inv-mgmt-input inv-item-total" type="text" readonly value="0.00"/></div>' +
             '<div class="inv-mgmt-field"><label>&nbsp;</label><button type="button" class="inv-mgmt-btn inv-mgmt-btn--danger inv-item-remove">Remove</button></div>';
 
@@ -164,7 +175,7 @@ var InventoryPurchases = (function () {
     function buildQuery(page) {
         var params = new URLSearchParams();
         params.set("page", String(page || 1));
-        params.set("page_size", String(PAGE_SIZE));
+        params.set("page_size", String(InventoryPagination.getPageSize("purchases-pagination")));
         return "?" + params.toString();
     }
 
@@ -178,7 +189,11 @@ var InventoryPurchases = (function () {
                     renderPurchaseRows(body.data.items || []);
                     InventoryPagination.render("purchases-pagination", body.data.pagination, function (p) {
                         loadPurchases(p);
-                    }, { label: "purchases" });
+                    }, {
+                        onPageSizeChange: function () {
+                            loadPurchases(1);
+                        }
+                    });
                 } else {
                     renderPurchaseRows([]);
                     InventoryPagination.render("purchases-pagination", null, function () {});
@@ -203,12 +218,21 @@ var InventoryPurchases = (function () {
             var row = rows[i];
             var productId = row.querySelector(".inv-item-product").value;
             var quantity = Number(row.querySelector(".inv-item-qty").value || 0);
-            var unitPrice = row.querySelector(".inv-item-price").value;
+            var unitPrice = Number(row.querySelector(".inv-item-price").value || 0);
             if (!productId) continue;
 
             var product = getProduct(productId);
             if (!product) {
                 InventoryToast.error("Selected product is no longer available.");
+                return null;
+            }
+
+            if (row.querySelector(".inv-item-price").value === "") {
+                InventoryToast.error("Enter a sale price for " + product.name + ".");
+                return null;
+            }
+            if (unitPrice < 0) {
+                InventoryToast.error("Sale price cannot be negative.");
                 return null;
             }
 

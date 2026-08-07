@@ -44,7 +44,6 @@ class PurchaseInvoiceService(BaseService):
             product_id = item.get("product_id")
             quantity = Decimal(str(item.get("quantity", 0)))
             purchase_price = Decimal(str(item.get("purchase_price", 0)))
-            selling_price = Decimal("0")
             discount = Decimal(str(item.get("discount", 0)))
             tax = Decimal(str(item.get("tax", 0)))
 
@@ -61,6 +60,8 @@ class PurchaseInvoiceService(BaseService):
                 )
             except Product.DoesNotExist:
                 raise NotFoundException(f"Product with id {product_id} not found.")
+
+            selling_price = Decimal(str(product.sale_price or 0))
 
             line_total = (quantity * purchase_price) - discount + tax
             subtotal += line_total

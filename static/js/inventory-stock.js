@@ -72,8 +72,8 @@ var InventoryStock = (function () {
             var avail = Number(item.available_quantity || 0);
             var availClass = avail > 0 ? "inv-batch-available" : "inv-batch-empty";
             var buy = Number(item.purchase_price || 0);
-            var sell = Number(item.selling_price || 0);
-            var unitProfit = sell - buy;
+            var sell = Number(item.product_sale_price != null ? item.product_sale_price : item.selling_price || 0);
+            var unitProfit = Number(item.unit_profit != null ? item.unit_profit : sell - buy);
             var profitClass = unitProfit >= 0 ? "inv-profit-positive" : "inv-profit-negative";
             return (
                 "<tr>" +
@@ -82,8 +82,8 @@ var InventoryStock = (function () {
                 "<td><code>" + InventoryApi.escapeHtml(item.batch_number || "—") + "</code></td>" +
                 "<td>" + InventoryApi.escapeHtml(item.invoice_number || "—") + "</td>" +
                 "<td class=\"inv-mgmt-cell--num " + availClass + "\"><strong>" + InventoryApi.escapeHtml(item.available_quantity) + "</strong></td>" +
-                "<td class=\"inv-mgmt-cell--num\">" + InventoryApi.formatMoney(item.purchase_price) + "</td>" +
-                "<td class=\"inv-mgmt-cell--num\">" + InventoryApi.formatMoney(item.selling_price) + "</td>" +
+                "<td class=\"inv-mgmt-cell--num\">" + InventoryApi.formatMoney(buy) + "</td>" +
+                "<td class=\"inv-mgmt-cell--num\">" + InventoryApi.formatMoney(sell) + "</td>" +
                 "<td class=\"inv-mgmt-cell--num " + profitClass + "\">" + formatProfit(unitProfit) + "</td>" +
                 "<td>" + formatDate(item.expiry_date) + "</td>" +
                 "<td>" + formatDate(String(item.created_at || "").slice(0, 10)) + "</td>" +
@@ -92,10 +92,10 @@ var InventoryStock = (function () {
         }).join("");
     }
 
-    function buildQuery(search, page, extra) {
+    function buildQuery(search, page, extra, containerId) {
         var params = new URLSearchParams();
         params.set("page", String(page || 1));
-        params.set("page_size", String(PAGE_SIZE));
+        params.set("page_size", String(InventoryPagination.getPageSize(containerId)));
         if (search) params.set("search", search);
         if (extra) {
             Object.keys(extra).forEach(function (key) {
@@ -112,13 +112,17 @@ var InventoryStock = (function () {
         currentPage = page || 1;
         InventoryLoader.show();
 
-        return summaryRequest(buildQuery(currentSearch, currentPage))
+        return summaryRequest(buildQuery(currentSearch, currentPage, null, "inventory-pagination"))
             .then(function (body) {
                 if (body && body.isSuccess && body.data) {
                     renderSummaryRows(body.data.items || []);
                     InventoryPagination.render("inventory-pagination", body.data.pagination, function (p) {
                         loadSummary(currentSearch, p);
-                    }, { label: "records" });
+                    }, {
+                        onPageSizeChange: function () {
+                            loadSummary(currentSearch, 1);
+                        }
+                    });
                 } else {
                     renderSummaryRows([]);
                     InventoryPagination.render("inventory-pagination", null, function () {});
@@ -144,13 +148,17 @@ var InventoryStock = (function () {
         }
 
         InventoryLoader.show();
-        return batchRequest(buildQuery(batchSearch, batchPage, extra))
+        return batchRequest(buildQuery(batchSearch, batchPage, extra, "batch-pagination"))
             .then(function (body) {
                 if (body && body.isSuccess && body.data) {
-                    renderBatchRows(body.data.items || [], batchPage, PAGE_SIZE);
+                    renderBatchRows(body.data.items || [], batchPage, InventoryPagination.getPageSize("batch-pagination"));
                     InventoryPagination.render("batch-pagination", body.data.pagination, function (p) {
                         loadBatches(batchSearch, p);
-                    }, { label: "batches" });
+                    }, {
+                        onPageSizeChange: function () {
+                            loadBatches(batchSearch, 1);
+                        }
+                    });
                 } else {
                     renderBatchRows([]);
                     InventoryPagination.render("batch-pagination", null, function () {});

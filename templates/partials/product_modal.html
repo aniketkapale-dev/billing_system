@@ -1,0 +1,103 @@
+<div id="product-modal" class="inv-modal inv-hidden" aria-hidden="true">
+    <div class="inv-modal-backdrop" data-modal-close></div>
+    <div class="inv-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="product-modal-title">
+        <div class="inv-modal-header">
+            <h3 id="product-modal-title">Add Product</h3>
+            <button type="button" class="inv-modal-close" data-modal-close aria-label="Close">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="inv-modal-body">
+            <div class="inv-mgmt-form-grid" style="padding:0;">
+                <div class="inv-mgmt-field">
+                    <label for="product-name">Product Name</label>
+                    <input id="product-name" class="inv-mgmt-input" type="text" placeholder="Product name" required/>
+                </div>
+                <div class="inv-mgmt-field">
+                    <label for="product-sku">Product Code (SKU)</label>
+                    <input id="product-sku" class="inv-mgmt-input" type="text" placeholder="Optional product code"/>
+                </div>
+                <div class="inv-mgmt-field">
+                    <label for="product-barcode">Barcode</label>
+                    <input id="product-barcode" class="inv-mgmt-input" type="text" placeholder="Optional barcode"/>
+                </div>
+                <div class="inv-mgmt-field" id="product-quantity-field">
+                    <label for="product-quantity">Quantity</label>
+                    <input id="product-quantity" class="inv-mgmt-input" type="number" min="0" step="0.01" placeholder="0"/>
+                </div>
+                <div class="inv-mgmt-field inv-mgmt-field--full">
+                    <label for="product-category">Category</label>
+                    <div class="inv-field-inline">
+                        <select id="product-category" class="inv-mgmt-select">
+                            <option value="">Select category (optional)</option>
+                        </select>
+                        <button id="product-category-add-btn" type="button" class="inv-inline-add-btn" title="Add new category" aria-label="Add new category">
+                            <span class="material-symbols-outlined">add</span>
+                        </button>
+                    </div>
+                    <div id="product-category-new-panel" class="inv-inline-add-panel inv-hidden">
+                        <input id="product-category-new-name" class="inv-mgmt-input" type="text" placeholder="New category name"/>
+                        <input id="product-category-new-desc" class="inv-mgmt-input" type="text" placeholder="Description (optional)"/>
+                        <div class="inv-inline-add-actions">
+                            <button id="product-category-save-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Save Category</button>
+                            <button id="product-category-cancel-btn" type="button" class="inv-mgmt-btn">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="inv-mgmt-field inv-mgmt-field--full">
+                    <label for="product-brand">Brand</label>
+                    <div class="inv-field-inline">
+                        <select id="product-brand" class="inv-mgmt-select">
+                            <option value="">Select brand (optional)</option>
+                        </select>
+                        <button id="product-brand-add-btn" type="button" class="inv-inline-add-btn" title="Add new brand" aria-label="Add new brand">
+                            <span class="material-symbols-outlined">add</span>
+                        </button>
+                    </div>
+                    <div id="product-brand-new-panel" class="inv-inline-add-panel inv-hidden">
+                        <input id="product-brand-new-name" class="inv-mgmt-input" type="text" placeholder="New brand name"/>
+                        <div class="inv-inline-add-actions">
+                            <button id="product-brand-save-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Save Brand</button>
+                            <button id="product-brand-cancel-btn" type="button" class="inv-mgmt-btn">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="inv-mgmt-field inv-mgmt-field--full">
+                    <label for="product-unit">Unit</label>
+                    <div class="inv-field-inline">
+                        <select id="product-unit" class="inv-mgmt-select" required>
+                            <option value="">Select unit</option>
+                        </select>
+                        <button id="product-unit-add-btn" type="button" class="inv-inline-add-btn" title="Add new unit" aria-label="Add new unit">
+                            <span class="material-symbols-outlined">add</span>
+                        </button>
+                    </div>
+                    <div id="product-unit-new-panel" class="inv-inline-add-panel inv-hidden">
+                        <input id="product-unit-new-name" class="inv-mgmt-input" type="text" placeholder="Unit name (e.g. Piece)"/>
+                        <input id="product-unit-new-short" class="inv-mgmt-input" type="text" placeholder="Short name (e.g. pcs)"/>
+                        <div class="inv-inline-add-actions">
+                            <button id="product-unit-save-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Save Unit</button>
+                            <button id="product-unit-cancel-btn" type="button" class="inv-mgmt-btn">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="inv-mgmt-field">
+                    <label for="product-purchase-price">Buy Price</label>
+                    <input id="product-purchase-price" class="inv-mgmt-input" type="number" min="0" step="0.01" placeholder="0.00" required/>
+                </div>
+                <div class="inv-mgmt-field">
+                    <label for="product-sale-price">Sell Price</label>
+                    <input id="product-sale-price" class="inv-mgmt-input" type="number" min="0" step="0.01" placeholder="0.00" required/>
+                </div>
+                <div class="inv-mgmt-field inv-mgmt-field--full">
+                    <label for="product-description">Description</label>
+                    <textarea id="product-description" class="inv-mgmt-textarea" rows="3" placeholder="Optional description"></textarea>
+                </div>
+            </div>
+        </div>
+        <div class="inv-modal-footer">
+            <button type="button" class="inv-mgmt-btn" data-modal-close>Cancel</button>
+            <button id="product-save-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Save Product</button>
+        </div>
+    </div>
+</div>

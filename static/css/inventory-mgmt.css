@@ -438,6 +438,10 @@
     grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto;
 }
 
+.inv-mgmt-item-row--sale {
+    grid-template-columns: 2fr 1fr 1fr 1fr auto;
+}
+
 .inv-mgmt-empty {
     text-align: center;
     color: var(--inv-secondary);
@@ -512,35 +516,6 @@
     color: var(--inv-error);
     border-color: var(--inv-error-container);
     background: var(--inv-error-container);
-}
-
-.inv-mgmt-flow {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 20px;
-    padding: 14px 16px;
-    border-radius: 12px;
-    background: #FFFFFF;
-    box-shadow: 0 2px 8px rgba(27, 33, 45, 0.06);
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--inv-secondary);
-}
-
-.inv-mgmt-flow-step {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 10px;
-    border-radius: 999px;
-    background: #F7F8FA;
-    color: var(--inv-primary);
-}
-
-.inv-mgmt-flow-step--active {
-    background: var(--inv-primary-container);
 }
 
 .inv-mgmt-items-panel {

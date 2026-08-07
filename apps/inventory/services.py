@@ -36,7 +36,7 @@ class InventoryStockService(BaseService):
 
         unrealized = batch_qs.filter(available_quantity__gt=0).aggregate(
             total=Sum(
-                F("available_quantity") * (F("selling_price") - F("purchase_price"))
+                F("available_quantity") * (F("product__sale_price") - F("purchase_price"))
             )
         )["total"] or Decimal("0")
 
@@ -45,7 +45,7 @@ class InventoryStockService(BaseService):
         )["total"] or Decimal("0")
 
         stock_value = batch_qs.filter(available_quantity__gt=0).aggregate(
-            total=Sum(F("available_quantity") * F("selling_price"))
+            total=Sum(F("available_quantity") * F("product__sale_price"))
         )["total"] or Decimal("0")
 
         realized = BatchConsumption.objects.filter(
