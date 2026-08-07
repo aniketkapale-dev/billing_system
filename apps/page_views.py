@@ -55,3 +55,13 @@ def user_inventory(request):
 def user_purchases(request):
     return render(request, "user/purchases.html", {"active_nav": "purchases"})
 
+
+@never_cache
+def user_stock_in(request):
+    return render(request, "user/stock-in.html", {"active_nav": "stock-in"})
+
+
+@never_cache
+def user_business(request):
+    return render(request, "user/business.html", {"active_nav": "business"})
+

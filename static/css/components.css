@@ -327,6 +327,7 @@ body.inv-modal-open { overflow: hidden; }
 .inv-modal-backdrop {
     position: absolute;
     inset: 0;
+    z-index: 0;
     background: rgba(27, 33, 45, 0.45);
     backdrop-filter: blur(2px);
 }
@@ -335,6 +336,7 @@ body.inv-modal-open { overflow: hidden; }
     position: absolute;
     top: 50%;
     left: 50%;
+    z-index: 1;
     transform: translate(-50%, -50%);
     width: min(640px, calc(100vw - 32px));
     max-height: calc(100vh - 32px);
@@ -371,6 +373,7 @@ body.inv-modal-open { overflow: hidden; }
     border: 1px solid #EEF0F4;
     background: #FFFFFF;
     color: var(--inv-secondary);
+    cursor: pointer;
 }
 
 .inv-modal-close:hover {

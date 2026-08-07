@@ -9,22 +9,13 @@ from core.base_serializer import BaseModelSerializer
 class InventoryStockSerializer(BaseModelSerializer):
     product_name = serializers.CharField(source="product.name", read_only=True)
     product_sku = serializers.CharField(source="product.sku", read_only=True)
-    product_unit = serializers.CharField(source="product.unit", read_only=True)
-    product_purchase_price = serializers.DecimalField(
-        source="product.purchase_price",
-        max_digits=12,
-        decimal_places=2,
-        read_only=True,
-    )
-    product_sale_price = serializers.DecimalField(
-        source="product.sale_price",
-        max_digits=12,
-        decimal_places=2,
-        read_only=True,
-    )
+    product_unit = serializers.CharField(source="product.unit.short_name", read_only=True)
+    avg_batch_cost = serializers.SerializerMethodField()
+    avg_batch_sell = serializers.SerializerMethodField()
     profit_per_unit = serializers.SerializerMethodField()
     total_profit = serializers.SerializerMethodField()
-    business_name = serializers.CharField(source="business.name", read_only=True)
+    batch_available = serializers.SerializerMethodField()
+    business_name = serializers.CharField(source="business.business_name", read_only=True)
 
     class Meta:
         model = InventoryStock
@@ -37,9 +28,10 @@ class InventoryStockSerializer(BaseModelSerializer):
             "product_name",
             "product_sku",
             "product_unit",
-            "product_purchase_price",
-            "product_sale_price",
+            "avg_batch_cost",
+            "avg_batch_sell",
             "quantity",
+            "batch_available",
             "profit_per_unit",
             "total_profit",
             "is_active",
@@ -47,10 +39,56 @@ class InventoryStockSerializer(BaseModelSerializer):
             "updated_at",
         )
 
+    def _get_product_batches(self, obj):
+        from apps.invoicing.models import InventoryBatch
+
+        return InventoryBatch.objects.filter(
+            business_id=obj.business_id,
+            product_id=obj.product_id,
+            is_deleted=False,
+            is_active=True,
+            available_quantity__gt=0,
+        )
+
+    def get_batch_available(self, obj):
+        batches = self._get_product_batches(obj)
+        return sum((Decimal(b.available_quantity) for b in batches), Decimal("0"))
+
+    def _batch_weighted_averages(self, obj):
+        batches = self._get_product_batches(obj)
+        total_qty = Decimal("0")
+        total_cost = Decimal("0")
+        total_sell = Decimal("0")
+        for batch in batches:
+            qty = Decimal(batch.available_quantity or 0)
+            total_qty += qty
+            total_cost += Decimal(batch.purchase_price or 0) * qty
+            total_sell += Decimal(batch.selling_price or 0) * qty
+        if total_qty <= 0:
+            return Decimal("0"), Decimal("0"), Decimal("0")
+        return total_cost / total_qty, total_sell / total_qty, total_qty
+
+    def get_avg_batch_cost(self, obj):
+        cost, _, qty = self._batch_weighted_averages(obj)
+        return cost if qty > 0 else Decimal("0")
+
+    def get_avg_batch_sell(self, obj):
+        _, sell, qty = self._batch_weighted_averages(obj)
+        return sell if qty > 0 else Decimal("0")
+
     def get_profit_per_unit(self, obj):
-        sale = Decimal(obj.product.sale_price or 0)
-        cost = Decimal(obj.product.purchase_price or 0)
-        return sale - cost
+        cost, sell, qty = self._batch_weighted_averages(obj)
+        if qty <= 0:
+            return Decimal("0")
+        return sell - cost
 
     def get_total_profit(self, obj):
-        return self.get_profit_per_unit(obj) * Decimal(obj.quantity or 0)
+        batches = self._get_product_batches(obj)
+        return sum(
+            (
+                (Decimal(b.selling_price or 0) - Decimal(b.purchase_price or 0))
+                * Decimal(b.available_quantity or 0)
+                for b in batches
+            ),
+            Decimal("0"),
+        )

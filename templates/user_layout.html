@@ -36,15 +36,27 @@
             </a>
         </li>
         <li>
+            <a class="inv-nav-item{% if active_nav == 'stock-in' %} inv-nav-item--active{% endif %}" href="/dashboard/stock-in/">
+                <span class="material-symbols-outlined">input</span>
+                Purchase
+            </a>
+        </li>
+        <li>
             <a class="inv-nav-item{% if active_nav == 'purchases' %} inv-nav-item--active{% endif %}" href="/dashboard/purchases/">
-                <span class="material-symbols-outlined">shopping_cart</span>
-                Purchases
+                <span class="material-symbols-outlined">point_of_sale</span>
+                Sale
             </a>
         </li>
         <li>
             <a class="inv-nav-item{% if active_nav == 'inventory' %} inv-nav-item--active{% endif %}" href="/dashboard/inventory/">
                 <span class="material-symbols-outlined">warehouse</span>
-                Inventory
+                Inventory &amp; Profit
+            </a>
+        </li>
+        <li>
+            <a class="inv-nav-item{% if active_nav == 'business' %} inv-nav-item--active{% endif %}" href="/dashboard/business/">
+                <span class="material-symbols-outlined">store</span>
+                Business
             </a>
         </li>
     </ul>
@@ -53,8 +65,8 @@
 <header class="inv-dashboard-header">
     <div class="inv-header-left">
         <div class="inv-business-switcher">
-            <label class="inv-business-label" for="inv-business-select">Business</label>
-            <select id="inv-business-select" class="inv-business-select" aria-label="Select business"></select>
+            <span class="inv-business-label">Business</span>
+            <div id="inv-business-tabs" class="inv-business-tabs" role="tablist" aria-label="Select business"></div>
             <button id="inv-business-add-btn" type="button" class="inv-business-add-btn" title="Add business" aria-label="Add business">
                 <span class="material-symbols-outlined">add</span>
             </button>
@@ -87,7 +99,7 @@
 
 <div id="business-modal" class="inv-modal inv-hidden" aria-hidden="true">
     <div class="inv-modal-backdrop" data-modal-close></div>
-    <div class="inv-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="business-modal-title">
+    <div class="inv-modal-dialog inv-modal-dialog--wide" role="dialog" aria-modal="true" aria-labelledby="business-modal-title">
         <div class="inv-modal-header">
             <h3 id="business-modal-title">Add Business</h3>
             <button type="button" class="inv-modal-close" data-modal-close aria-label="Close">
@@ -95,9 +107,31 @@
             </button>
         </div>
         <div class="inv-modal-body">
-            <div class="inv-mgmt-field">
-                <label for="business-name">Business Name</label>
-                <input id="business-name" class="inv-mgmt-input" type="text" placeholder="Business name" required/>
+            <div class="inv-mgmt-form-grid" style="padding:0;">
+                <div class="inv-mgmt-field inv-mgmt-field--full">
+                    <label for="business-name">Business Name</label>
+                    <input id="business-name" class="inv-mgmt-input" type="text" placeholder="Business name" required/>
+                </div>
+                <div class="inv-mgmt-field">
+                    <label for="business-gst">GST Number</label>
+                    <input id="business-gst" class="inv-mgmt-input" type="text" placeholder="GST number"/>
+                </div>
+                <div class="inv-mgmt-field">
+                    <label for="business-phone">Phone</label>
+                    <input id="business-phone" class="inv-mgmt-input" type="text" placeholder="Phone number"/>
+                </div>
+                <div class="inv-mgmt-field inv-mgmt-field--full">
+                    <label for="business-email">Email</label>
+                    <input id="business-email" class="inv-mgmt-input" type="email" placeholder="Business email"/>
+                </div>
+                <div class="inv-mgmt-field inv-mgmt-field--full">
+                    <label for="business-address">Address</label>
+                    <textarea id="business-address" class="inv-mgmt-textarea" rows="3" placeholder="Business address"></textarea>
+                </div>
+                <div class="inv-mgmt-field inv-mgmt-field--full">
+                    <label for="business-logo">Logo</label>
+                    <input id="business-logo" class="inv-mgmt-input" type="file" accept="image/*"/>
+                </div>
             </div>
         </div>
         <div class="inv-modal-footer">

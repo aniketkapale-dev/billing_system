@@ -9,7 +9,7 @@ class InventoryStockRepository(BaseRepository):
     model = InventoryStock
 
     def get_queryset(self):
-        return super().get_queryset().select_related("product", "owner", "business")
+        return super().get_queryset().select_related("product", "product__unit", "owner", "business")
 
     def get_or_create_stock(self, business_id, product_id):
         product = Product.objects.get(pk=product_id)

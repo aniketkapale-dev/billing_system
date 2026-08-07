@@ -79,10 +79,21 @@
 
 .inv-mgmt-table th,
 .inv-mgmt-table td {
-    padding: 12px 14px;
+    box-sizing: border-box;
+    padding: 12px 14px 12px 0;
     text-align: left;
     vertical-align: middle;
     border-bottom: 1px solid var(--inv-outline-variant);
+}
+
+.inv-mgmt-table th:first-child,
+.inv-mgmt-table td:first-child {
+    padding-left: 14px;
+}
+
+.inv-mgmt-table th:last-child,
+.inv-mgmt-table td:last-child {
+    padding-right: 14px;
 }
 
 .inv-mgmt-table th {
@@ -106,43 +117,258 @@
     word-break: break-word;
 }
 
-/* Products table */
-.inv-mgmt-table--products {
-    min-width: 860px;
-}
-
-.inv-mgmt-table--products col.inv-col-name { width: 20%; }
-.inv-mgmt-table--products col.inv-col-sku { width: 12%; }
-.inv-mgmt-table--products col.inv-col-unit { width: 8%; }
-.inv-mgmt-table--products col.inv-col-qty { width: 8%; }
-.inv-mgmt-table--products col.inv-col-buy { width: 14%; }
-.inv-mgmt-table--products col.inv-col-sell { width: 14%; }
-.inv-mgmt-table--products col.inv-col-action { width: 24%; }
-
-.inv-mgmt-table--products td.inv-col-qty,
-.inv-mgmt-table--products td.inv-col-buy,
-.inv-mgmt-table--products td.inv-col-sell {
-    text-align: right;
+/* Equal-width columns: numbers right-aligned, text columns left-aligned */
+.inv-mgmt-table--products th,
+.inv-mgmt-table--products td:not(.inv-mgmt-empty),
+.inv-mgmt-table--inventory th,
+.inv-mgmt-table--inventory td:not(.inv-mgmt-empty),
+.inv-mgmt-table--batches th,
+.inv-mgmt-table--batches td:not(.inv-mgmt-empty),
+.inv-mgmt-table--stockin th,
+.inv-mgmt-table--stockin td:not(.inv-mgmt-empty),
+.inv-mgmt-table--purchases th,
+.inv-mgmt-table--purchases td:not(.inv-mgmt-empty) {
+    /* text-align: right; */
     font-variant-numeric: tabular-nums;
 }
 
-.inv-mgmt-table--products .inv-col-action {
-    text-align: center;
+/* Products: Buy, Sell, Qty, Action = right */
+.inv-mgmt-table--products th:nth-child(6),
+.inv-mgmt-table--products td:nth-child(6):not(.inv-mgmt-empty),
+.inv-mgmt-table--products th:nth-child(7),
+.inv-mgmt-table--products td:nth-child(7):not(.inv-mgmt-empty),
+.inv-mgmt-table--products th:nth-child(8),
+.inv-mgmt-table--products td:nth-child(8):not(.inv-mgmt-empty),
+.inv-mgmt-table--products th:nth-child(10),
+.inv-mgmt-table--products td:nth-child(10):not(.inv-mgmt-empty) {
+    text-align: right;
+}
+/* Inventory: Product, SKU, Unit = text */
+.inv-mgmt-table--inventory th:nth-child(-n+3),
+.inv-mgmt-table--inventory td:nth-child(-n+3):not(.inv-mgmt-empty),
+/* Batches: Product, Batch, Invoice, Expiry, Received = text */
+.inv-mgmt-table--batches th:nth-child(2),
+.inv-mgmt-table--batches td:nth-child(2):not(.inv-mgmt-empty),
+.inv-mgmt-table--batches th:nth-child(3),
+.inv-mgmt-table--batches td:nth-child(3):not(.inv-mgmt-empty),
+.inv-mgmt-table--batches th:nth-child(4),
+.inv-mgmt-table--batches td:nth-child(4):not(.inv-mgmt-empty),
+.inv-mgmt-table--batches th:nth-child(9),
+.inv-mgmt-table--batches td:nth-child(9):not(.inv-mgmt-empty),
+.inv-mgmt-table--batches th:nth-child(10),
+.inv-mgmt-table--batches td:nth-child(10):not(.inv-mgmt-empty),
+/* Purchase & Sale lists: date, labels = text */
+.inv-mgmt-table--stockin th:nth-child(-n+3),
+.inv-mgmt-table--stockin td:nth-child(-n+3):not(.inv-mgmt-empty),
+.inv-mgmt-table--purchases th:nth-child(-n+3),
+.inv-mgmt-table--purchases td:nth-child(-n+3):not(.inv-mgmt-empty),
+/* First column on all tables */
+.inv-mgmt-table--products th:first-child,
+.inv-mgmt-table--products td:first-child:not(.inv-mgmt-empty),
+.inv-mgmt-table--inventory th:first-child,
+.inv-mgmt-table--inventory td:first-child:not(.inv-mgmt-empty),
+.inv-mgmt-table--batches th:first-child,
+.inv-mgmt-table--batches td:first-child:not(.inv-mgmt-empty),
+.inv-mgmt-table--stockin th:first-child,
+.inv-mgmt-table--stockin td:first-child:not(.inv-mgmt-empty),
+.inv-mgmt-table--purchases th:first-child,
+.inv-mgmt-table--purchases td:first-child:not(.inv-mgmt-empty) {
+    text-align: left;
+    font-variant-numeric: normal;
 }
 
-.inv-mgmt-table--products .inv-col-action .inv-mgmt-btn {
-    min-width: 72px;
+.inv-mgmt-table--products td:not(.inv-mgmt-empty),
+.inv-mgmt-table--inventory td:not(.inv-mgmt-empty),
+.inv-mgmt-table--batches td:not(.inv-mgmt-empty),
+.inv-mgmt-table--stockin td:not(.inv-mgmt-empty),
+.inv-mgmt-table--purchases td:not(.inv-mgmt-empty) {
+    white-space: normal;
+    word-break: break-word;
+}
+
+.inv-mgmt-table--products .inv-row-actions,
+.inv-mgmt-table--products td.inv-col-action {
+    justify-content: flex-end;
+}
+
+.inv-mgmt-table--products td.inv-col-sku,
+.inv-mgmt-table--products td.inv-col-barcode,
+.inv-mgmt-table--products td.inv-col-category,
+.inv-mgmt-table--products td.inv-col-brand,
+.inv-mgmt-table--products td.inv-col-unit,
+.inv-mgmt-table--inventory td.inv-col-sku,
+.inv-mgmt-table--inventory td.inv-col-unit {
+    color: var(--inv-secondary);
+}
+
+.inv-mgmt-table--products {
+    min-width: 1100px;
+}
+
+.inv-mgmt-table--inventory {
+    min-width: 920px;
+}
+
+.inv-mgmt-table--batches {
+    min-width: 1100px;
+}
+
+.inv-mgmt-table--stockin {
+    min-width: 720px;
+}
+
+.inv-mgmt-table--purchases {
+    min-width: 960px;
+}
+
+.inv-mgmt-table--products td.inv-col-action {
+    text-align: right;
+}
+
+.inv-mgmt-table--products td.inv-col-action .inv-row-actions {
+    display: inline-flex;
+    justify-content: flex-end;
+    width: 100%;
+}
+
+.inv-inline-add-panel {
+    margin-top: 10px;
+    padding: 12px;
+    border: 1px solid #EEF0F4;
+    border-radius: 10px;
+    background: #FAFBFC;
+    display: grid;
+    gap: 10px;
+}
+
+.inv-field-inline {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.inv-field-inline .inv-mgmt-select {
+    flex: 1;
+    min-width: 0;
+}
+
+.inv-inline-add-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    flex-shrink: 0;
+    border-radius: var(--inv-radius);
+    border: 1px solid var(--inv-primary-container);
+    background: var(--inv-primary-container);
+    color: var(--inv-primary);
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.inv-inline-add-btn:hover {
+    background: var(--inv-primary);
+    border-color: var(--inv-primary);
+    color: var(--inv-white, #fff);
+}
+
+.inv-inline-add-btn .material-symbols-outlined {
+    font-size: 20px;
+}
+
+.inv-inline-add-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.inv-row-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.inv-row-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: var(--inv-radius);
+    border: 1px solid var(--inv-outline-variant);
+    background: var(--inv-surface, #fff);
+    color: var(--inv-primary);
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.inv-row-action-btn .material-symbols-outlined {
+    font-size: 18px;
+}
+
+.inv-row-action-btn--view:hover,
+.inv-row-action-btn--edit:hover {
+    background: var(--inv-primary-container);
+    border-color: var(--inv-primary-container);
+}
+
+.inv-row-action-btn--delete {
+    color: var(--inv-error);
+    border-color: var(--inv-error-container);
+    background: var(--inv-error-container);
+}
+
+.inv-row-action-btn--delete:hover {
+    background: var(--inv-error);
+    color: var(--inv-white, #fff);
+    border-color: var(--inv-error);
+}
+
+.inv-product-view-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.inv-product-view-item--full {
+    grid-column: 1 / -1;
+}
+
+.inv-product-view-label {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--inv-secondary);
+}
+
+.inv-product-view-value {
+    font-size: 14px;
+    color: var(--inv-primary);
+    word-break: break-word;
+}
+
+@media (max-width: 640px) {
+    .inv-product-view-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 .inv-mgmt-table td.inv-mgmt-cell--num,
 .inv-mgmt-table th.inv-mgmt-cell--num {
-    text-align: right;
+    /* text-align: right; */
     font-variant-numeric: tabular-nums;
 }
 
 .inv-mgmt-table td.inv-mgmt-cell--action,
 .inv-mgmt-table th.inv-mgmt-cell--action {
-    text-align: right;
+    text-align: center;
     white-space: nowrap;
 }
 
@@ -157,27 +383,6 @@
     color: var(--inv-secondary);
 }
 
-.inv-mgmt-table--purchases col:nth-child(1) { width: 14%; }
-.inv-mgmt-table--purchases col:nth-child(2) { width: 18%; }
-.inv-mgmt-table--purchases col:nth-child(3) { width: 48%; }
-.inv-mgmt-table--purchases col:nth-child(4) { width: 20%; }
-
-.inv-mgmt-table--inventory col.inv-col-name { width: 18%; }
-.inv-mgmt-table--inventory col.inv-col-sku { width: 10%; }
-.inv-mgmt-table--inventory col.inv-col-unit { width: 8%; }
-.inv-mgmt-table--inventory col.inv-col-qty { width: 10%; }
-.inv-mgmt-table--inventory col.inv-col-buy { width: 14%; }
-.inv-mgmt-table--inventory col.inv-col-sell { width: 14%; }
-.inv-mgmt-table--inventory col.inv-col-profit { width: 16%; }
-
-.inv-mgmt-table--inventory td.inv-col-buy,
-.inv-mgmt-table--inventory td.inv-col-sell,
-.inv-mgmt-table--inventory td.inv-col-qty,
-.inv-mgmt-table--inventory td.inv-col-profit {
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-}
-
 .inv-profit-positive {
     color: var(--inv-success-text, #15803d);
 }
@@ -187,6 +392,51 @@
 }
 
 .inv-mgmt-table tbody tr:hover { background: #f6f3f2; }
+
+.inv-mgmt-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.inv-mgmt-tab {
+    padding: 10px 18px;
+    border-radius: 10px;
+    border: 1px solid #EEF0F4;
+    background: #FFFFFF;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--inv-secondary);
+    cursor: pointer;
+}
+
+.inv-mgmt-tab--active {
+    background: var(--inv-primary-container);
+    border-color: var(--inv-primary-container);
+    color: var(--inv-primary);
+}
+
+.inv-mgmt-checkbox-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--inv-primary);
+    white-space: nowrap;
+}
+
+.inv-batch-available {
+    color: var(--inv-success-text, #15803d);
+}
+
+.inv-batch-empty {
+    color: var(--inv-secondary);
+}
+
+.inv-mgmt-item-row--stockin {
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto;
+}
 
 .inv-mgmt-empty {
     text-align: center;
@@ -318,6 +568,99 @@
 @media (max-width: 900px) {
     .inv-mgmt-form-grid,
     .inv-mgmt-item-row {
+        grid-template-columns: 1fr;
+    }
+
+    .inv-business-profile {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Business profile page */
+.inv-business-profile {
+    display: grid;
+    grid-template-columns: 200px minmax(0, 1fr);
+    gap: 28px;
+    padding: 24px;
+}
+
+.inv-business-profile-logo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.inv-business-profile-logo-preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 140px;
+    height: 140px;
+    border-radius: 16px;
+    border: 1px solid #EEF0F4;
+    background: #FAFBFC;
+    overflow: hidden;
+}
+
+.inv-business-profile-logo-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.inv-business-profile-logo-preview .material-symbols-outlined {
+    font-size: 48px;
+    color: var(--inv-secondary);
+}
+
+.inv-business-profile-logo-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    width: 100%;
+}
+
+.inv-business-profile-form {
+    min-width: 0;
+}
+
+.inv-business-profile-meta {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #EEF0F4;
+}
+
+.inv-business-profile-meta-label {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--inv-secondary);
+}
+
+.inv-business-profile-meta-value {
+    font-size: 14px;
+    color: var(--inv-primary);
+    word-break: break-word;
+}
+
+.inv-business-profile-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #EEF0F4;
+}
+
+@media (max-width: 768px) {
+    .inv-business-profile-meta {
         grid-template-columns: 1fr;
     }
 }

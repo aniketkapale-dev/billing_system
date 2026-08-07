@@ -40,10 +40,18 @@ var InventoryApi = (function () {
         if (skipBusiness === undefined) {
             skipBusiness = String(basePath).indexOf("/api/businesses") !== -1;
         }
+        var headers = authHeaders({ skipBusiness: skipBusiness });
+        var body = undefined;
+        if (opts.body instanceof FormData) {
+            delete headers["Content-Type"];
+            body = opts.body;
+        } else if (opts.body) {
+            body = JSON.stringify(opts.body);
+        }
         return fetch(buildUrl(basePath, path), {
             method: opts.method || "GET",
-            headers: authHeaders({ skipBusiness: skipBusiness }),
-            body: opts.body ? JSON.stringify(opts.body) : undefined,
+            headers: headers,
+            body: body,
             cache: "no-store"
         }).then(function (res) {
             return res.json();

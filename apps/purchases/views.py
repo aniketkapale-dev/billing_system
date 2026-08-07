@@ -33,7 +33,7 @@ class PurchaseViewSet(BusinessScopedViewSetMixin, BaseViewSet):
         payload = self.serializer_class(instance, context={"request": request}).data
         return ApiResponse.success(
             data=payload,
-            message="Purchase recorded and stock updated.",
+            message="Sale recorded. FIFO batches consumed and profit calculated.",
             status_code=status.HTTP_201_CREATED,
         )
 

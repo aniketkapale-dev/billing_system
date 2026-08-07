@@ -118,8 +118,9 @@ body.inv-dashboard-body {
 .inv-business-switcher {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     min-width: 0;
+    flex: 1;
 }
 
 .inv-business-label {
@@ -127,24 +128,54 @@ body.inv-dashboard-body {
     font-weight: 600;
     color: var(--inv-secondary);
     white-space: nowrap;
+    flex-shrink: 0;
 }
 
-.inv-business-select {
-    min-width: 180px;
-    max-width: 280px;
-    padding: 8px 12px;
-    font-size: 14px;
-    font-family: inherit;
-    border: 1px solid var(--inv-input-border);
-    border-radius: var(--inv-radius);
+.inv-business-tabs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    flex: 1;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    padding: 2px 0;
+}
+
+.inv-business-tabs-empty {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--inv-secondary);
+    white-space: nowrap;
+}
+
+.inv-business-tab {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: 1px solid #EEF0F4;
     background: #FFFFFF;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    color: var(--inv-secondary);
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.inv-business-tab:hover:not(.inv-business-tab--active) {
+    background: #F7F8FA;
     color: var(--inv-primary);
 }
 
-.inv-business-select:focus {
-    outline: none;
-    border-color: var(--inv-primary);
-    box-shadow: 0 0 0 1px var(--inv-primary);
+.inv-business-tab--active {
+    background: var(--inv-primary-container);
+    border-color: var(--inv-primary-container);
+    color: var(--inv-primary);
 }
 
 .inv-business-add-btn {
@@ -153,6 +184,7 @@ body.inv-dashboard-body {
     justify-content: center;
     width: 36px;
     height: 36px;
+    flex-shrink: 0;
     border-radius: 10px;
     border: 1px solid #EEF0F4;
     background: var(--inv-primary-container);

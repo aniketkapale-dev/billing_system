@@ -1,0 +1,88 @@
+{% extends "user_layout.html" %}
+{% load static %}
+{% block title %}Business - Billing System{% endblock %}
+
+{% block content %}
+<div class="inv-mgmt-page">
+    <div class="inv-mgmt-header">
+        <h2 class="inv-dashboard-greeting">Business</h2>
+    </div>
+
+    <div id="business-profile-empty" class="inv-business-empty inv-hidden">
+        <p>Select or create a business using the tabs above to view and edit its details.</p>
+        <button type="button" class="inv-mgmt-btn inv-mgmt-btn--primary" id="business-profile-empty-add-btn">
+            <span class="material-symbols-outlined">add</span>
+            Add Business
+        </button>
+    </div>
+
+    <div id="business-profile-panel" class="inv-mgmt-card inv-hidden">
+        <div class="inv-business-profile">
+            <div class="inv-business-profile-logo">
+                <div id="business-profile-logo-preview" class="inv-business-profile-logo-preview" aria-hidden="true">
+                    <span class="material-symbols-outlined">storefront</span>
+                </div>
+                <div class="inv-business-profile-logo-actions">
+                    <label class="inv-mgmt-btn" for="business-profile-logo">Change Logo</label>
+                    <input id="business-profile-logo" class="inv-hidden" type="file" accept="image/*"/>
+                    <button type="button" id="business-profile-logo-clear" class="inv-mgmt-btn inv-hidden">Remove Logo</button>
+                </div>
+            </div>
+
+            <form id="business-profile-form" class="inv-business-profile-form" novalidate>
+                <div class="inv-mgmt-form-grid" style="padding:0;">
+                    <div class="inv-mgmt-field inv-mgmt-field--full">
+                        <label for="business-profile-name">Business Name</label>
+                        <input id="business-profile-name" class="inv-mgmt-input" type="text" placeholder="Business name" required/>
+                    </div>
+                    <div class="inv-mgmt-field">
+                        <label for="business-profile-gst">GST Number</label>
+                        <input id="business-profile-gst" class="inv-mgmt-input" type="text" placeholder="GST number"/>
+                    </div>
+                    <div class="inv-mgmt-field">
+                        <label for="business-profile-phone">Phone</label>
+                        <input id="business-profile-phone" class="inv-mgmt-input" type="text" placeholder="Phone number"/>
+                    </div>
+                    <div class="inv-mgmt-field inv-mgmt-field--full">
+                        <label for="business-profile-email">Email</label>
+                        <input id="business-profile-email" class="inv-mgmt-input" type="email" placeholder="Business email"/>
+                    </div>
+                    <div class="inv-mgmt-field inv-mgmt-field--full">
+                        <label for="business-profile-address">Address</label>
+                        <textarea id="business-profile-address" class="inv-mgmt-textarea" rows="3" placeholder="Business address"></textarea>
+                    </div>
+                </div>
+
+                <div class="inv-business-profile-meta">
+                    <div class="inv-business-profile-meta-item">
+                        <span class="inv-business-profile-meta-label">Owner</span>
+                        <span id="business-profile-owner" class="inv-business-profile-meta-value">—</span>
+                    </div>
+                    <div class="inv-business-profile-meta-item">
+                        <span class="inv-business-profile-meta-label">Created</span>
+                        <span id="business-profile-created" class="inv-business-profile-meta-value">—</span>
+                    </div>
+                    <div class="inv-business-profile-meta-item">
+                        <span class="inv-business-profile-meta-label">Last Updated</span>
+                        <span id="business-profile-updated" class="inv-business-profile-meta-value">—</span>
+                    </div>
+                </div>
+
+                <div class="inv-business-profile-actions">
+                    <button type="submit" id="business-profile-save-btn" class="inv-mgmt-btn inv-mgmt-btn--primary">
+                        <span class="material-symbols-outlined">save</span>
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<link href="{% static 'css/inventory-mgmt.css' %}" rel="stylesheet"/>
+<script src="{% static 'js/inventory-api.js' %}"></script>
+<script src="{% static 'js/inventory-business-profile.js' %}"></script>
+<script>InventoryBusinessProfile.init();</script>
+{% endblock %}

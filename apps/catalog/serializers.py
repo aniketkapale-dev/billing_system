@@ -1,0 +1,78 @@
+from rest_framework import serializers
+
+from apps.catalog.models import Brand, Category, Unit
+from core.base_serializer import BaseModelSerializer
+
+
+class UnitSerializer(BaseModelSerializer):
+    business_name = serializers.CharField(source="business.business_name", read_only=True)
+
+    class Meta:
+        model = Unit
+        fields = (
+            "id",
+            "business",
+            "business_name",
+            "name",
+            "short_name",
+            "is_active",
+            "is_deleted",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = ("business",)
+
+
+class UnitWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Unit
+        fields = ("name", "short_name", "is_active")
+
+
+class CategorySerializer(BaseModelSerializer):
+    business_name = serializers.CharField(source="business.business_name", read_only=True)
+
+    class Meta:
+        model = Category
+        fields = (
+            "id",
+            "business",
+            "business_name",
+            "name",
+            "description",
+            "is_active",
+            "is_deleted",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = ("business",)
+
+
+class CategoryWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = ("name", "description", "is_active")
+
+
+class BrandSerializer(BaseModelSerializer):
+    business_name = serializers.CharField(source="business.business_name", read_only=True)
+
+    class Meta:
+        model = Brand
+        fields = (
+            "id",
+            "business",
+            "business_name",
+            "name",
+            "is_active",
+            "is_deleted",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = ("business",)
+
+
+class BrandWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Brand
+        fields = ("name", "is_active")

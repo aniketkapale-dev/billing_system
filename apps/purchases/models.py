@@ -27,6 +27,8 @@ class Purchase(BaseEntity):
     purchase_date = models.DateField(default=timezone.localdate)
     notes = models.TextField(blank=True, default="")
     total_amount = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
+    total_cost = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
+    total_profit = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
 
     class Meta:
         db_table = "purchases"
@@ -54,6 +56,8 @@ class PurchaseItem(BaseEntity):
     quantity = models.DecimalField(max_digits=12, decimal_places=2)
     unit_price = models.DecimalField(max_digits=12, decimal_places=2)
     line_total = models.DecimalField(max_digits=14, decimal_places=2)
+    cost_amount = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
+    profit_amount = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
 
     class Meta:
         db_table = "purchase_items"

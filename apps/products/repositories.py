@@ -15,6 +15,6 @@ class ProductRepository(BaseRepository):
         return (
             super()
             .get_queryset()
-            .select_related("owner", "business")
+            .select_related("owner", "business", "category", "brand", "unit")
             .prefetch_related(Prefetch("inventory_stocks", queryset=active_stocks))
         )

@@ -8,6 +8,7 @@ var InventoryModal = (function () {
         var modal = document.getElementById(modalId);
         if (!modal) return;
         modal.classList.remove("inv-hidden");
+        modal.setAttribute("aria-hidden", "false");
         document.body.classList.add("inv-modal-open");
     }
 
@@ -15,6 +16,7 @@ var InventoryModal = (function () {
         var modal = document.getElementById(modalId);
         if (!modal) return;
         modal.classList.add("inv-hidden");
+        modal.setAttribute("aria-hidden", "true");
         if (!document.querySelector(".inv-modal:not(.inv-hidden)")) {
             document.body.classList.remove("inv-modal-open");
         }
@@ -22,31 +24,54 @@ var InventoryModal = (function () {
 
     function wire(modalId) {
         var modal = document.getElementById(modalId);
-        if (!modal) return;
+        if (!modal || modal.dataset.modalWired === "true") return;
+        modal.dataset.modalWired = "true";
 
-        modal.querySelectorAll("[data-modal-close]").forEach(function (el) {
-            el.addEventListener("click", function () {
+        modal.addEventListener("click", function (e) {
+            if (e.target.closest("[data-modal-close]")) {
+                e.preventDefault();
                 close(modalId);
-            });
-        });
-
-        var backdrop = modal.querySelector(".inv-modal-backdrop");
-        if (backdrop) {
-            backdrop.addEventListener("click", function () {
-                close(modalId);
-            });
-        }
-
-        window.addEventListener("keydown", function onKeydown(e) {
-            if (e.key === "Escape" && !modal.classList.contains("inv-hidden")) {
+                return;
+            }
+            if (e.target.classList.contains("inv-modal-backdrop")) {
                 close(modalId);
             }
         });
     }
 
+    function wireAll() {
+        document.querySelectorAll(".inv-modal[id]").forEach(function (node) {
+            wire(node.id);
+        });
+    }
+
+    function bindEscape() {
+        if (document.documentElement.dataset.invModalEscapeBound === "true") return;
+        document.documentElement.dataset.invModalEscapeBound = "true";
+        document.addEventListener("keydown", function (e) {
+            if (e.key !== "Escape") return;
+            var openModal = document.querySelector(".inv-modal:not(.inv-hidden)");
+            if (openModal && openModal.id) {
+                close(openModal.id);
+            }
+        });
+    }
+
+    function init() {
+        wireAll();
+        bindEscape();
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", init);
+    } else {
+        init();
+    }
+
     return {
         open: open,
         close: close,
-        wire: wire
+        wire: wire,
+        wireAll: wireAll
     };
 })();

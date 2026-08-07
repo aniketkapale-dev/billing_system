@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.db import models
 
 from apps.users.models import User
@@ -17,12 +19,34 @@ class Product(BaseEntity):
         related_name="products",
         db_column="business_id",
     )
+    category = models.ForeignKey(
+        "catalog.Category",
+        on_delete=models.SET_NULL,
+        related_name="products",
+        db_column="category_id",
+        null=True,
+        blank=True,
+    )
+    brand = models.ForeignKey(
+        "catalog.Brand",
+        on_delete=models.SET_NULL,
+        related_name="products",
+        db_column="brand_id",
+        null=True,
+        blank=True,
+    )
+    unit = models.ForeignKey(
+        "catalog.Unit",
+        on_delete=models.PROTECT,
+        related_name="products",
+        db_column="unit_id",
+    )
     name = models.CharField(max_length=150)
     sku = models.CharField(max_length=50, blank=True, default="")
-    unit = models.CharField(max_length=20, default="pcs")
+    barcode = models.CharField(max_length=100, blank=True, default="")
     description = models.TextField(blank=True, default="")
-    purchase_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    sale_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    purchase_price = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0"))
+    sale_price = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0"))
 
     class Meta:
         db_table = "products"

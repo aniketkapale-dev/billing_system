@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from django.db import transaction
 
+from apps.inventory.batch_service import BatchInventoryService
 from apps.inventory.services import InventoryStockService
 from apps.products.models import Product
 from apps.purchases.models import PurchaseItem
@@ -16,6 +17,7 @@ class PurchaseService(BaseService):
     def __init__(self):
         super().__init__(repository=PurchaseRepository())
         self.inventory_service = InventoryStockService()
+        self.batch_service = BatchInventoryService()
 
     @transaction.atomic
     def create_with_items(self, data):
@@ -70,7 +72,7 @@ class PurchaseService(BaseService):
             })
 
         for product_id, requested_qty in requested_by_product.items():
-            available = self.inventory_service.get_available_quantity(business_id, product_id)
+            available = self.batch_service.get_available_for_sale(business_id, product_id)
             if requested_qty > available:
                 product = Product.objects.get(pk=product_id)
                 raise ValidationException(
@@ -82,18 +84,49 @@ class PurchaseService(BaseService):
         data["total_amount"] = total_amount
         purchase = self.repository.create(**data)
 
+        total_cost = Decimal("0")
+        total_profit = Decimal("0")
+
         for item in prepared_items:
-            PurchaseItem.objects.create(
+            purchase_item = PurchaseItem.objects.create(
                 purchase=purchase,
                 product=item["product"],
                 quantity=item["quantity"],
                 unit_price=item["unit_price"],
                 line_total=item["line_total"],
             )
+            slices = self.batch_service.consume_fifo(
+                business_id,
+                item["product"].id,
+                item["quantity"],
+                reference_type=BatchInventoryService.REF_CUSTOMER_SALE,
+                reference_id=purchase_item.id,
+                selling_price=item["unit_price"],
+                purchase_item=purchase_item,
+            )
+            line_cost = sum(
+                (s["purchase_price"] * s["quantity"] for s in slices),
+                Decimal("0"),
+            )
+            line_profit = sum(
+                (s["profit"] for s in slices),
+                Decimal("0"),
+            )
+            purchase_item.cost_amount = line_cost
+            purchase_item.profit_amount = line_profit
+            purchase_item.save(update_fields=["cost_amount", "profit_amount", "updated_at"])
+
+            total_cost += line_cost
+            total_profit += line_profit
+
             self.inventory_service.deduct_stock(
                 business_id,
                 item["product"].id,
                 item["quantity"],
             )
+
+        purchase.total_cost = total_cost
+        purchase.total_profit = total_profit
+        purchase.save(update_fields=["total_cost", "total_profit", "updated_at"])
 
         return purchase

@@ -69,7 +69,7 @@ var InventoryPurchases = (function () {
         if (Number(qtyInput.value || 0) > available) {
             qtyInput.value = available > 0 ? available : "";
         }
-        priceInput.value = product.sale_price || 0;
+        priceInput.value = "";
         updateRowTotal(row);
     }
 
@@ -127,7 +127,7 @@ var InventoryPurchases = (function () {
         if (!tbody) return;
 
         if (!items || !items.length) {
-            tbody.innerHTML = '<tr><td colspan="4" class="inv-mgmt-empty">No purchases yet.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="inv-mgmt-empty">No sales yet. Record a purchase first, then create a sale.</td></tr>';
             return;
         }
 
@@ -138,15 +138,27 @@ var InventoryPurchases = (function () {
             }).join(", ");
             if (!productNames) productNames = "—";
 
+            var profit = Number(purchase.total_profit || 0);
+            var profitClass = profit >= 0 ? "inv-profit-positive" : "inv-profit-negative";
+
             return (
                 "<tr>" +
                 "<td>" + InventoryApi.escapeHtml(purchase.purchase_date) + "</td>" +
                 "<td>" + InventoryApi.escapeHtml(purchase.customer_name || "—") + "</td>" +
                 "<td class=\"inv-col-name\">" + productNames + "</td>" +
                 "<td class=\"inv-mgmt-cell--num\">" + InventoryApi.formatMoney(purchase.total_amount) + "</td>" +
+                "<td class=\"inv-mgmt-cell--num\">" + InventoryApi.formatMoney(purchase.total_cost) + "</td>" +
+                "<td class=\"inv-mgmt-cell--num " + profitClass + "\"><strong>" + formatProfit(profit) + "</strong></td>" +
                 "</tr>"
             );
         }).join("");
+    }
+
+    function formatProfit(value) {
+        var num = Number(value || 0);
+        var formatted = InventoryApi.formatMoney(num);
+        if (num > 0) return "+" + formatted;
+        return formatted;
     }
 
     function buildQuery(page) {
@@ -170,12 +182,12 @@ var InventoryPurchases = (function () {
                 } else {
                     renderPurchaseRows([]);
                     InventoryPagination.render("purchases-pagination", null, function () {});
-                    InventoryToast.error(body.message || "Failed to load purchases.");
+                    InventoryToast.error(body.message || "Failed to load sales.");
                 }
             })
             .catch(function () {
                 renderPurchaseRows([]);
-                InventoryToast.error("Network error while loading purchases.");
+                InventoryToast.error("Network error while loading sales.");
             })
             .finally(function () {
                 InventoryLoader.hide();
@@ -265,12 +277,12 @@ var InventoryPurchases = (function () {
         })
             .then(function (body) {
                 if (body && body.isSuccess) {
-                    InventoryToast.success(body.message || "Purchase saved. Stock updated.");
+                    InventoryToast.success(body.message || "Sale saved. FIFO applied and profit calculated.");
                     resetForm();
                     InventoryModal.close("purchase-modal");
                     loadPurchases(1);
                 } else {
-                    var err = body.message || "Unable to create purchase.";
+                    var err = body.message || "Unable to create sale.";
                     if (body.errors && body.errors.length) err = body.errors.join(" • ");
                     InventoryToast.error(err);
                 }
@@ -308,7 +320,7 @@ var InventoryPurchases = (function () {
             }
             loadProducts().then(function () {
                 if (!products.length) {
-                    InventoryToast.warning("No products in stock. Add products with quantity first.");
+                    InventoryToast.warning("No products in stock. Add a purchase invoice first.");
                 }
                 resetForm();
                 InventoryModal.open("purchase-modal");
