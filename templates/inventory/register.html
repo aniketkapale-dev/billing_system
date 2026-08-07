@@ -10,44 +10,116 @@
 </head>
 <body class="inv-auth-body">
 {% include "partials/inventory_ui.html" %}
+
 <main class="inv-auth-main">
     <div class="inv-back-wrap">{% include "partials/back_to_home.html" %}</div>
-    <div class="inv-auth-bg"></div>
-    <div class="inv-auth-card">
-        <div class="inv-auth-header">
-            <div class="inv-auth-header-inner">
-                <h1>Billing System</h1>
-                <p>Register Your Business</p>
+
+    <section class="inv-auth-shell inv-auth-shell--register" aria-label="Billing System registration">
+        <aside class="inv-auth-showcase">
+            <a href="/" class="inv-auth-brand" aria-label="Billing System home">
+                <span class="inv-auth-brand-mark">
+                    <span class="material-symbols-outlined material-symbols-outlined--filled">receipt_long</span>
+                </span>
+                <span>Billing System</span>
+            </a>
+
+            <div class="inv-auth-copy">
+                <span class="inv-auth-kicker">
+                    <span class="material-symbols-outlined material-symbols-outlined--filled">rocket_launch</span>
+                    Start organized
+                </span>
+                <h1>Create a workspace for clear billing.</h1>
+                <p>Register your business and keep invoices, stock, and customer activity ready for everyday operations.</p>
             </div>
-        </div>
-        <div class="inv-auth-body-inner">
-            <form id="inventory-register-form" class="inv-form inv-form--compact">
-                <div class="inv-field">
-                    <label for="full_name">Full Name</label>
-                    <input class="inv-input" id="full_name" name="full_name" required type="text"/>
+
+            <div class="inv-auth-benefits" aria-label="Registration benefits">
+                <div>
+                    <span class="material-symbols-outlined">receipt_long</span>
+                    <strong>Professional bills</strong>
+                    <p>Prepare clean invoices with business-ready records.</p>
                 </div>
-                <div class="inv-field">
-                    <label for="email">Work Email</label>
-                    <input class="inv-input" id="email" name="email" required type="email"/>
+                <div>
+                    <span class="material-symbols-outlined">inventory_2</span>
+                    <strong>Inventory visibility</strong>
+                    <p>Track product quantity, movement, and stock value.</p>
                 </div>
-                <div class="inv-field">
-                    <label for="mobile_number">Mobile Number</label>
-                    <input class="inv-input" id="mobile_number" name="mobile_number" required type="text"
-                           inputmode="numeric" pattern="[0-9]{10}" maxlength="10" minlength="10"
-                           placeholder="10-digit mobile number" autocomplete="tel"/>
+                <div>
+                    <span class="material-symbols-outlined">monitoring</span>
+                    <strong>Daily insights</strong>
+                    <p>Review important numbers without digging through sheets.</p>
                 </div>
-                <div class="inv-field">
-                    <label for="password">Password</label>
-                    <input class="inv-input" id="password" name="password" required minlength="8" type="password"/>
+            </div>
+        </aside>
+
+        <section class="inv-auth-panel">
+            <div class="inv-auth-card">
+                <div class="inv-auth-header">
+                    <span class="material-symbols-outlined material-symbols-outlined--filled">person_add</span>
+                    <h2>Register business</h2>
+                    <p>Create your account. Admin approval may be required before access.</p>
                 </div>
-                <button id="register-submit" class="inv-btn inv-btn-primary inv-btn-block" type="submit">Register</button>
-            </form>
-            <p class="inv-auth-footer-text">
-                Already have an account? <a class="inv-link" href="/login/">Sign in</a>
-            </p>
-        </div>
-    </div>
+
+                <form id="inventory-register-form" class="inv-form inv-form--compact">
+                    <div class="inv-field">
+                        <label for="full_name">Full Name</label>
+                        <div class="inv-input-wrap">
+                            <span class="material-symbols-outlined">person</span>
+                            <input class="inv-input" id="full_name" name="full_name" required type="text" placeholder="Your full name" autocomplete="name"/>
+                        </div>
+                    </div>
+
+                    <div class="inv-field">
+                        <label for="email">Work Email</label>
+                        <div class="inv-input-wrap">
+                            <span class="material-symbols-outlined">mail</span>
+                            <input class="inv-input" id="email" name="email" required type="email" placeholder="name@company.com" autocomplete="email"/>
+                        </div>
+                    </div>
+
+                    <div class="inv-field">
+                        <label for="mobile_number">Mobile Number</label>
+                        <div class="inv-input-wrap">
+                            <span class="material-symbols-outlined">call</span>
+                            <input class="inv-input" id="mobile_number" name="mobile_number" required type="text"
+                                   inputmode="numeric" pattern="[0-9]{10}" maxlength="10" minlength="10"
+                                   placeholder="10-digit mobile number" autocomplete="tel"/>
+                        </div>
+                    </div>
+
+                    <div class="inv-field">
+                        <label for="password">Password</label>
+                        <div class="inv-input-wrap">
+                            <span class="material-symbols-outlined">lock</span>
+                            <input class="inv-input" id="password" name="password" required minlength="8" type="password"
+                                   placeholder="Minimum 8 characters" autocomplete="new-password"/>
+                        </div>
+                    </div>
+
+                    <button id="register-submit" class="inv-btn inv-btn-primary inv-btn-block" type="submit">
+                        <span>Register</span>
+                        <span class="material-symbols-outlined">arrow_forward</span>
+                    </button>
+                </form>
+
+                <p class="inv-auth-footer-text">
+                    Already have an account?
+                    <a class="inv-link" href="/login/">Sign in</a>
+                </p>
+            </div>
+        </section>
+    </section>
 </main>
+
+<footer class="inv-page-footer">
+    <div class="inv-page-footer-inner">
+        <div class="inv-label-md">&copy; 2026 Billing System</div>
+        <nav>
+            <a href="#">Privacy Policy</a>
+            <a href="#">Terms of Service</a>
+        </nav>
+    </div>
+</footer>
+
 {% load static %}
 <script src="{% static 'js/inventory-toast.js' %}"></script>
 <script src="{% static 'js/inventory-loader.js' %}"></script>

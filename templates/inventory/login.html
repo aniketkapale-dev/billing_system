@@ -10,179 +10,86 @@
 </head>
 <body class="inv-auth-body">
 {% include "partials/inventory_ui.html" %}
-<!-- <main class="inv-auth-main">
-    <div class="inv-back-wrap">{% include "partials/back_to_home.html" %}</div>
-    <div class="inv-auth-bg"></div>
-    <div class="inv-auth-card">
-        <div class="inv-auth-header">
-            <div class="inv-auth-header-grid"></div>
-            <div class="inv-auth-header-inner">
-                <h1>Billing System</h1>
-                <p>Welcome Back</p>
-            </div>
-        </div>
-        <div class="inv-auth-body-inner">
-            <form id="inventory-login-form" class="inv-form">
-                <div class="inv-field">
-                    <label for="email">Work Email</label>
-                    <div class="inv-input-wrap">
-                        <span class="material-symbols-outlined">mail</span>
-                        <input class="inv-input" id="email" name="email" placeholder="name@company.com" required type="email"/>
-                    </div>
-                </div>
-                <div class="inv-field">
-                    <label for="password">Password</label>
-                    <div class="inv-input-wrap inv-input-wrap--password">
-                        <span class="material-symbols-outlined">lock</span>
-                        <input class="inv-input" id="password" name="password" placeholder="••••••••" required type="password"/>
-                        <button type="button" id="password-toggle" class="inv-password-toggle" aria-label="Show password">
-                            <span class="material-symbols-outlined">visibility</span>
-                        </button>
-                    </div>
-                </div>
-                <button id="login-submit" class="inv-btn inv-btn-primary inv-btn-block" type="submit">
-                    <span>Sign In</span>
-                    <span class="material-symbols-outlined">arrow_forward</span>
-                </button>
-            </form>
-            <div class="inv-auth-footer-text">
-                Don't have an account?
-                <a class="inv-link" href="/register/">Register your business</a>
-            </div>
-        </div>
-    </div>
-</main> -->
 
 <main class="inv-auth-main">
+    <div class="inv-back-wrap">{% include "partials/back_to_home.html" %}</div>
 
-    <div class="inv-back-wrap">
-        {% include "partials/back_to_home.html" %}
-    </div>
+    <section class="inv-auth-shell" aria-label="Billing System login">
+        <aside class="inv-auth-showcase">
+            <a href="/" class="inv-auth-brand" aria-label="Billing System home">
+                <span class="inv-auth-brand-mark">
+                    <span class="material-symbols-outlined material-symbols-outlined--filled">receipt_long</span>
+                </span>
+                <span>Billing System</span>
+            </a>
 
-    <div class="inv-auth-container">
-
-        <!-- Left Side -->
-        <div class="inv-auth-left">
-
-            <!-- Future Image -->
-            <!--
-            <img src="{% static 'images/login-banner.png' %}" alt="">
-            -->
-
-        </div>
-
-        <!-- Right Side -->
-        <div class="inv-auth-right">
-
-            <div class="inv-auth-card">
-
-                <div class="inv-auth-header">
-                    <div class="inv-auth-header-grid"></div>
-
-                    <div class="inv-auth-header-inner">
-                        <h1>Billing System</h1>
-                        <p>Welcome Back</p>
-                    </div>
-                </div>
-
-                <div class="inv-auth-body-inner">
-
-                    <form id="inventory-login-form" class="inv-form">
-
-                        <div class="inv-field">
-                            <label for="email">Work Email</label>
-
-                            <div class="inv-input-wrap">
-                                <span class="material-symbols-outlined">mail</span>
-
-                                <input
-                                        class="inv-input"
-                                        id="email"
-                                        name="email"
-                                        type="email"
-                                        placeholder="name@company.com"
-                                        required>
-                            </div>
-                        </div>
-
-                        <div class="inv-field">
-
-                            <label for="password">Password</label>
-
-                            <div class="inv-input-wrap inv-input-wrap--password">
-
-                                <span class="material-symbols-outlined">
-                                    lock
-                                </span>
-
-                                <input
-                                        class="inv-input"
-                                        id="password"
-                                        name="password"
-                                        type="password"
-                                        placeholder="••••••••"
-                                        required>
-
-                                <button
-                                        type="button"
-                                        id="password-toggle"
-                                        class="inv-password-toggle">
-
-                                    <span class="material-symbols-outlined">
-                                        visibility
-                                    </span>
-
-                                </button>
-
-                            </div>
-
-                        </div>
-
-                        <button
-                                id="login-submit"
-                                class="inv-btn inv-btn-primary inv-btn-block"
-                                type="submit">
-
-                            <span>Sign In</span>
-
-                            <span class="material-symbols-outlined">
-                                arrow_forward
-                            </span>
-
-                        </button>
-
-                    </form>
-
-                    <div class="inv-auth-footer-text">
-
-                        Don't have an account?
-
-                        <a class="inv-link" href="/register/">
-
-                            Register your business
-
-                        </a>
-
-                    </div>
-
-                </div>
-
+            <div class="inv-auth-copy">
+                <span class="inv-auth-kicker">
+                    <span class="material-symbols-outlined material-symbols-outlined--filled">verified</span>
+                    Secure workspace
+                </span>
+                <h1>Welcome back to smarter billing.</h1>
+                <p>Sign in to manage invoices, inventory, customers, and daily business activity from one calm dashboard.</p>
             </div>
 
-        </div>
+            <!-- <div class="inv-auth-preview" aria-hidden="true"> -->
+               
+            </div>
+        </aside>
 
-    </div>
+        <section class="inv-auth-panel">
+            <div class="inv-auth-card">
+                <div class="inv-auth-header">
+                    <span class="material-symbols-outlined material-symbols-outlined--filled">account_circle</span>
+                    <h2>Sign in</h2>
+                    <p>Use your work email and password to continue.</p>
+                </div>
 
+                <form id="inventory-login-form" class="inv-form">
+                    <div class="inv-field">
+                        <label for="email">Work Email</label>
+                        <div class="inv-input-wrap">
+                            <span class="material-symbols-outlined">mail</span>
+                            <input class="inv-input" id="email" name="email" type="email" placeholder="name@company.com" autocomplete="email" required/>
+                        </div>
+                    </div>
+
+                    <div class="inv-field">
+                        <label for="password">Password</label>
+                        <div class="inv-input-wrap inv-input-wrap--password">
+                            <span class="material-symbols-outlined">lock</span>
+                            <input class="inv-input" id="password" name="password" type="password" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;" autocomplete="current-password" required/>
+                            <button type="button" id="password-toggle" class="inv-password-toggle" aria-label="Show password">
+                                <span class="material-symbols-outlined">visibility</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button id="login-submit" class="inv-btn inv-btn-primary inv-btn-block" type="submit">
+                        <span>Sign In</span>
+                        <span class="material-symbols-outlined">arrow_forward</span>
+                    </button>
+                </form>
+
+                <div class="inv-auth-footer-text">
+                    Do not have an account?
+                    <a class="inv-link" href="/register/">Register your business</a>
+                </div>
+            </div>
+        </section>
+    </section>
 </main>
+
 <footer class="inv-page-footer">
     <div class="inv-page-footer-inner">
-        <div class="inv-label-md">© 2026 Billing System</div>
+        <div class="inv-label-md">&copy; 2026 Billing System</div>
         <nav>
             <a href="#">Privacy Policy</a>
             <a href="#">Terms of Service</a>
         </nav>
     </div>
 </footer>
+
 {% load static %}
 <script src="{% static 'js/inventory-toast.js' %}"></script>
 <script src="{% static 'js/inventory-loader.js' %}"></script>
