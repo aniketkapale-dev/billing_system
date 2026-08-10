@@ -1,3 +1,5 @@
+import json
+
 from rest_framework import status
 
 from apps.invoicing.models import InventoryBatch, PurchaseInvoice, PurchaseInvoiceItem
@@ -24,12 +26,28 @@ class PurchaseInvoiceViewSet(BusinessScopedViewSetMixin, BaseViewSet):
     required_roles = ["Business Owner"]
     ordering_default = ("-invoice_date", "-created_at")
 
+    def _merge_request_data(self, request):
+        data = {}
+        if hasattr(request.data, "keys"):
+            for key in request.data.keys():
+                data[key] = request.data.get(key)
+        for key in request.FILES.keys():
+            data[key] = request.FILES.get(key)
+        items = data.get("items")
+        if isinstance(items, str):
+            try:
+                data["items"] = json.loads(items)
+            except (TypeError, ValueError):
+                pass
+        return data
+
     def get_permissions(self):
         return [IsAuthenticatedUser(), HasRole()]
 
     def create(self, request):
+        data = self._merge_request_data(request)
         serializer = self.get_write_serializer(
-            data=request.data,
+            data=data,
             context={"request": request},
         )
         serializer.is_valid(raise_exception=True)
@@ -49,8 +67,9 @@ class PurchaseInvoiceViewSet(BusinessScopedViewSetMixin, BaseViewSet):
         )
 
     def partial_update(self, request, pk=None):
+        data = self._merge_request_data(request)
         serializer = PurchaseInvoiceHeaderWriteSerializer(
-            data=request.data,
+            data=data,
             partial=True,
             context={"request": request},
         )

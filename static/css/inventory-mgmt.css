@@ -589,8 +589,126 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.inv-mgmt-form-grid--stockin-header {
-    grid-template-columns: 1fr 1fr 2fr;
+.inv-stockin-header-wrap {
+    width: 100%;
+}
+
+.inv-stockin-header-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    flex-wrap: nowrap;
+    width: 100%;
+}
+
+.inv-stockin-field {
+    min-width: 0;
+}
+
+.inv-stockin-field--invoice {
+    flex: 0 0 130px;
+    max-width: 140px;
+}
+
+.inv-stockin-field--date {
+    flex: 0 0 145px;
+    max-width: 195px;
+}
+
+.inv-stockin-field--remarks {
+    flex: 1 1 auto;
+}
+
+.inv-stockin-field--file {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
+.inv-stockin-input--compact {
+    padding: 8px 10px;
+    font-size: 13px;
+}
+
+.inv-stockin-remarks-input {
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 13px;
+}
+
+.inv-stockin-field-label-spacer {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.2;
+    visibility: hidden;
+    user-select: none;
+}
+
+.inv-stockin-file-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+    white-space: nowrap;
+    padding: 0 12px;
+    height: 38px;
+    font-size: 13px;
+}
+
+.inv-stockin-file-btn .material-symbols-outlined {
+    font-size: 18px;
+}
+
+.inv-stockin-attachment-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    max-width: 100%;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: var(--inv-surface-muted, #f4f6f8);
+    font-size: 13px;
+    color: var(--inv-primary);
+}
+
+.inv-stockin-attachment-icon {
+    font-size: 18px;
+    color: var(--inv-accent, #2563eb);
+}
+
+.inv-stockin-attachment-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.inv-stockin-attachment-name a {
+    color: var(--inv-accent, #2563eb);
+    text-decoration: none;
+}
+
+.inv-stockin-attachment-name a:hover {
+    text-decoration: underline;
+}
+
+.inv-stockin-attachment-clear {
+    border: none;
+    background: transparent;
+    color: var(--inv-muted, #64748b);
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 4px;
+}
+
+.inv-stockin-attachment-clear:hover {
+    color: var(--inv-danger, #dc2626);
 }
 
 .inv-mgmt-form-grid .inv-mgmt-field--full {
@@ -691,10 +809,27 @@
 @media (max-width: 900px) {
     .inv-mgmt-form-grid,
     .inv-mgmt-form-grid--product,
-    .inv-mgmt-form-grid--stockin-header,
     .inv-mgmt-item-row.inv-mgmt-item-row--sale {
         grid-template-columns: 1fr;
         min-width: 0;
+    }
+
+    .inv-stockin-header-row {
+        flex-wrap: wrap;
+    }
+
+    .inv-stockin-field--invoice,
+    .inv-stockin-field--date {
+        flex: 1 1 calc(50% - 6px);
+        max-width: none;
+    }
+
+    .inv-stockin-field--remarks {
+        flex: 1 1 100%;
+    }
+
+    .inv-stockin-field--file {
+        flex: 0 0 auto;
     }
 
     .inv-mgmt-item-row.inv-mgmt-item-row--stockin {

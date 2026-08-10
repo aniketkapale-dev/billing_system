@@ -8,6 +8,8 @@ var InventoryStockIn = (function () {
     var products = [];
     var pendingProductRow = null;
     var editingInvoiceId = null;
+    var existingAttachment = null;
+    var ALLOWED_ATTACHMENT_EXT = ["pdf", "jpg", "jpeg", "png", "webp", "gif"];
     var STOCKIN_LIST_PANEL = "stockin-list-panel";
     var STOCKIN_FORM_PANEL = "stockin-form-panel";
     var STOCKIN_VIEW_PANEL = "stockin-view-panel";
@@ -124,6 +126,94 @@ var InventoryStockIn = (function () {
         );
     }
 
+    function getAttachmentInput() {
+        return document.getElementById("stockin-attachment");
+    }
+
+    function getSelectedAttachmentFile() {
+        var input = getAttachmentInput();
+        return input && input.files && input.files[0] ? input.files[0] : null;
+    }
+
+    function isAllowedAttachmentFile(file) {
+        if (!file || !file.name) return false;
+        var parts = file.name.split(".");
+        if (parts.length < 2) return false;
+        var ext = parts.pop().toLowerCase();
+        return ALLOWED_ATTACHMENT_EXT.indexOf(ext) !== -1;
+    }
+
+    function updateAttachmentMeta() {
+        var meta = document.getElementById("stockin-attachment-meta");
+        var nameEl = document.getElementById("stockin-attachment-name");
+        if (!meta || !nameEl) return;
+
+        var file = getSelectedAttachmentFile();
+        if (file) {
+            nameEl.textContent = file.name;
+            meta.classList.remove("inv-hidden");
+            return;
+        }
+
+        if (existingAttachment && existingAttachment.name) {
+            if (existingAttachment.url) {
+                nameEl.innerHTML =
+                    '<a href="' + InventoryApi.escapeHtml(existingAttachment.url) + '" target="_blank" rel="noopener">' +
+                    InventoryApi.escapeHtml(existingAttachment.name) + "</a> (current)";
+            } else {
+                nameEl.textContent = existingAttachment.name + " (current)";
+            }
+            meta.classList.remove("inv-hidden");
+            return;
+        }
+
+        meta.classList.add("inv-hidden");
+        nameEl.textContent = "";
+    }
+
+    function clearAttachmentSelection() {
+        var input = getAttachmentInput();
+        if (input) input.value = "";
+        updateAttachmentMeta();
+    }
+
+    function resetAttachmentField() {
+        existingAttachment = null;
+        var input = getAttachmentInput();
+        if (input) input.value = "";
+        updateAttachmentMeta();
+    }
+
+    function setExistingAttachment(invoice) {
+        existingAttachment = null;
+        if (invoice && invoice.attachment_url) {
+            existingAttachment = {
+                url: invoice.attachment_url,
+                name: invoice.attachment_name || "Attachment"
+            };
+        }
+        var input = getAttachmentInput();
+        if (input) input.value = "";
+        updateAttachmentMeta();
+    }
+
+    function buildInvoiceFormData(payload, items) {
+        var fd = new FormData();
+        fd.append("invoice_number", payload.invoice_number);
+        if (payload.invoice_date) {
+            fd.append("invoice_date", payload.invoice_date);
+        }
+        fd.append("remarks", payload.remarks || "");
+        if (items) {
+            fd.append("items", JSON.stringify(items));
+        }
+        var file = getSelectedAttachmentFile();
+        if (file) {
+            fd.append("attachment", file);
+        }
+        return fd;
+    }
+
     function displayValue(value) {
         if (value === null || value === undefined || String(value).trim() === "") return "—";
         return InventoryApi.escapeHtml(String(value));
@@ -173,6 +263,18 @@ var InventoryStockIn = (function () {
             { label: "Grand Total", value: InventoryApi.formatMoney(invoice.grand_total) },
             { label: "Remarks", value: displayValue(invoice.remarks), full: true }
         ];
+
+        if (invoice.attachment_url) {
+            rows.push({
+                label: "Attachment",
+                value:
+                    '<a href="' + InventoryApi.escapeHtml(invoice.attachment_url) + '" target="_blank" rel="noopener">' +
+                    InventoryApi.escapeHtml(invoice.attachment_name || "View file") +
+                    "</a>",
+                full: true,
+                html: true
+            });
+        }
 
         container.innerHTML = rows.map(function (row) {
             var cls = row.full ? " inv-product-view-item--full" : "";
@@ -243,6 +345,7 @@ var InventoryStockIn = (function () {
     function populateForm(invoice) {
         document.getElementById("stockin-invoice-no").value = invoice.invoice_number || "";
         document.getElementById("stockin-remarks").value = invoice.remarks || "";
+        setExistingAttachment(invoice);
         var dateEl = document.getElementById("stockin-invoice-date");
         if (dateEl) dateEl.value = invoice.invoice_date || "";
 
@@ -265,6 +368,7 @@ var InventoryStockIn = (function () {
         setFormMode("add");
         document.getElementById("stockin-invoice-no").value = "";
         document.getElementById("stockin-remarks").value = "";
+        resetAttachmentField();
         var dateEl = document.getElementById("stockin-invoice-date");
         if (dateEl) dateEl.value = new Date().toISOString().slice(0, 10);
         var container = document.getElementById("stockin-items-container");
@@ -402,6 +506,12 @@ var InventoryStockIn = (function () {
             return;
         }
 
+        var attachmentFile = getSelectedAttachmentFile();
+        if (attachmentFile && !isAllowedAttachmentFile(attachmentFile)) {
+            InventoryToast.error("Only PDF and image files are allowed.");
+            return;
+        }
+
         var payload = {
             invoice_number: invoiceNumber,
             invoice_date: document.getElementById("stockin-invoice-date").value || undefined,
@@ -410,7 +520,8 @@ var InventoryStockIn = (function () {
 
         if (editingInvoiceId) {
             InventoryLoader.show();
-            request("/" + editingInvoiceId + "/", { method: "PATCH", body: payload })
+            var editBody = attachmentFile ? buildInvoiceFormData(payload) : payload;
+            request("/" + editingInvoiceId + "/", { method: "PATCH", body: editBody })
                 .then(function (body) {
                     if (body && body.isSuccess) {
                         InventoryToast.success(body.message || "Purchase updated.");
@@ -441,7 +552,8 @@ var InventoryStockIn = (function () {
         payload.items = items;
 
         InventoryLoader.show();
-        request("/", { method: "POST", body: payload })
+        var createBody = attachmentFile ? buildInvoiceFormData(payload, items) : payload;
+        request("/", { method: "POST", body: createBody })
             .then(function (body) {
                 if (body && body.isSuccess) {
                     InventoryToast.success(body.message || "Purchase invoice saved.");
@@ -504,6 +616,28 @@ var InventoryStockIn = (function () {
             });
         }
         if (saveBtn) saveBtn.addEventListener("click", saveInvoice);
+
+        var attachmentBtn = document.getElementById("stockin-attachment-btn");
+        var attachmentInput = getAttachmentInput();
+        var attachmentClear = document.getElementById("stockin-attachment-clear");
+
+        if (attachmentBtn && attachmentInput) {
+            attachmentBtn.addEventListener("click", function () {
+                attachmentInput.click();
+            });
+            attachmentInput.addEventListener("change", function () {
+                var file = getSelectedAttachmentFile();
+                if (file && !isAllowedAttachmentFile(file)) {
+                    InventoryToast.error("Only PDF and image files are allowed.");
+                    clearAttachmentSelection();
+                    return;
+                }
+                updateAttachmentMeta();
+            });
+        }
+        if (attachmentClear) {
+            attachmentClear.addEventListener("click", clearAttachmentSelection);
+        }
 
         if (tbody) {
             tbody.addEventListener("click", function (e) {

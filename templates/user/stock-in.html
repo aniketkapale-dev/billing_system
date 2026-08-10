@@ -51,18 +51,33 @@
         </div>
         <div class="inv-mgmt-card inv-mgmt-panel-card">
             <div class="inv-mgmt-panel-body">
-                <div class="inv-mgmt-form-grid inv-mgmt-form-grid--stockin-header" style="padding:0;">
-                    <div class="inv-mgmt-field">
-                        <label for="stockin-invoice-no">Invoice Number</label>
-                        <input id="stockin-invoice-no" class="inv-mgmt-input" type="text" placeholder="PI-001" required/>
+                <div class="inv-stockin-header-wrap" style="padding:0;">
+                    <div class="inv-stockin-header-row">
+                        <div class="inv-mgmt-field inv-stockin-field inv-stockin-field--invoice">
+                            <label for="stockin-invoice-no">Invoice Number</label>
+                            <input id="stockin-invoice-no" class="inv-mgmt-input inv-stockin-input--compact" type="text" placeholder="PI-001" required/>
+                        </div>
+                        <div class="inv-mgmt-field inv-stockin-field inv-stockin-field--date">
+                            <label for="stockin-invoice-date">Purchase Date</label>
+                            <input id="stockin-invoice-date" class="inv-mgmt-input inv-stockin-input--compact" type="date"/>
+                        </div>
+                        <div class="inv-mgmt-field inv-stockin-field inv-stockin-field--remarks">
+                            <label for="stockin-remarks">Remarks</label>
+                            <input id="stockin-remarks" class="inv-mgmt-input inv-stockin-remarks-input" type="text" placeholder="Optional notes"/>
+                        </div>
+                        <div class="inv-stockin-field inv-stockin-field--file">
+                            <span class="inv-stockin-field-label-spacer" aria-hidden="true">&nbsp;</span>
+                            <input id="stockin-attachment" class="inv-hidden" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,.gif,application/pdf,image/*"/>
+                            <button id="stockin-attachment-btn" type="button" class="inv-mgmt-btn inv-stockin-file-btn" title="Attach PDF or image">
+                                <span class="material-symbols-outlined">attach_file</span>
+                                Add File
+                            </button>
+                        </div>
                     </div>
-                    <div class="inv-mgmt-field">
-                        <label for="stockin-invoice-date">Purchase Date</label>
-                        <input id="stockin-invoice-date" class="inv-mgmt-input" type="date"/>
-                    </div>
-                    <div class="inv-mgmt-field inv-mgmt-field--remarks">
-                        <label for="stockin-remarks">Remarks</label>
-                        <input id="stockin-remarks" class="inv-mgmt-input" type="text" placeholder="Optional notes"/>
+                    <div id="stockin-attachment-meta" class="inv-stockin-attachment-meta inv-hidden">
+                        <span class="material-symbols-outlined inv-stockin-attachment-icon">description</span>
+                        <span id="stockin-attachment-name" class="inv-stockin-attachment-name"></span>
+                        <button id="stockin-attachment-clear" type="button" class="inv-stockin-attachment-clear" title="Remove file" aria-label="Remove file">&times;</button>
                     </div>
                 </div>
 

@@ -144,6 +144,9 @@ class PurchaseInvoiceService(BaseService):
         if "remarks" in data:
             updates["remarks"] = data.get("remarks") or ""
 
+        if "attachment" in data:
+            updates["attachment"] = data["attachment"]
+
         if not updates:
             return invoice
 

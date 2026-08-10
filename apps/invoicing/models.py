@@ -1,9 +1,14 @@
 from decimal import Decimal
 
+from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.utils import timezone
 
 from core.base_entity import BaseEntity
+
+
+def purchase_invoice_upload_path(instance, filename):
+    return f"purchase_invoices/{instance.business_id}/{filename}"
 
 
 class PurchaseInvoice(BaseEntity):
@@ -20,6 +25,16 @@ class PurchaseInvoice(BaseEntity):
     tax = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
     grand_total = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
     remarks = models.TextField(blank=True, default="")
+    attachment = models.FileField(
+        upload_to=purchase_invoice_upload_path,
+        blank=True,
+        null=True,
+        validators=[
+            FileExtensionValidator(
+                allowed_extensions=["pdf", "jpg", "jpeg", "png", "webp", "gif"]
+            )
+        ],
+    )
 
     class Meta:
         db_table = "purchase_invoices"
