@@ -67,6 +67,11 @@ def user_business(request):
 
 
 @never_cache
+def user_customers(request):
+    return render(request, "user/customers.html", {"active_nav": "customers"})
+
+
+@never_cache
 def user_catalog_units(request):
     return render(request, "user/catalog.html", {
         "active_nav": "products-units",

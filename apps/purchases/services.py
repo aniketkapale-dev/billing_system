@@ -10,7 +10,6 @@ from apps.purchases.repositories import PurchaseRepository
 from core.base_service import BaseService
 from core.exceptions import NotFoundException, ValidationException
 from core.middleware import get_current_user
-from core.validators import validate_required
 
 
 class PurchaseService(BaseService):
@@ -35,6 +34,27 @@ class PurchaseService(BaseService):
             raise NotFoundException("Payment type not found.")
         return payment_type_id
 
+    def _resolve_customer(self, business_id, customer_id):
+        from apps.customers.models import Customer
+
+        try:
+            return Customer.objects.get(
+                pk=customer_id,
+                business_id=business_id,
+                is_deleted=False,
+            )
+        except Customer.DoesNotExist:
+            raise NotFoundException("Customer not found.")
+
+    def _apply_customer(self, data, business_id):
+        customer_id = data.pop("customer_id", None)
+        if customer_id is None:
+            raise ValidationException("Customer is required.")
+        customer = self._resolve_customer(business_id, customer_id)
+        data["customer_id"] = customer.id
+        data["customer_name"] = customer.name
+        return data
+
     @transaction.atomic
     def create_with_items(self, data):
         user = get_current_user()
@@ -49,7 +69,7 @@ class PurchaseService(BaseService):
         if not items_data:
             raise ValidationException("At least one purchase item is required.")
 
-        validate_required(data.get("customer_name"), "Customer name")
+        self._apply_customer(data, business_id)
 
         if "payment_type_id" in data:
             data["payment_type_id"] = self._resolve_payment_type_id(
@@ -157,10 +177,10 @@ class PurchaseService(BaseService):
         purchase = self.repository.get_by_id(pk)
         updates = {}
 
-        if "customer_name" in data:
-            customer_name = (data.get("customer_name") or "").strip()
-            validate_required(customer_name, "Customer name")
-            updates["customer_name"] = customer_name
+        if "customer_id" in data and data.get("customer_id") is not None:
+            customer = self._resolve_customer(purchase.business_id, data["customer_id"])
+            updates["customer_id"] = customer.id
+            updates["customer_name"] = customer.name
 
         if "purchase_date" in data and data.get("purchase_date") is not None:
             updates["purchase_date"] = data["purchase_date"]

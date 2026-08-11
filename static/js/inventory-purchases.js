@@ -4,11 +4,13 @@ var InventoryPurchases = (function () {
     var API = "/api/purchases";
     var PRODUCTS_API = "/api/products";
     var CATALOG_API = "/api/catalog";
+    var CUSTOMERS_API = "/api/customers";
     var PAGE_SIZE = (window.InventoryConstants && InventoryConstants.PAGE_SIZE) || 10;
     var currentPage = 1;
     var searchTimer = null;
     var products = [];
     var paymentTypes = [];
+    var customers = [];
     var editingPurchaseId = null;
     var PURCHASES_LIST_PANEL = "purchases-list-panel";
     var PURCHASES_FORM_PANEL = "purchases-form-panel";
@@ -30,6 +32,66 @@ var InventoryPurchases = (function () {
             urlPath = "/" + segment + "/" + path.replace(/^\//, "");
         }
         return InventoryApi.request(CATALOG_API, urlPath, opts);
+    }
+
+    function customerLabel(customer) {
+        var mobile = customer.mobile ? String(customer.mobile) : "—";
+        return InventoryApi.escapeHtml(customer.name) + "(" + InventoryApi.escapeHtml(mobile) + ")";
+    }
+
+    function renderCustomerSelect(selectedId) {
+        var select = document.getElementById("purchase-customer");
+        if (!select) return;
+
+        var applyOptions = function (el) {
+            var html;
+            if (!customers.length) {
+                html = '<option value="">No customers — add a customer first</option>';
+            } else {
+                html = '<option value="">Select customer</option>';
+                customers.forEach(function (item) {
+                    var selected = String(item.id) === String(selectedId) ? " selected" : "";
+                    html += '<option value="' + item.id + '"' + selected + ">" +
+                        customerLabel(item) + "</option>";
+                });
+            }
+            el.innerHTML = html;
+            if (selectedId) {
+                el.value = String(selectedId);
+            }
+        };
+
+        if (window.InventorySearchableSelect) {
+            InventorySearchableSelect.rebuild(select, applyOptions);
+            return;
+        }
+
+        applyOptions(select);
+    }
+
+    function loadCustomers(selectedId) {
+        return InventoryApi.request(CUSTOMERS_API, "?page_size=100").then(function (body) {
+            customers = body && body.isSuccess ? (body.data.items || []) : [];
+            renderCustomerSelect(selectedId);
+            return customers;
+        });
+    }
+
+    function openAddCustomerModal() {
+        if (window.InventoryCustomers && typeof InventoryCustomers.openAddModal === "function") {
+            InventoryCustomers.openAddModal();
+            return;
+        }
+        InventoryToast.error("Customer form is not available.");
+    }
+
+    function formatCustomerDisplay(purchase) {
+        var name = purchase.customer_name || "—";
+        var mobile = purchase.customer_mobile;
+        if (mobile) {
+            return InventoryApi.escapeHtml(name) + "(" + InventoryApi.escapeHtml(mobile) + ")";
+        }
+        return InventoryApi.escapeHtml(name);
     }
 
     function renderPaymentTypeSelect(selectedId) {
@@ -356,7 +418,7 @@ var InventoryPurchases = (function () {
     }
 
     function populateForm(purchase) {
-        document.getElementById("purchase-customer").value = purchase.customer_name || "";
+        loadCustomers(purchase.customer || "");
         document.getElementById("purchase-date").value = purchase.purchase_date || "";
         document.getElementById("purchase-billing-address").value = purchase.billing_address || "";
         document.getElementById("purchase-shipping-address").value = purchase.shipping_address || "";
@@ -435,7 +497,7 @@ var InventoryPurchases = (function () {
             return (
                 "<tr>" +
                 "<td>" + InventoryApi.escapeHtml(purchase.purchase_date) + "</td>" +
-                "<td>" + InventoryApi.escapeHtml(purchase.customer_name || "—") + "</td>" +
+                "<td>" + formatCustomerDisplay(purchase) + "</td>" +
                 "<td class=\"inv-col-name\">" + productNames + "</td>" +
                 "<td class=\"inv-mgmt-cell--num\">" + InventoryApi.formatMoney(purchase.total_amount) + "</td>" +
                 "<td class=\"inv-mgmt-cell--num\">" + InventoryApi.formatMoney(purchase.total_cost) + "</td>" +
@@ -465,7 +527,7 @@ var InventoryPurchases = (function () {
         var profitClass = profit >= 0 ? "inv-profit-positive" : "inv-profit-negative";
         var rows = [
             { label: "Sale Date", value: displayValue(purchase.purchase_date) },
-            { label: "Customer", value: displayValue(purchase.customer_name) },
+            { label: "Customer", value: formatCustomerDisplay(purchase) },
             { label: "Payment Type", value: displayValue(purchase.payment_type_name) },
             { label: "Billing Address", value: displayValue(purchase.billing_address) },
             { label: "Shipping Address", value: displayValue(purchase.shipping_address) },
@@ -700,7 +762,7 @@ var InventoryPurchases = (function () {
     function resetForm(isSilent) {
         editingPurchaseId = null;
         setFormMode("add");
-        document.getElementById("purchase-customer").value = "";
+        loadCustomers("");
         document.getElementById("purchase-date").value = new Date().toISOString().slice(0, 10);
         document.getElementById("purchase-billing-address").value = "";
         document.getElementById("purchase-shipping-address").value = "";
@@ -713,8 +775,9 @@ var InventoryPurchases = (function () {
     function getSaleHeaderPayload() {
         var paymentTypeEl = document.getElementById("purchase-payment-type");
         var paymentTypeId = paymentTypeEl ? paymentTypeEl.value : "";
+        var customerId = document.getElementById("purchase-customer").value;
         return {
-            customer_name: document.getElementById("purchase-customer").value.trim(),
+            customer_id: customerId ? Number(customerId) : null,
             purchase_date: document.getElementById("purchase-date").value || undefined,
             billing_address: document.getElementById("purchase-billing-address").value.trim(),
             shipping_address: document.getElementById("purchase-shipping-address").value.trim(),
@@ -723,9 +786,10 @@ var InventoryPurchases = (function () {
     }
 
     function savePurchase() {
-        var customer = document.getElementById("purchase-customer").value.trim();
-        if (!customer) {
-            InventoryToast.error("Customer name is required.");
+        var customerId = document.getElementById("purchase-customer").value;
+        if (!customerId) {
+            InventoryToast.error("Please select a customer.");
+            document.getElementById("purchase-customer").focus();
             return;
         }
 
@@ -810,6 +874,7 @@ var InventoryPurchases = (function () {
             if (!InventoryBusiness.getActiveId()) return;
             loadProducts().then(function () {
                 loadPaymentTypes();
+                loadCustomers();
                 loadPurchases(1);
             });
         }
@@ -823,13 +888,18 @@ var InventoryPurchases = (function () {
                 return;
             }
             loadProducts().then(function () {
-                loadPaymentTypes();
+                return Promise.all([loadPaymentTypes(), loadCustomers()]);
+            }).then(function () {
                 resetForm(true);
                 if (!hasAvailableProducts(null)) {
                     InventoryToast.warning("No products with remaining stock available.");
                 }
+                if (!customers.length) {
+                    InventoryToast.warning("No customers found. Add a customer first.");
+                }
                 InventoryPagePanel.showPanel(PURCHASES_LIST_PANEL, PURCHASES_FORM_PANEL);
-                document.getElementById("purchase-customer").focus();
+                var customerSelect = document.getElementById("purchase-customer");
+                if (customerSelect) customerSelect.focus();
             });
         });
 
@@ -862,6 +932,16 @@ var InventoryPurchases = (function () {
         var paymentTypeAddBtn = document.getElementById("purchase-payment-type-add-btn");
         var paymentTypeSaveBtn = document.getElementById("purchase-payment-type-save-btn");
         var paymentTypeCancelBtn = document.getElementById("purchase-payment-type-cancel-btn");
+        var customerAddBtn = document.getElementById("purchase-customer-add-btn");
+
+        if (customerAddBtn) {
+            customerAddBtn.addEventListener("click", openAddCustomerModal);
+        }
+
+        window.addEventListener("inventory:customer-created", function (e) {
+            var customer = e.detail && e.detail.customer;
+            loadCustomers(customer && customer.id ? customer.id : "");
+        });
 
         if (paymentTypeAddBtn) {
             paymentTypeAddBtn.addEventListener("click", function () {

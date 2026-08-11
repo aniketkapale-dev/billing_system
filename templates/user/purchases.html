@@ -60,8 +60,15 @@
             <div class="inv-mgmt-panel-body">
                 <div class="inv-mgmt-form-grid inv-mgmt-form-grid--sale-top" style="padding:0;">
                     <div class="inv-mgmt-field">
-                        <label for="purchase-customer">Customer Name</label>
-                        <input id="purchase-customer" class="inv-mgmt-input" type="text" placeholder="Customer name" required/>
+                        <label for="purchase-customer">Customer</label>
+                        <div class="inv-field-inline">
+                            <select id="purchase-customer" class="inv-mgmt-select" required>
+                                <option value="">Select customer</option>
+                            </select>
+                            <button id="purchase-customer-add-btn" type="button" class="inv-inline-add-btn" title="Add customer" aria-label="Add customer">
+                                <span class="material-symbols-outlined">add</span>
+                            </button>
+                        </div>
                     </div>
                     <div class="inv-mgmt-field">
                         <label for="purchase-date">Sale Date</label>
@@ -134,15 +141,20 @@
         </div>
     </div>
 </div>
+
+{% include "partials/customer_modal.html" %}
 {% endblock %}
 
 {% block page_scripts %}
 <link href="{% static 'css/inventory-mgmt.css' %}" rel="stylesheet"/>
 <script src="{% static 'js/inventory-api.js' %}"></script>
+<script src="{% static 'js/inventory-modal.js' %}"></script>
 <script src="{% static 'js/inventory-page-panel.js' %}"></script>
+<script src="{% static 'js/inventory-customers.js' %}"></script>
 <script src="{% static 'js/inventory-purchases.js' %}"></script>
 <script>
 InventoryPagePanel.init();
+InventoryCustomers.init();
 InventoryPurchases.init();
 </script>
 {% endblock %}

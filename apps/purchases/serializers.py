@@ -29,6 +29,7 @@ class PurchaseSerializer(BaseModelSerializer):
     items = PurchaseItemSerializer(many=True, read_only=True)
     business_name = serializers.CharField(source="business.business_name", read_only=True)
     payment_type_name = serializers.CharField(source="payment_type.name", read_only=True, default="")
+    customer_mobile = serializers.CharField(source="customer.mobile", read_only=True, default="")
 
     class Meta:
         model = Purchase
@@ -37,7 +38,9 @@ class PurchaseSerializer(BaseModelSerializer):
             "owner",
             "business",
             "business_name",
+            "customer",
             "customer_name",
+            "customer_mobile",
             "supplier_name",
             "reference_no",
             "purchase_date",
@@ -63,7 +66,7 @@ class PurchaseItemWriteSerializer(serializers.Serializer):
 
 
 class PurchaseWriteSerializer(serializers.Serializer):
-    customer_name = serializers.CharField(max_length=150)
+    customer_id = serializers.IntegerField()
     supplier_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
     reference_no = serializers.CharField(max_length=50, required=False, allow_blank=True)
     purchase_date = serializers.DateField(required=False)
@@ -75,7 +78,7 @@ class PurchaseWriteSerializer(serializers.Serializer):
 
 
 class PurchaseHeaderWriteSerializer(serializers.Serializer):
-    customer_name = serializers.CharField(max_length=150, required=False)
+    customer_id = serializers.IntegerField(required=False)
     purchase_date = serializers.DateField(required=False, allow_null=True)
     reference_no = serializers.CharField(max_length=50, required=False, allow_blank=True)
     notes = serializers.CharField(required=False, allow_blank=True)

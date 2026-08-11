@@ -17,6 +17,7 @@ from apps.page_views import (
     user_purchases,
     user_stock_in,
     user_business,
+    user_customers,
     user_catalog_units,
     user_catalog_categories,
     user_catalog_brands,
@@ -36,6 +37,7 @@ urlpatterns = [
     path("dashboard/inventory/", user_inventory, name="user-inventory"),
     path("dashboard/stock-in/", user_stock_in, name="user-stock-in"),
     path("dashboard/purchases/", user_purchases, name="user-purchases"),
+    path("dashboard/customers/", user_customers, name="user-customers"),
     path("dashboard/business/", user_business, name="user-business"),
     path("api/auth/", include("apps.accounts.urls")),
     path("api/users/", include("apps.users.urls")),
@@ -46,6 +48,7 @@ urlpatterns = [
     path("api/inventory/", include("apps.inventory.urls")),
     path("api/invoicing/", include("apps.invoicing.urls")),
     path("api/purchases/", include("apps.purchases.urls")),
+    path("api/customers/", include("apps.customers.urls")),
 ]
 
 if settings.DEBUG:

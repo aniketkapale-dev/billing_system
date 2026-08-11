@@ -9,7 +9,7 @@ class PurchaseRepository(BaseRepository):
         return (
             super()
             .get_queryset()
-            .select_related("owner", "payment_type")
+            .select_related("owner", "payment_type", "customer")
             .prefetch_related("items__product")
         )
 

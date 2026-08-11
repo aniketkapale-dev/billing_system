@@ -23,6 +23,14 @@ class Purchase(BaseEntity):
     )
     supplier_name = models.CharField(max_length=150, blank=True, default="")
     customer_name = models.CharField(max_length=150)
+    customer = models.ForeignKey(
+        "customers.Customer",
+        on_delete=models.SET_NULL,
+        related_name="purchases",
+        db_column="customer_id",
+        null=True,
+        blank=True,
+    )
     reference_no = models.CharField(max_length=50, blank=True, default="")
     purchase_date = models.DateField(default=timezone.localdate)
     notes = models.TextField(blank=True, default="")
