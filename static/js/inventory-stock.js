@@ -22,13 +22,6 @@ var InventoryStock = (function () {
         return InventoryApi.request(BATCH_API, path, opts);
     }
 
-    function formatProfit(value) {
-        var num = Number(value || 0);
-        var formatted = InventoryApi.formatMoney(num);
-        if (num > 0) return "+" + formatted;
-        return formatted;
-    }
-
     function formatDate(value) {
         if (!value) return "—";
         return InventoryApi.escapeHtml(value);
@@ -53,22 +46,17 @@ var InventoryStock = (function () {
         if (!tbody) return;
 
         if (!items || !items.length) {
-            tbody.innerHTML = '<tr><td colspan="8" class="inv-mgmt-empty">No stock yet. Record a purchase to add inventory.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" class="inv-mgmt-empty">No stock yet. Record a purchase to add inventory.</td></tr>';
             return;
         }
 
         tbody.innerHTML = items.map(function (item) {
-            var profit = Number(item.total_profit || 0);
-            var profitClass = profit >= 0 ? "inv-profit-positive" : "inv-profit-negative";
             return (
                 "<tr>" +
                 "<td class=\"inv-col-name\">" + InventoryApi.escapeHtml(item.product_name) + "</td>" +
                 "<td class=\"inv-col-sku\">" + InventoryApi.escapeHtml(item.product_sku || "—") + "</td>" +
                 "<td class=\"inv-col-unit\">" + InventoryApi.escapeHtml(item.product_unit || "pcs") + "</td>" +
                 "<td class=\"inv-col-qty\"><strong>" + InventoryApi.escapeHtml(item.quantity) + "</strong></td>" +
-                "<td class=\"inv-col-buy\">" + InventoryApi.formatMoney(item.avg_batch_cost) + "</td>" +
-                "<td class=\"inv-col-sell\">" + InventoryApi.formatMoney(item.avg_batch_sell) + "</td>" +
-                "<td class=\"inv-col-profit " + profitClass + "\"><strong>" + formatProfit(profit) + "</strong></td>" +
                 "<td class=\"inv-col-action\">" + actionButtons(item) + "</td>" +
                 "</tr>"
             );
@@ -90,20 +78,11 @@ var InventoryStock = (function () {
         var purchasesWrap = document.getElementById("inventory-view-purchases-wrap");
         if (!container || !purchasesWrap) return;
 
-        var profit = Number(stock.total_profit || 0);
-        var profitClass = profit >= 0 ? "inv-profit-positive" : "inv-profit-negative";
         var rows = [
             { label: "Product", value: displayValue(stock.product_name) },
             { label: "SKU", value: displayValue(stock.product_sku) },
             { label: "Unit", value: displayValue(stock.product_unit || "pcs") },
-            { label: "In Stock", value: displayValue(stock.quantity) },
-            { label: "Avg Batch Cost", value: InventoryApi.formatMoney(stock.avg_batch_cost) },
-            { label: "Avg Batch Sell", value: InventoryApi.formatMoney(stock.avg_batch_sell) },
-            {
-                label: "Potential Profit",
-                value: "<strong class=\"" + profitClass + "\">" + formatProfit(profit) + "</strong>",
-                html: true
-            }
+            { label: "In Stock", value: displayValue(stock.quantity) }
         ];
 
         container.innerHTML = rows.map(function (row) {
@@ -170,7 +149,7 @@ var InventoryStock = (function () {
         if (!tbody) return;
 
         if (!items || !items.length) {
-            tbody.innerHTML = '<tr><td colspan="10" class="inv-mgmt-empty">No batches yet. Step 1: Record a purchase invoice to add stock.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" class="inv-mgmt-empty">No batches yet. Step 1: Record a purchase invoice to add stock.</td></tr>';
             return;
         }
 
@@ -180,8 +159,6 @@ var InventoryStock = (function () {
             var availClass = avail > 0 ? "inv-batch-available" : "inv-batch-empty";
             var buy = Number(item.purchase_price || 0);
             var sell = Number(item.product_sale_price != null ? item.product_sale_price : item.selling_price || 0);
-            var unitProfit = Number(item.unit_profit != null ? item.unit_profit : sell - buy);
-            var profitClass = unitProfit >= 0 ? "inv-profit-positive" : "inv-profit-negative";
             return (
                 "<tr>" +
                 "<td><strong>" + (offset + index + 1) + "</strong></td>" +
@@ -191,7 +168,6 @@ var InventoryStock = (function () {
                 "<td class=\"inv-mgmt-cell--num " + availClass + "\"><strong>" + InventoryApi.escapeHtml(item.available_quantity) + "</strong></td>" +
                 "<td class=\"inv-mgmt-cell--num\">" + InventoryApi.formatMoney(buy) + "</td>" +
                 "<td class=\"inv-mgmt-cell--num\">" + InventoryApi.formatMoney(sell) + "</td>" +
-                "<td class=\"inv-mgmt-cell--num " + profitClass + "\">" + formatProfit(unitProfit) + "</td>" +
                 "<td>" + formatDate(item.expiry_date) + "</td>" +
                 "<td>" + formatDate(String(item.created_at || "").slice(0, 10)) + "</td>" +
                 "</tr>"

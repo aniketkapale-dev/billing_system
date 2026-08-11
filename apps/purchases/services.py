@@ -19,6 +19,22 @@ class PurchaseService(BaseService):
         self.inventory_service = InventoryStockService()
         self.batch_service = BatchInventoryService()
 
+    def _resolve_payment_type_id(self, business_id, payment_type_id):
+        if not payment_type_id:
+            return None
+
+        from apps.catalog.models import PaymentType
+
+        try:
+            PaymentType.objects.get(
+                pk=payment_type_id,
+                business_id=business_id,
+                is_deleted=False,
+            )
+        except PaymentType.DoesNotExist:
+            raise NotFoundException("Payment type not found.")
+        return payment_type_id
+
     @transaction.atomic
     def create_with_items(self, data):
         user = get_current_user()
@@ -34,6 +50,12 @@ class PurchaseService(BaseService):
             raise ValidationException("At least one purchase item is required.")
 
         validate_required(data.get("customer_name"), "Customer name")
+
+        if "payment_type_id" in data:
+            data["payment_type_id"] = self._resolve_payment_type_id(
+                business_id,
+                data.get("payment_type_id"),
+            )
 
         total_amount = Decimal("0")
         prepared_items = []
@@ -148,6 +170,18 @@ class PurchaseService(BaseService):
 
         if "notes" in data:
             updates["notes"] = data.get("notes") or ""
+
+        if "billing_address" in data:
+            updates["billing_address"] = (data.get("billing_address") or "").strip()
+
+        if "shipping_address" in data:
+            updates["shipping_address"] = (data.get("shipping_address") or "").strip()
+
+        if "payment_type_id" in data:
+            updates["payment_type_id"] = self._resolve_payment_type_id(
+                purchase.business_id,
+                data.get("payment_type_id"),
+            )
 
         if not updates:
             return purchase

@@ -26,6 +26,16 @@ class Purchase(BaseEntity):
     reference_no = models.CharField(max_length=50, blank=True, default="")
     purchase_date = models.DateField(default=timezone.localdate)
     notes = models.TextField(blank=True, default="")
+    billing_address = models.TextField(blank=True, default="")
+    shipping_address = models.TextField(blank=True, default="")
+    payment_type = models.ForeignKey(
+        "catalog.PaymentType",
+        on_delete=models.SET_NULL,
+        related_name="purchases",
+        db_column="payment_type_id",
+        null=True,
+        blank=True,
+    )
     total_amount = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
     total_cost = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
     total_profit = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))

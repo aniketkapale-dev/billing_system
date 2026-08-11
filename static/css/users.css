@@ -45,6 +45,7 @@
 .inv-users-table {
     width: 100%;
     border-collapse: collapse;
+    table-layout: fixed;
     font-size: 14px;
 }
 

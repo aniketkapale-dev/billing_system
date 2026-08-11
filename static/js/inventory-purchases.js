@@ -3,9 +3,12 @@ var InventoryPurchases = (function () {
 
     var API = "/api/purchases";
     var PRODUCTS_API = "/api/products";
+    var CATALOG_API = "/api/catalog";
     var PAGE_SIZE = (window.InventoryConstants && InventoryConstants.PAGE_SIZE) || 10;
     var currentPage = 1;
+    var searchTimer = null;
     var products = [];
+    var paymentTypes = [];
     var editingPurchaseId = null;
     var PURCHASES_LIST_PANEL = "purchases-list-panel";
     var PURCHASES_FORM_PANEL = "purchases-form-panel";
@@ -13,6 +16,87 @@ var InventoryPurchases = (function () {
 
     function request(path, opts) {
         return InventoryApi.request(API, path, opts);
+    }
+
+    function catalogRequest(resource, path, opts) {
+        path = path == null ? "" : String(path);
+        var segment = String(resource).replace(/^\/+|\/+$/g, "");
+        var urlPath;
+        if (path.charAt(0) === "?") {
+            urlPath = "/" + segment + "/" + path;
+        } else if (!path) {
+            urlPath = "/" + segment + "/";
+        } else {
+            urlPath = "/" + segment + "/" + path.replace(/^\//, "");
+        }
+        return InventoryApi.request(CATALOG_API, urlPath, opts);
+    }
+
+    function renderPaymentTypeSelect(selectedId) {
+        var select = document.getElementById("purchase-payment-type");
+        if (!select) return;
+
+        var html = '<option value="">Select payment type (optional)</option>';
+        paymentTypes.forEach(function (item) {
+            var selected = String(item.id) === String(selectedId) ? " selected" : "";
+            html += '<option value="' + item.id + '"' + selected + ">" +
+                InventoryApi.escapeHtml(item.name) + "</option>";
+        });
+        select.innerHTML = html;
+        if (selectedId) {
+            select.value = String(selectedId);
+        }
+    }
+
+    function togglePaymentTypePanel(show) {
+        var panel = document.getElementById("purchase-payment-type-new-panel");
+        if (!panel) return;
+        panel.classList.toggle("inv-hidden", !show);
+        if (show) {
+            document.getElementById("purchase-payment-type-new-name").focus();
+        } else {
+            document.getElementById("purchase-payment-type-new-name").value = "";
+        }
+    }
+
+    function loadPaymentTypes(selectedId) {
+        return catalogRequest("payment-types", "?page_size=100").then(function (body) {
+            paymentTypes = body && body.isSuccess ? (body.data.items || []) : [];
+            renderPaymentTypeSelect(selectedId);
+            return paymentTypes;
+        });
+    }
+
+    function saveNewPaymentType() {
+        var name = document.getElementById("purchase-payment-type-new-name").value.trim();
+        if (!name) {
+            InventoryToast.error("Payment type name is required.");
+            return;
+        }
+
+        var btn = document.getElementById("purchase-payment-type-save-btn");
+        InventoryLoader.button(btn, true, "Saving...");
+
+        catalogRequest("payment-types", "", {
+            method: "POST",
+            body: { name: name }
+        })
+            .then(function (body) {
+                if (body && body.isSuccess && body.data) {
+                    InventoryToast.success(body.message || "Payment type added.");
+                    togglePaymentTypePanel(false);
+                    return loadPaymentTypes(body.data.id);
+                }
+                var err = body.message || "Unable to add payment type.";
+                if (body.errors && body.errors.length) err = body.errors.join(" • ");
+                InventoryToast.error(err);
+            })
+            .catch(function () {
+                InventoryToast.error("Network error while saving payment type.");
+            })
+            .finally(function () {
+                InventoryLoader.button(btn, false);
+            });
     }
 
     function loadProducts() {
@@ -114,8 +198,8 @@ var InventoryPurchases = (function () {
             }
             if (selectedId) {
                 select.value = String(selectedId);
+                updateRowQtyLimits(row, getProduct(select.value));
             }
-            applyProductToRow(row, getProduct(select.value));
         });
     }
 
@@ -126,16 +210,17 @@ var InventoryPurchases = (function () {
         return product.sale_price;
     }
 
-    function applyProductToRow(row, product) {
+    function updateRowQtyLimits(row, product) {
         var qtyInput = row.querySelector(".inv-item-qty");
-        var priceInput = row.querySelector(".inv-item-price");
+        if (!qtyInput) return;
+
         if (!product) {
             qtyInput.removeAttribute("max");
             row.dataset.maxQty = "";
-            if (priceInput) priceInput.value = "";
             updateRowTotal(row);
             return;
         }
+
         var available = getRemainingQty(product.id, row);
         row.dataset.maxQty = String(available);
         if (available <= 0) {
@@ -152,8 +237,25 @@ var InventoryPurchases = (function () {
                 qtyInput.value = 1;
             }
         }
-        if (priceInput) {
-            priceInput.value = defaultSalePrice(product);
+        updateRowTotal(row);
+    }
+
+    function applyProductToRow(row, product, options) {
+        options = options || {};
+        var priceInput = row.querySelector(".inv-item-price");
+        if (!product) {
+            updateRowQtyLimits(row, null);
+            if (priceInput) priceInput.value = "";
+            return;
+        }
+
+        updateRowQtyLimits(row, product);
+
+        if (priceInput && options.updatePrice !== false) {
+            var shouldSetPrice = options.forcePrice || priceInput.value === "";
+            if (shouldSetPrice) {
+                priceInput.value = defaultSalePrice(product);
+            }
         }
         updateRowTotal(row);
     }
@@ -172,7 +274,7 @@ var InventoryPurchases = (function () {
             '<div class="inv-mgmt-field"><label>Available Product</label><select class="inv-mgmt-select inv-item-product" required>' + productOptions(data.product_id, row) + "</select></div>" +
             '<div class="inv-mgmt-field"><label>Quantity</label><input class="inv-mgmt-input inv-item-qty" type="number" min="0.01" step="0.01" value="' + (data.quantity || 1) + '" required/></div>' +
             '<div class="inv-mgmt-field"><label>Sale Price</label><input class="inv-mgmt-input inv-item-price" type="number" min="0" step="0.01" placeholder="0.00" value="' + (data.unit_price != null && data.unit_price !== "" ? data.unit_price : "") + '" required/></div>' +
-            '<div class="inv-mgmt-field"><label>Line Total</label><input class="inv-mgmt-input inv-item-total" type="text" readonly value="0.00"/></div>' +
+            '<div class="inv-mgmt-field"><label>Total Price</label><input class="inv-mgmt-input inv-item-total" type="text" readonly value="0.00"/></div>' +
             '<div class="inv-mgmt-field"><label>&nbsp;</label><button type="button" class="inv-mgmt-btn inv-mgmt-btn--danger inv-item-remove">Remove</button></div>';
 
         row.querySelector(".inv-item-qty").addEventListener("input", function () {
@@ -198,12 +300,14 @@ var InventoryPurchases = (function () {
 
         var select = row.querySelector(".inv-item-product");
         select.addEventListener("change", function () {
-            applyProductToRow(row, getProduct(select.value));
+            applyProductToRow(row, getProduct(select.value), { forcePrice: true });
             refreshAllProductSelects();
         });
 
         if (data.product_id) {
-            applyProductToRow(row, getProduct(data.product_id));
+            applyProductToRow(row, getProduct(data.product_id), {
+                updatePrice: data.unit_price == null || data.unit_price === ""
+            });
         } else {
             updateRowTotal(row);
         }
@@ -221,7 +325,7 @@ var InventoryPurchases = (function () {
             '<div class="inv-mgmt-field"><label>Product</label><input class="inv-mgmt-input" type="text" readonly value="' + label + '"/></div>' +
             '<div class="inv-mgmt-field"><label>Quantity</label><input class="inv-mgmt-input" type="text" readonly value="' + InventoryApi.escapeHtml(formatQty(line.quantity)) + '"/></div>' +
             '<div class="inv-mgmt-field"><label>Sale Price</label><input class="inv-mgmt-input" type="text" readonly value="' + InventoryApi.formatMoney(line.unit_price) + '"/></div>' +
-            '<div class="inv-mgmt-field"><label>Line Total</label><input class="inv-mgmt-input" type="text" readonly value="' + InventoryApi.formatMoney(line.line_total) + '"/></div>' +
+            '<div class="inv-mgmt-field"><label>Total Price</label><input class="inv-mgmt-input" type="text" readonly value="' + InventoryApi.formatMoney(line.line_total) + '"/></div>' +
             '<div class="inv-mgmt-field"><label>&nbsp;</label><button type="button" class="inv-mgmt-btn inv-mgmt-btn--danger inv-item-remove inv-hidden" disabled>Remove</button></div>';
         return row;
     }
@@ -254,6 +358,9 @@ var InventoryPurchases = (function () {
     function populateForm(purchase) {
         document.getElementById("purchase-customer").value = purchase.customer_name || "";
         document.getElementById("purchase-date").value = purchase.purchase_date || "";
+        document.getElementById("purchase-billing-address").value = purchase.billing_address || "";
+        document.getElementById("purchase-shipping-address").value = purchase.shipping_address || "";
+        loadPaymentTypes(purchase.payment_type || "");
 
         var container = document.getElementById("purchase-items-container");
         container.innerHTML = "";
@@ -359,8 +466,11 @@ var InventoryPurchases = (function () {
         var rows = [
             { label: "Sale Date", value: displayValue(purchase.purchase_date) },
             { label: "Customer", value: displayValue(purchase.customer_name) },
+            { label: "Payment Type", value: displayValue(purchase.payment_type_name) },
+            { label: "Billing Address", value: displayValue(purchase.billing_address) },
+            { label: "Shipping Address", value: displayValue(purchase.shipping_address) },
             { label: "Sale Amount", value: InventoryApi.formatMoney(purchase.total_amount) },
-            { label: "FIFO Cost", value: InventoryApi.formatMoney(purchase.total_cost) },
+            { label: "Total Cost", value: InventoryApi.formatMoney(purchase.total_cost) },
             {
                 label: "Profit",
                 value: "<strong class=\"" + profitClass + "\">" + formatProfit(profit) + "</strong>",
@@ -396,7 +506,7 @@ var InventoryPurchases = (function () {
             '<div class="inv-mgmt-table-wrap">' +
             '<table class="inv-mgmt-table">' +
             "<thead><tr>" +
-            "<th>Product</th><th>SKU</th><th>Unit</th><th>Qty</th><th>Sale Price</th><th>Line Total</th><th>FIFO Cost</th><th>Profit</th>" +
+            "<th>Product</th><th>SKU</th><th>Unit</th><th>Qty</th><th>Sale Price</th><th>Total Price</th><th>Total Cost</th><th>Profit</th>" +
             "</tr></thead><tbody>" +
             lines.map(function (line) {
                 var lineProfit = Number(line.profit_amount || 0);
@@ -460,7 +570,31 @@ var InventoryPurchases = (function () {
         var params = new URLSearchParams();
         params.set("page", String(page || 1));
         params.set("page_size", String(InventoryPagination.getPageSize("purchases-pagination")));
+
+        var searchEl = document.getElementById("purchases-search");
+        var dateFromEl = document.getElementById("purchases-date-from");
+        var dateToEl = document.getElementById("purchases-date-to");
+        if (searchEl && searchEl.value.trim()) {
+            params.set("search", searchEl.value.trim());
+        }
+        if (dateFromEl && dateFromEl.value) {
+            params.set("date_from", dateFromEl.value);
+        }
+        if (dateToEl && dateToEl.value) {
+            params.set("date_to", dateToEl.value);
+        }
+
         return "?" + params.toString();
+    }
+
+    function clearFilters() {
+        var searchEl = document.getElementById("purchases-search");
+        var dateFromEl = document.getElementById("purchases-date-from");
+        var dateToEl = document.getElementById("purchases-date-to");
+        if (searchEl) searchEl.value = "";
+        if (dateFromEl) dateFromEl.value = "";
+        if (dateToEl) dateToEl.value = "";
+        loadPurchases(1);
     }
 
     function loadPurchases(page) {
@@ -568,8 +702,24 @@ var InventoryPurchases = (function () {
         setFormMode("add");
         document.getElementById("purchase-customer").value = "";
         document.getElementById("purchase-date").value = new Date().toISOString().slice(0, 10);
+        document.getElementById("purchase-billing-address").value = "";
+        document.getElementById("purchase-shipping-address").value = "";
+        document.getElementById("purchase-payment-type").value = "";
+        togglePaymentTypePanel(false);
         document.getElementById("purchase-items-container").innerHTML = "";
         addItemRow(null, isSilent !== false);
+    }
+
+    function getSaleHeaderPayload() {
+        var paymentTypeEl = document.getElementById("purchase-payment-type");
+        var paymentTypeId = paymentTypeEl ? paymentTypeEl.value : "";
+        return {
+            customer_name: document.getElementById("purchase-customer").value.trim(),
+            purchase_date: document.getElementById("purchase-date").value || undefined,
+            billing_address: document.getElementById("purchase-billing-address").value.trim(),
+            shipping_address: document.getElementById("purchase-shipping-address").value.trim(),
+            payment_type_id: paymentTypeId ? Number(paymentTypeId) : null
+        };
     }
 
     function savePurchase() {
@@ -584,14 +734,11 @@ var InventoryPurchases = (function () {
             InventoryLoader.button(btn, true, "Updating...");
             request("/" + editingPurchaseId + "/", {
                 method: "PATCH",
-                body: {
-                    customer_name: customer,
-                    purchase_date: document.getElementById("purchase-date").value || undefined
-                }
+                body: getSaleHeaderPayload()
             })
                 .then(function (body) {
                     if (body && body.isSuccess) {
-                        InventoryToast.success(body.message || "Sale updated.");
+                        InventoryToast.success(body.message || "Sale updated successfully.");
                         resetForm(true);
                         InventoryPagePanel.showList(PURCHASES_LIST_PANEL);
                         loadPurchases(currentPage);
@@ -629,15 +776,11 @@ var InventoryPurchases = (function () {
 
         request("", {
             method: "POST",
-            body: {
-                customer_name: customer,
-                purchase_date: document.getElementById("purchase-date").value,
-                items: items
-            }
+            body: Object.assign(getSaleHeaderPayload(), { items: items })
         })
             .then(function (body) {
                 if (body && body.isSuccess) {
-                    InventoryToast.success(body.message || "Sale saved. FIFO applied and profit calculated.");
+                    InventoryToast.success(body.message || "Sale added successfully. Stock has been updated.");
                     resetForm(true);
                     InventoryPagePanel.showList(PURCHASES_LIST_PANEL);
                     loadPurchases(1);
@@ -666,6 +809,7 @@ var InventoryPurchases = (function () {
         function boot() {
             if (!InventoryBusiness.getActiveId()) return;
             loadProducts().then(function () {
+                loadPaymentTypes();
                 loadPurchases(1);
             });
         }
@@ -679,6 +823,7 @@ var InventoryPurchases = (function () {
                 return;
             }
             loadProducts().then(function () {
+                loadPaymentTypes();
                 resetForm(true);
                 if (!hasAvailableProducts(null)) {
                     InventoryToast.warning("No products with remaining stock available.");
@@ -696,6 +841,40 @@ var InventoryPurchases = (function () {
             addItemRow(null, true);
         });
         document.getElementById("purchase-save-btn").addEventListener("click", savePurchase);
+
+        var searchEl = document.getElementById("purchases-search");
+        var dateFromEl = document.getElementById("purchases-date-from");
+        var dateToEl = document.getElementById("purchases-date-to");
+        var clearBtn = document.getElementById("purchases-clear-filters");
+
+        if (searchEl) {
+            searchEl.addEventListener("input", function () {
+                window.clearTimeout(searchTimer);
+                searchTimer = window.setTimeout(function () {
+                    loadPurchases(1);
+                }, 300);
+            });
+        }
+        if (dateFromEl) dateFromEl.addEventListener("change", function () { loadPurchases(1); });
+        if (dateToEl) dateToEl.addEventListener("change", function () { loadPurchases(1); });
+        if (clearBtn) clearBtn.addEventListener("click", clearFilters);
+
+        var paymentTypeAddBtn = document.getElementById("purchase-payment-type-add-btn");
+        var paymentTypeSaveBtn = document.getElementById("purchase-payment-type-save-btn");
+        var paymentTypeCancelBtn = document.getElementById("purchase-payment-type-cancel-btn");
+
+        if (paymentTypeAddBtn) {
+            paymentTypeAddBtn.addEventListener("click", function () {
+                var panel = document.getElementById("purchase-payment-type-new-panel");
+                togglePaymentTypePanel(panel.classList.contains("inv-hidden"));
+            });
+        }
+        if (paymentTypeSaveBtn) paymentTypeSaveBtn.addEventListener("click", saveNewPaymentType);
+        if (paymentTypeCancelBtn) {
+            paymentTypeCancelBtn.addEventListener("click", function () {
+                togglePaymentTypePanel(false);
+            });
+        }
 
         var tbody = document.getElementById("purchases-table-body");
         if (tbody) {

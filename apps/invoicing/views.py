@@ -26,6 +26,16 @@ class PurchaseInvoiceViewSet(BusinessScopedViewSetMixin, BaseViewSet):
     required_roles = ["Business Owner"]
     ordering_default = ("-invoice_date", "-created_at")
 
+    def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
+        date_from = self.request.query_params.get("date_from")
+        date_to = self.request.query_params.get("date_to")
+        if date_from:
+            queryset = queryset.filter(invoice_date__gte=date_from)
+        if date_to:
+            queryset = queryset.filter(invoice_date__lte=date_to)
+        return queryset
+
     def _merge_request_data(self, request):
         data = {}
         if hasattr(request.data, "keys"):

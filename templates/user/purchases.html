@@ -14,11 +14,19 @@
         </div>
 
         <div class="inv-mgmt-card">
+            <div class="inv-mgmt-toolbar inv-mgmt-toolbar--filters">
+                <input type="search" id="purchases-search" class="inv-mgmt-search" placeholder="Search customer, invoice no...."/>
+                <div class="inv-mgmt-filter-dates">
+                    <input type="date" id="purchases-date-from" class="inv-mgmt-input inv-mgmt-filter-date" aria-label="From date"/>
+                    <span class="inv-mgmt-filter-sep">to</span>
+                    <input type="date" id="purchases-date-to" class="inv-mgmt-input inv-mgmt-filter-date" aria-label="To date"/>
+                </div>
+                <button type="button" id="purchases-clear-filters" class="inv-mgmt-btn">Clear</button>
+            </div>
             <div class="inv-mgmt-table-wrap">
                 <table class="inv-mgmt-table inv-mgmt-table--purchases">
                     <colgroup>
-                        <col span="6"/>
-                        <col style="width:88px"/>
+                        <col span="7"/>
                     </colgroup>
                     <thead>
                         <tr>
@@ -26,7 +34,7 @@
                             <th>Customer</th>
                             <th>Products Sold</th>
                             <th>Sale Amount</th>
-                            <th>FIFO Cost</th>
+                            <th>Total Cost</th>
                             <th>Profit</th>
                             <th class="inv-col-action">Action</th>
                         </tr>
@@ -50,7 +58,7 @@
         </div>
         <div class="inv-mgmt-card inv-mgmt-panel-card">
             <div class="inv-mgmt-panel-body">
-                <div class="inv-mgmt-form-grid" style="padding:0;">
+                <div class="inv-mgmt-form-grid inv-mgmt-form-grid--sale-top" style="padding:0;">
                     <div class="inv-mgmt-field">
                         <label for="purchase-customer">Customer Name</label>
                         <input id="purchase-customer" class="inv-mgmt-input" type="text" placeholder="Customer name" required/>
@@ -58,6 +66,34 @@
                     <div class="inv-mgmt-field">
                         <label for="purchase-date">Sale Date</label>
                         <input id="purchase-date" class="inv-mgmt-input" type="date"/>
+                    </div>
+                    <div class="inv-mgmt-field">
+                        <label for="purchase-payment-type">Payment Type <span class="inv-field-optional">(optional)</span></label>
+                        <div class="inv-field-inline">
+                            <select id="purchase-payment-type" class="inv-mgmt-select">
+                                <option value="">Select payment type (optional)</option>
+                            </select>
+                            <button id="purchase-payment-type-add-btn" type="button" class="inv-inline-add-btn" title="Add new payment type" aria-label="Add new payment type">
+                                <span class="material-symbols-outlined">add</span>
+                            </button>
+                        </div>
+                        <div id="purchase-payment-type-new-panel" class="inv-inline-add-panel inv-hidden">
+                            <input id="purchase-payment-type-new-name" class="inv-mgmt-input" type="text" placeholder="New payment type (e.g. Cash, UPI)"/>
+                            <div class="inv-inline-add-actions">
+                                <button id="purchase-payment-type-save-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Save Payment Type</button>
+                                <button id="purchase-payment-type-cancel-btn" type="button" class="inv-mgmt-btn">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="inv-mgmt-form-grid inv-mgmt-form-grid--sale-addresses" style="padding:0;">
+                    <div class="inv-mgmt-field">
+                        <label for="purchase-billing-address">Billing Address <span class="inv-field-optional">(optional)</span></label>
+                        <textarea id="purchase-billing-address" class="inv-mgmt-textarea" rows="3" placeholder="Billing address"></textarea>
+                    </div>
+                    <div class="inv-mgmt-field">
+                        <label for="purchase-shipping-address">Shipping Address <span class="inv-field-optional">(optional)</span></label>
+                        <textarea id="purchase-shipping-address" class="inv-mgmt-textarea" rows="3" placeholder="Shipping address"></textarea>
                     </div>
                 </div>
 
@@ -81,7 +117,7 @@
 
     <div id="purchases-view-panel" class="inv-mgmt-page-panel inv-hidden">
         <div class="inv-mgmt-panel-header">
-            <h2 id="purchase-view-title" class="inv-dashboard   greeting">Sale Details</h2>
+            <h2 id="purchase-view-title" class="inv-dashboard-greeting">Sale Details</h2>
             <button type="button" class="inv-mgmt-btn inv-page-back-btn" data-page-back="purchases-list-panel">
                 <span class="material-symbols-outlined">arrow_back</span>
                 Back to List

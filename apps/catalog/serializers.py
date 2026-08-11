@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from apps.catalog.models import Brand, Category, Manufacturer, Unit
+from apps.catalog.models import Brand, Category, Manufacturer, PaymentType, Unit
 from core.base_serializer import BaseModelSerializer
 
 
@@ -99,4 +99,28 @@ class ManufacturerSerializer(BaseModelSerializer):
 class ManufacturerWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Manufacturer
+        fields = ("name", "is_active")
+
+
+class PaymentTypeSerializer(BaseModelSerializer):
+    business_name = serializers.CharField(source="business.business_name", read_only=True)
+
+    class Meta:
+        model = PaymentType
+        fields = (
+            "id",
+            "business",
+            "business_name",
+            "name",
+            "is_active",
+            "is_deleted",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = ("business",)
+
+
+class PaymentTypeWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PaymentType
         fields = ("name", "is_active")

@@ -87,6 +87,52 @@
     background: #FFFFFF;
 }
 
+.inv-mgmt-toolbar--filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px 16px;
+}
+
+.inv-mgmt-toolbar--filters .inv-mgmt-search {
+    width: min(320px, 100%);
+    max-width: 320px;
+    flex: 0 1 320px;
+    margin: 0;
+}
+
+.inv-mgmt-filter-dates {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+
+.inv-mgmt-toolbar--filters .inv-mgmt-filter-date {
+    width: 11rem;
+    min-width: 11rem;
+    max-width: 11rem;
+    flex: 0 0 11rem;
+    margin: 0;
+}
+
+.inv-mgmt-filter-sep {
+    flex: 0 0 auto;
+    font-size: 13px;
+    line-height: 1;
+    color: var(--inv-secondary);
+    white-space: nowrap;
+}
+
+.inv-mgmt-toolbar--filters .inv-mgmt-btn {
+    flex: 0 0 auto;
+    align-self: center;
+    min-height: 42px;
+    box-sizing: border-box;
+}
+
 .inv-mgmt-search,
 .inv-mgmt-input,
 .inv-mgmt-select,
@@ -127,20 +173,10 @@
 .inv-mgmt-table th,
 .inv-mgmt-table td {
     box-sizing: border-box;
-    padding: 12px 14px 12px 0;
+    padding: 12px 14px;
     text-align: left;
     vertical-align: middle;
     border-bottom: 1px solid var(--inv-outline-variant);
-}
-
-.inv-mgmt-table th:first-child,
-.inv-mgmt-table td:first-child {
-    padding-left: 14px;
-}
-
-.inv-mgmt-table th:last-child,
-.inv-mgmt-table td:last-child {
-    padding-right: 14px;
 }
 
 .inv-mgmt-table th {
@@ -185,7 +221,7 @@
     display: inline;
 }
 
-/* Equal-width columns: numbers right-aligned, text columns left-aligned */
+/* All management tables: left-aligned headers and cells */
 .inv-mgmt-table--products th,
 .inv-mgmt-table--products td:not(.inv-mgmt-empty),
 .inv-mgmt-table--inventory th,
@@ -196,51 +232,16 @@
 .inv-mgmt-table--stockin td:not(.inv-mgmt-empty),
 .inv-mgmt-table--purchases th,
 .inv-mgmt-table--purchases td:not(.inv-mgmt-empty) {
-    /* text-align: right; */
+    text-align: left;
     font-variant-numeric: tabular-nums;
 }
 
-/* Products: Qty, Opening, Action = right (Buy Price stays left, next to Brand) */
-.inv-mgmt-table--products th:nth-child(7),
-.inv-mgmt-table--products td:nth-child(7):not(.inv-mgmt-empty),
-.inv-mgmt-table--products th:nth-child(8),
-.inv-mgmt-table--products td:nth-child(8):not(.inv-mgmt-empty),
-.inv-mgmt-table--products th:nth-child(10),
-.inv-mgmt-table--products td:nth-child(10):not(.inv-mgmt-empty) {
-    text-align: right;
-}
-/* Inventory: Product, SKU, Unit = text */
-.inv-mgmt-table--inventory th:nth-child(-n+3),
-.inv-mgmt-table--inventory td:nth-child(-n+3):not(.inv-mgmt-empty),
-/* Batches: Product, Batch, Invoice, Expiry, Received = text */
-.inv-mgmt-table--batches th:nth-child(2),
-.inv-mgmt-table--batches td:nth-child(2):not(.inv-mgmt-empty),
-.inv-mgmt-table--batches th:nth-child(3),
-.inv-mgmt-table--batches td:nth-child(3):not(.inv-mgmt-empty),
-.inv-mgmt-table--batches th:nth-child(4),
-.inv-mgmt-table--batches td:nth-child(4):not(.inv-mgmt-empty),
-.inv-mgmt-table--batches th:nth-child(9),
-.inv-mgmt-table--batches td:nth-child(9):not(.inv-mgmt-empty),
-.inv-mgmt-table--batches th:nth-child(10),
-.inv-mgmt-table--batches td:nth-child(10):not(.inv-mgmt-empty),
-/* Purchase & Sale lists: date, labels = text */
-.inv-mgmt-table--stockin th:nth-child(-n+2),
-.inv-mgmt-table--stockin td:nth-child(-n+2):not(.inv-mgmt-empty),
-.inv-mgmt-table--purchases th:nth-child(-n+3),
-.inv-mgmt-table--purchases td:nth-child(-n+3):not(.inv-mgmt-empty),
-/* First column on all tables */
-.inv-mgmt-table--products th:first-child,
-.inv-mgmt-table--products td:first-child:not(.inv-mgmt-empty),
-.inv-mgmt-table--inventory th:first-child,
-.inv-mgmt-table--inventory td:first-child:not(.inv-mgmt-empty),
-.inv-mgmt-table--batches th:first-child,
-.inv-mgmt-table--batches td:first-child:not(.inv-mgmt-empty),
-.inv-mgmt-table--stockin th:first-child,
-.inv-mgmt-table--stockin td:first-child:not(.inv-mgmt-empty),
-.inv-mgmt-table--purchases th:first-child,
-.inv-mgmt-table--purchases td:first-child:not(.inv-mgmt-empty) {
-    text-align: left;
-    font-variant-numeric: normal;
+.inv-mgmt-table .inv-row-actions {
+    display: inline-flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
 }
 
 .inv-mgmt-table--products td:not(.inv-mgmt-empty),
@@ -250,11 +251,6 @@
 .inv-mgmt-table--purchases td:not(.inv-mgmt-empty) {
     white-space: normal;
     word-break: break-word;
-}
-
-.inv-mgmt-table--products .inv-row-actions,
-.inv-mgmt-table--products td.inv-col-action {
-    justify-content: flex-end;
 }
 
 .inv-mgmt-table--products td.inv-col-sku,
@@ -269,18 +265,7 @@
 }
 
 .inv-mgmt-table--products td.inv-col-brand,
-.inv-mgmt-table--products th:nth-child(5) {
-    max-width: 110px;
-    padding-right: 20px;
-}
-
-.inv-mgmt-table--products td.inv-col-buy,
-.inv-mgmt-table--products th:nth-child(6) {
-    min-width: 84px;
-    max-width: 110px;
-    padding-left: 0;
-    padding-right: 16px;
-    text-align: left;
+.inv-mgmt-table--products td.inv-col-buy {
     font-variant-numeric: tabular-nums;
 }
 
@@ -292,8 +277,6 @@
 .inv-mgmt-table--products td.inv-col-opening {
     white-space: normal;
     word-break: normal;
-    min-width: 132px;
-    padding-right: 16px;
 }
 
 .inv-mgmt-table--products th.inv-col-opening-hd {
@@ -309,12 +292,6 @@
     text-transform: uppercase;
     letter-spacing: 0.03em;
     color: var(--inv-secondary);
-}
-
-.inv-mgmt-table--products th:nth-child(9),
-.inv-mgmt-table--products td.inv-col-unit {
-    min-width: 52px;
-    padding-left: 4px;
 }
 
 .inv-mgmt-table--products td.inv-col-opening .inv-opening-qty,
@@ -337,40 +314,38 @@
 }
 
 .inv-mgmt-table--stockin {
-    min-width: 760px;
+    min-width: 980px;
 }
 
-.inv-mgmt-table--inventory th:nth-child(8),
-.inv-mgmt-table--inventory td.inv-col-action {
-    text-align: right;
+.inv-mgmt-table--stockin td.inv-col-file {
+    word-break: break-word;
 }
 
-.inv-mgmt-table--inventory .inv-row-actions {
+.inv-stockin-list-file-link {
     display: inline-flex;
-    justify-content: flex-end;
-    width: 100%;
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+    color: var(--inv-accent, #2563eb);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 13px;
 }
 
-.inv-mgmt-table--purchases th:nth-child(7),
-.inv-mgmt-table--purchases td.inv-col-action {
-    text-align: right;
+.inv-stockin-list-file-link:hover {
+    text-decoration: underline;
 }
 
-.inv-mgmt-table--purchases .inv-row-actions {
-    display: inline-flex;
-    justify-content: flex-end;
-    width: 100%;
+.inv-stockin-list-file-link .material-symbols-outlined {
+    font-size: 18px;
+    flex-shrink: 0;
 }
 
-.inv-mgmt-table--stockin th:nth-child(5),
-.inv-mgmt-table--stockin td.inv-col-action {
-    text-align: right;
-}
-
-.inv-mgmt-table--stockin .inv-row-actions {
-    display: inline-flex;
-    justify-content: flex-end;
-    width: 100%;
+.inv-stockin-list-file-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
 }
 
 .inv-stockin-view-items {
@@ -392,16 +367,6 @@
 
 .inv-mgmt-table--purchases {
     min-width: 960px;
-}
-
-.inv-mgmt-table--products td.inv-col-action {
-    text-align: right;
-}
-
-.inv-mgmt-table--products td.inv-col-action .inv-row-actions {
-    display: inline-flex;
-    justify-content: flex-end;
-    width: 100%;
 }
 
 .inv-inline-add-panel {
@@ -558,7 +523,7 @@
 
 .inv-mgmt-table td.inv-mgmt-cell--action,
 .inv-mgmt-table th.inv-mgmt-cell--action {
-    text-align: center;
+    text-align: left;
     white-space: nowrap;
 }
 
@@ -655,8 +620,22 @@
     padding: 16px;
 }
 
+.inv-field-optional {
+    font-weight: 400;
+    font-size: 12px;
+    color: var(--inv-secondary);
+}
+
 .inv-mgmt-form-grid--product {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.inv-mgmt-form-grid--sale-top {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.inv-mgmt-form-grid--sale-addresses {
+    margin-top: 16px;
 }
 
 .inv-stockin-header-wrap {
@@ -879,6 +858,7 @@
 @media (max-width: 900px) {
     .inv-mgmt-form-grid,
     .inv-mgmt-form-grid--product,
+    .inv-mgmt-form-grid--sale-top,
     .inv-mgmt-item-row.inv-mgmt-item-row--sale {
         grid-template-columns: 1fr;
         min-width: 0;

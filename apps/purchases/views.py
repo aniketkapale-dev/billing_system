@@ -16,9 +16,20 @@ class PurchaseViewSet(BusinessScopedViewSetMixin, BaseViewSet):
     service_class = PurchaseService
     serializer_class = PurchaseSerializer
     write_serializer_class = PurchaseWriteSerializer
-    search_fields = ("supplier_name", "reference_no", "notes")
+    search_fields = ("customer_name", "reference_no", "notes")
+    filter_fields = ("customer_name", "reference_no")
     required_roles = ["Business Owner"]
     ordering_default = ("-purchase_date", "-created_at")
+
+    def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
+        date_from = self.request.query_params.get("date_from")
+        date_to = self.request.query_params.get("date_to")
+        if date_from:
+            queryset = queryset.filter(purchase_date__gte=date_from)
+        if date_to:
+            queryset = queryset.filter(purchase_date__lte=date_to)
+        return queryset
 
     def get_permissions(self):
         return [IsAuthenticatedUser(), HasRole()]
@@ -34,7 +45,7 @@ class PurchaseViewSet(BusinessScopedViewSetMixin, BaseViewSet):
         payload = self.serializer_class(instance, context={"request": request}).data
         return ApiResponse.success(
             data=payload,
-            message="Sale recorded. FIFO batches consumed and profit calculated.",
+            message="Sale added successfully. Stock has been updated.",
             status_code=status.HTTP_201_CREATED,
         )
 
@@ -55,7 +66,7 @@ class PurchaseViewSet(BusinessScopedViewSetMixin, BaseViewSet):
         payload = self.serializer_class(instance, context={"request": request}).data
         return ApiResponse.success(
             data=payload,
-            message="Sale updated.",
+            message="Sale updated successfully.",
         )
 
     def destroy(self, request, pk=None):

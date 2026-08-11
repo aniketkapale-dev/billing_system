@@ -1,4 +1,4 @@
-from apps.catalog.models import Brand, Category, Manufacturer, Unit
+from apps.catalog.models import Brand, Category, Manufacturer, PaymentType, Unit
 from core.base_repository import BaseRepository
 
 
@@ -25,6 +25,13 @@ class BrandRepository(BaseRepository):
 
 class ManufacturerRepository(BaseRepository):
     model = Manufacturer
+
+    def get_queryset(self):
+        return super().get_queryset().select_related("business")
+
+
+class PaymentTypeRepository(BaseRepository):
+    model = PaymentType
 
     def get_queryset(self):
         return super().get_queryset().select_related("business")

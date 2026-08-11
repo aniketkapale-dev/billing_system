@@ -45,6 +45,7 @@ class PurchaseInvoiceItemSerializer(BaseModelSerializer):
 class PurchaseInvoiceSerializer(BaseModelSerializer):
     items = PurchaseInvoiceItemSerializer(many=True, read_only=True)
     business_name = serializers.CharField(source="business.business_name", read_only=True)
+    total_quantity = serializers.SerializerMethodField()
     attachment_url = serializers.SerializerMethodField()
     attachment_name = serializers.SerializerMethodField()
 
@@ -60,6 +61,7 @@ class PurchaseInvoiceSerializer(BaseModelSerializer):
             "discount",
             "tax",
             "grand_total",
+            "total_quantity",
             "remarks",
             "attachment",
             "attachment_url",
@@ -69,6 +71,16 @@ class PurchaseInvoiceSerializer(BaseModelSerializer):
             "created_at",
             "updated_at",
         )
+
+    def get_total_quantity(self, obj):
+        from decimal import Decimal
+
+        total = Decimal("0")
+        for item in obj.items.all():
+            if item.is_deleted:
+                continue
+            total += Decimal(str(item.quantity or 0))
+        return total
 
     def get_attachment_url(self, obj):
         request = self.context.get("request")

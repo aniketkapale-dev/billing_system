@@ -5,6 +5,7 @@ var InventoryStockIn = (function () {
     var PRODUCTS_API = "/api/products";
     var PAGE_SIZE = (window.InventoryConstants && InventoryConstants.PAGE_SIZE) || 10;
     var currentPage = 1;
+    var searchTimer = null;
     var products = [];
     var pendingProductRow = null;
     var editingInvoiceId = null;
@@ -219,22 +220,57 @@ var InventoryStockIn = (function () {
         return InventoryApi.escapeHtml(String(value));
     }
 
+    function formatDate(value) {
+        if (value === null || value === undefined || String(value).trim() === "") return "—";
+        var raw = String(value).trim();
+        var match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (match) {
+            return match[3] + "/" + match[2] + "/" + match[1];
+        }
+        var d = new Date(raw);
+        if (isNaN(d.getTime())) return "—";
+        var day = String(d.getDate()).padStart(2, "0");
+        var month = String(d.getMonth() + 1).padStart(2, "0");
+        var year = d.getFullYear();
+        return day + "/" + month + "/" + year;
+    }
+
+    function formatQty(value) {
+        var num = Number(value || 0);
+        return Number.isInteger(num) ? String(num) : num.toFixed(2);
+    }
+
+    function cellFile(item) {
+        if (!item.attachment_url) {
+            return "—";
+        }
+        var label = item.attachment_name || "View file";
+        return (
+            '<a class="inv-stockin-list-file-link" href="' + InventoryApi.escapeHtml(item.attachment_url) + '" ' +
+            'target="_blank" rel="noopener" title="Open ' + InventoryApi.escapeHtml(label) + '">' +
+            '<span class="material-symbols-outlined">description</span>' +
+            '<span class="inv-stockin-list-file-text">' + InventoryApi.escapeHtml(label) + "</span></a>"
+        );
+    }
+
     function renderRows(items) {
         var tbody = document.getElementById("stockin-table-body");
         if (!tbody) return;
 
         if (!items || !items.length) {
-            tbody.innerHTML = '<tr><td colspan="5" class="inv-mgmt-empty">No purchase invoices yet.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" class="inv-mgmt-empty">No purchase invoices yet.</td></tr>';
             return;
         }
 
         tbody.innerHTML = items.map(function (item) {
             return (
                 "<tr>" +
-                "<td>" + InventoryApi.escapeHtml(item.invoice_date) + "</td>" +
+                "<td>" + InventoryApi.escapeHtml(formatDate(item.invoice_date)) + "</td>" +
                 "<td><strong>" + InventoryApi.escapeHtml(item.invoice_number) + "</strong></td>" +
+                "<td class=\"inv-mgmt-cell--num\">" + InventoryApi.escapeHtml(formatQty(item.total_quantity)) + "</td>" +
                 "<td class=\"inv-mgmt-cell--num\">" + InventoryApi.formatMoney(item.subtotal) + "</td>" +
                 "<td class=\"inv-mgmt-cell--num\"><strong>" + InventoryApi.formatMoney(item.grand_total) + "</strong></td>" +
+                "<td class=\"inv-col-file\">" + cellFile(item) + "</td>" +
                 "<td class=\"inv-col-action\">" + actionButtons(item) + "</td>" +
                 "</tr>"
             );
@@ -258,7 +294,8 @@ var InventoryStockIn = (function () {
 
         var rows = [
             { label: "Invoice Number", value: displayValue(invoice.invoice_number) },
-            { label: "Purchase Date", value: displayValue(invoice.invoice_date) },
+            { label: "Purchase Date", value: displayValue(formatDate(invoice.invoice_date)) },
+            { label: "Total Quantity", value: displayValue(formatQty(invoice.total_quantity)) },
             { label: "Subtotal", value: InventoryApi.formatMoney(invoice.subtotal) },
             { label: "Grand Total", value: InventoryApi.formatMoney(invoice.grand_total) },
             { label: "Remarks", value: displayValue(invoice.remarks), full: true }
@@ -297,7 +334,7 @@ var InventoryStockIn = (function () {
             '<div class="inv-mgmt-table-wrap">' +
             '<table class="inv-mgmt-table">' +
             "<thead><tr>" +
-            "<th>Product</th><th>SKU</th><th>Qty</th><th>Buy Price</th><th>Batch</th><th>Expiry</th><th>Line Total</th>" +
+            "<th>Product</th><th>SKU</th><th>Qty</th><th>Buy Price</th><th>Batch</th><th>Expiry</th><th>Total Price</th>" +
             "</tr></thead><tbody>" +
             lines.map(function (line) {
                 return (
@@ -442,14 +479,42 @@ var InventoryStockIn = (function () {
         });
     }
 
+    function buildListQuery(page) {
+        var params = new URLSearchParams();
+        params.set("page", String(page || 1));
+        params.set("page_size", String(InventoryPagination.getPageSize("stockin-pagination")));
+
+        var searchEl = document.getElementById("stockin-search");
+        var dateFromEl = document.getElementById("stockin-date-from");
+        var dateToEl = document.getElementById("stockin-date-to");
+        if (searchEl && searchEl.value.trim()) {
+            params.set("search", searchEl.value.trim());
+        }
+        if (dateFromEl && dateFromEl.value) {
+            params.set("date_from", dateFromEl.value);
+        }
+        if (dateToEl && dateToEl.value) {
+            params.set("date_to", dateToEl.value);
+        }
+
+        return "?" + params.toString();
+    }
+
+    function clearFilters() {
+        var searchEl = document.getElementById("stockin-search");
+        var dateFromEl = document.getElementById("stockin-date-from");
+        var dateToEl = document.getElementById("stockin-date-to");
+        if (searchEl) searchEl.value = "";
+        if (dateFromEl) dateFromEl.value = "";
+        if (dateToEl) dateToEl.value = "";
+        loadInvoices(1);
+    }
+
     function loadInvoices(page) {
         currentPage = page || 1;
         InventoryLoader.show();
-        var params = new URLSearchParams();
-        params.set("page", String(currentPage));
-        params.set("page_size", String(InventoryPagination.getPageSize("stockin-pagination")));
 
-        return request("?" + params.toString())
+        return request(buildListQuery(currentPage))
             .then(function (body) {
                 if (body && body.isSuccess && body.data) {
                     renderRows(body.data.items || []);
@@ -616,6 +681,23 @@ var InventoryStockIn = (function () {
             });
         }
         if (saveBtn) saveBtn.addEventListener("click", saveInvoice);
+
+        var searchEl = document.getElementById("stockin-search");
+        var dateFromEl = document.getElementById("stockin-date-from");
+        var dateToEl = document.getElementById("stockin-date-to");
+        var clearBtn = document.getElementById("stockin-clear-filters");
+
+        if (searchEl) {
+            searchEl.addEventListener("input", function () {
+                window.clearTimeout(searchTimer);
+                searchTimer = window.setTimeout(function () {
+                    loadInvoices(1);
+                }, 300);
+            });
+        }
+        if (dateFromEl) dateFromEl.addEventListener("change", function () { loadInvoices(1); });
+        if (dateToEl) dateToEl.addEventListener("change", function () { loadInvoices(1); });
+        if (clearBtn) clearBtn.addEventListener("click", clearFilters);
 
         var attachmentBtn = document.getElementById("stockin-attachment-btn");
         var attachmentInput = getAttachmentInput();
