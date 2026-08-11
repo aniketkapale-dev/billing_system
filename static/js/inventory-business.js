@@ -145,6 +145,13 @@ var InventoryBusiness = (function () {
             return null;
         }
 
+        if (phone && (!window.InventoryAuth || !InventoryAuth.isValidMobile(phone))) {
+            InventoryToast.error("Enter a valid 10-digit mobile number.");
+            var phoneInput = document.getElementById("business-phone");
+            if (phoneInput) phoneInput.focus();
+            return null;
+        }
+
         if (useFormData || logoFile) {
             var formData = new FormData();
             formData.append("business_name", businessName);
@@ -226,6 +233,10 @@ var InventoryBusiness = (function () {
 
         if (saveBtn) {
             saveBtn.addEventListener("click", saveBusiness);
+        }
+
+        if (window.InventoryAuth && typeof InventoryAuth.wireMobileInput === "function") {
+            InventoryAuth.wireMobileInput(document.getElementById("business-phone"));
         }
 
         InventoryModal.wire("business-modal");

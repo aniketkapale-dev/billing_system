@@ -519,6 +519,8 @@ var InventoryAuth = (function () {
         initRegister: initRegister,
         guardSuperAdmin: guardSuperAdmin,
         guardUser: guardUser,
-        clear: clear
+        clear: clear,
+        wireMobileInput: wireMobileInput,
+        isValidMobile: isValidMobile
     };
 })();

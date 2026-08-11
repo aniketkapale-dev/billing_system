@@ -69,7 +69,12 @@ class BusinessWriteSerializer(serializers.ModelSerializer):
         return (value or "").strip()
 
     def validate_phone(self, value):
-        return (value or "").strip()
+        value = (value or "").strip()
+        if not value:
+            return ""
+        from core.validators import validate_mobile_number
+
+        return validate_mobile_number(value)
 
     def validate_address(self, value):
         return (value or "").strip()

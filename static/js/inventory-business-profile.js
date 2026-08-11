@@ -97,6 +97,14 @@ var InventoryBusinessProfile = (function () {
             return null;
         }
 
+        var phone = document.getElementById("business-profile-phone").value.trim();
+        if (phone && (!window.InventoryAuth || !InventoryAuth.isValidMobile(phone))) {
+            InventoryToast.error("Enter a valid 10-digit mobile number.");
+            var phoneInput = document.getElementById("business-profile-phone");
+            if (phoneInput) phoneInput.focus();
+            return null;
+        }
+
         if (logoFile || clearLogo) {
             var formData = new FormData();
             formData.append("business_name", businessName);
@@ -185,6 +193,10 @@ var InventoryBusinessProfile = (function () {
                 var addBtn = document.getElementById("inv-business-add-btn");
                 if (addBtn) addBtn.click();
             });
+        }
+
+        if (window.InventoryAuth && typeof InventoryAuth.wireMobileInput === "function") {
+            InventoryAuth.wireMobileInput(document.getElementById("business-profile-phone"));
         }
 
         InventoryBusiness.whenReady(loadActiveBusiness);
