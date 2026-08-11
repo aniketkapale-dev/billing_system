@@ -28,9 +28,9 @@ var InventoryDashboard = (function () {
         {
             key: "in_stock_products",
             label: "In Stock Items",
-            icon: "shopping_bag",
+            icon: "warehouse",
             tone: "green",
-            link: "/dashboard/products/"
+            link: "/dashboard/inventory/"
         }
     ];
 

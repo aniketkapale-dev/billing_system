@@ -11,6 +11,8 @@ var InventoryStock = (function () {
     var batchPage = 1;
     var batchSearch = "";
     var activeTab = "summary";
+    var LIST_PANEL = "inventory-list-panel";
+    var VIEW_PANEL = "inventory-view-panel";
 
     function summaryRequest(path, opts) {
         return InventoryApi.request(SUMMARY_API, path, opts);
@@ -32,12 +34,26 @@ var InventoryStock = (function () {
         return InventoryApi.escapeHtml(value);
     }
 
+    function displayValue(value) {
+        if (value === null || value === undefined || String(value).trim() === "") return "—";
+        return InventoryApi.escapeHtml(String(value));
+    }
+
+    function actionButtons(item) {
+        return (
+            '<div class="inv-row-actions">' +
+            '<button type="button" class="inv-row-action-btn inv-row-action-btn--view inv-stock-view" data-id="' + item.id + '" title="View" aria-label="View stock">' +
+            '<span class="material-symbols-outlined">visibility</span></button>' +
+            "</div>"
+        );
+    }
+
     function renderSummaryRows(items) {
         var tbody = document.getElementById("inventory-table-body");
         if (!tbody) return;
 
         if (!items || !items.length) {
-            tbody.innerHTML = '<tr><td colspan="7" class="inv-mgmt-empty">No stock records yet. Add products or record a purchase invoice.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" class="inv-mgmt-empty">No stock yet. Record a purchase to add inventory.</td></tr>';
             return;
         }
 
@@ -53,9 +69,100 @@ var InventoryStock = (function () {
                 "<td class=\"inv-col-buy\">" + InventoryApi.formatMoney(item.avg_batch_cost) + "</td>" +
                 "<td class=\"inv-col-sell\">" + InventoryApi.formatMoney(item.avg_batch_sell) + "</td>" +
                 "<td class=\"inv-col-profit " + profitClass + "\"><strong>" + formatProfit(profit) + "</strong></td>" +
+                "<td class=\"inv-col-action\">" + actionButtons(item) + "</td>" +
                 "</tr>"
             );
         }).join("");
+    }
+
+    function fetchStock(id) {
+        return summaryRequest("/" + id + "/").then(function (body) {
+            if (body && body.isSuccess && body.data) {
+                return body.data;
+            }
+            InventoryToast.error(body.message || "Failed to load stock details.");
+            return null;
+        });
+    }
+
+    function renderViewDetails(stock) {
+        var container = document.getElementById("inventory-view-body");
+        var purchasesWrap = document.getElementById("inventory-view-purchases-wrap");
+        if (!container || !purchasesWrap) return;
+
+        var profit = Number(stock.total_profit || 0);
+        var profitClass = profit >= 0 ? "inv-profit-positive" : "inv-profit-negative";
+        var rows = [
+            { label: "Product", value: displayValue(stock.product_name) },
+            { label: "SKU", value: displayValue(stock.product_sku) },
+            { label: "Unit", value: displayValue(stock.product_unit || "pcs") },
+            { label: "In Stock", value: displayValue(stock.quantity) },
+            { label: "Avg Batch Cost", value: InventoryApi.formatMoney(stock.avg_batch_cost) },
+            { label: "Avg Batch Sell", value: InventoryApi.formatMoney(stock.avg_batch_sell) },
+            {
+                label: "Potential Profit",
+                value: "<strong class=\"" + profitClass + "\">" + formatProfit(profit) + "</strong>",
+                html: true
+            }
+        ];
+
+        container.innerHTML = rows.map(function (row) {
+            var cls = row.full ? " inv-product-view-item--full" : "";
+            return (
+                '<div class="inv-product-view-item' + cls + '">' +
+                '<span class="inv-product-view-label">' + row.label + "</span>" +
+                '<div class="inv-product-view-value">' + row.value + "</div>" +
+                "</div>"
+            );
+        }).join("");
+
+        var sources = stock.purchase_sources || [];
+        if (!sources.length) {
+            purchasesWrap.innerHTML =
+                '<h4 class="inv-stockin-view-items-title">Purchase Sources</h4>' +
+                '<p class="inv-mgmt-empty" style="padding:16px 0;">No purchase batches found for this product.</p>';
+            return;
+        }
+
+        purchasesWrap.innerHTML =
+            '<h4 class="inv-stockin-view-items-title">Purchase Sources</h4>' +
+            '<div class="inv-mgmt-table-wrap">' +
+            '<table class="inv-mgmt-table">' +
+            "<thead><tr>" +
+            "<th>Invoice No.</th><th>Purchase Date</th><th>Batch No.</th><th>Available Qty</th><th>Buy Price</th>" +
+            "</tr></thead><tbody>" +
+            sources.map(function (source) {
+                return (
+                    "<tr>" +
+                    "<td><strong>" + displayValue(source.invoice_number) + "</strong></td>" +
+                    "<td>" + formatDate(source.invoice_date) + "</td>" +
+                    "<td><code>" + displayValue(source.batch_number || "—") + "</code></td>" +
+                    "<td class=\"inv-mgmt-cell--num\"><strong>" + displayValue(source.available_quantity) + "</strong></td>" +
+                    "<td class=\"inv-mgmt-cell--num\">" + InventoryApi.formatMoney(source.purchase_price) + "</td>" +
+                    "</tr>"
+                );
+            }).join("") +
+            "</tbody></table></div>";
+    }
+
+    function openViewStock(id) {
+        InventoryLoader.show();
+        fetchStock(id)
+            .then(function (stock) {
+                if (!stock) return;
+                var titleEl = document.getElementById("inventory-view-title");
+                if (titleEl) {
+                    titleEl.textContent = stock.product_name || "Stock Details";
+                }
+                renderViewDetails(stock);
+                InventoryPagePanel.showPanel(LIST_PANEL, VIEW_PANEL);
+            })
+            .catch(function () {
+                InventoryToast.error("Network error while loading stock.");
+            })
+            .finally(function () {
+                InventoryLoader.hide();
+            });
     }
 
     function renderBatchRows(items, page, pageSize) {
@@ -238,6 +345,16 @@ var InventoryStock = (function () {
         if (inStockEl) {
             inStockEl.addEventListener("change", function () {
                 loadBatches(batchSearch, 1);
+            });
+        }
+
+        var summaryBody = document.getElementById("inventory-table-body");
+        if (summaryBody) {
+            summaryBody.addEventListener("click", function (e) {
+                var viewBtn = e.target.closest(".inv-stock-view");
+                if (viewBtn) {
+                    openViewStock(viewBtn.getAttribute("data-id"));
+                }
             });
         }
     }

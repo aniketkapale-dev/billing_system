@@ -16,6 +16,13 @@ class InventoryStockViewSet(BusinessScopedViewSetMixin, BaseViewSet):
     def get_permissions(self):
         return [IsAuthenticatedUser(), HasRole()]
 
+    def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
+        in_stock = self.request.query_params.get("in_stock")
+        if in_stock != "false":
+            queryset = queryset.filter(quantity__gt=0)
+        return queryset
+
     def profit_summary(self, request):
         business = self.get_active_business()
         data = self.get_service().get_profit_summary(business.id)

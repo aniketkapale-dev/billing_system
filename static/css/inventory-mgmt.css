@@ -305,6 +305,17 @@
     min-width: 760px;
 }
 
+.inv-mgmt-table--inventory th:nth-child(8),
+.inv-mgmt-table--inventory td.inv-col-action {
+    text-align: right;
+}
+
+.inv-mgmt-table--inventory .inv-row-actions {
+    display: inline-flex;
+    justify-content: flex-end;
+    width: 100%;
+}
+
 .inv-mgmt-table--stockin th:nth-child(5),
 .inv-mgmt-table--stockin td.inv-col-action {
     text-align: right;

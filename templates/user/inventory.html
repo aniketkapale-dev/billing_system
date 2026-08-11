@@ -1,11 +1,12 @@
 {% extends "user_layout.html" %}
 {% load static %}
-{% block title %}Inventory & Profit - Billing System{% endblock %}
+{% block title %}Stock - Billing System{% endblock %}
 
 {% block content %}
 <div class="inv-mgmt-page">
+    <div id="inventory-list-panel" class="inv-mgmt-page-panel">
     <div class="inv-mgmt-header">
-        <h2 class="inv-dashboard-greeting">Inventory &amp; Profit</h2>
+        <h2 class="inv-dashboard-greeting">Stock</h2>
         <a href="/dashboard/stock-in/" class="inv-mgmt-btn inv-mgmt-btn--primary">
             <span class="material-symbols-outlined">input</span>
             Add Purchase
@@ -13,18 +14,19 @@
     </div>
 
     <div class="inv-mgmt-tabs" role="tablist">
-        <button type="button" class="inv-mgmt-tab inv-mgmt-tab--active" data-tab="summary" role="tab" aria-selected="true">Stock Summary</button>
+        <button type="button" class="inv-mgmt-tab inv-mgmt-tab--active" data-tab="summary" role="tab" aria-selected="true">Current Stock</button>
         <button type="button" class="inv-mgmt-tab" data-tab="batches" role="tab" aria-selected="false">Batch Wise (FIFO)</button>
     </div>
 
     <div class="inv-mgmt-card" id="inventory-summary-panel">
         <div class="inv-mgmt-toolbar">
-            <input type="search" id="inventory-search" class="inv-mgmt-search" placeholder="Search inventory..."/>
+            <input type="search" id="inventory-search" class="inv-mgmt-search" placeholder="Search stock..."/>
         </div>
         <div class="inv-mgmt-table-wrap">
             <table class="inv-mgmt-table inv-mgmt-table--inventory">
                 <colgroup>
-                    <col span="7" style="width:14.2857%"/>
+                    <col span="7"/>
+                    <col style="width:72px"/>
                 </colgroup>
                 <thead>
                     <tr>
@@ -35,10 +37,11 @@
                         <th>Avg Batch Cost</th>
                         <th>Avg Batch Sell</th>
                         <th>Potential Profit</th>
+                        <th class="inv-col-action">Action</th>
                     </tr>
                 </thead>
                 <tbody id="inventory-table-body">
-                    <tr><td colspan="7" class="inv-mgmt-empty">Loading inventory...</td></tr>
+                    <tr><td colspan="8" class="inv-mgmt-empty">Loading inventory...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -79,12 +82,36 @@
         </div>
         <div id="batch-pagination" class="inv-pagination"></div>
     </div>
+    </div>
+
+    <div id="inventory-view-panel" class="inv-mgmt-page-panel inv-hidden">
+        <div class="inv-mgmt-panel-header">
+            <h2 id="inventory-view-title" class="inv-dashboard-greeting">Stock Details</h2>
+            <button type="button" class="inv-mgmt-btn inv-page-back-btn" data-page-back="inventory-list-panel">
+                <span class="material-symbols-outlined">arrow_back</span>
+                Back to List
+            </button>
+        </div>
+        <div class="inv-mgmt-card inv-mgmt-panel-card">
+            <div class="inv-mgmt-panel-body">
+                <div id="inventory-view-body" class="inv-product-view-grid"></div>
+                <div id="inventory-view-purchases-wrap" class="inv-stockin-view-items"></div>
+            </div>
+            <div class="inv-mgmt-panel-footer">
+                <button type="button" class="inv-mgmt-btn inv-mgmt-btn--primary" data-page-back="inventory-list-panel">Close</button>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
 {% block page_scripts %}
 <link href="{% static 'css/inventory-mgmt.css' %}" rel="stylesheet"/>
 <script src="{% static 'js/inventory-api.js' %}"></script>
+<script src="{% static 'js/inventory-page-panel.js' %}"></script>
 <script src="{% static 'js/inventory-stock.js' %}"></script>
-<script>InventoryStock.init();</script>
+<script>
+InventoryPagePanel.init();
+InventoryStock.init();
+</script>
 {% endblock %}

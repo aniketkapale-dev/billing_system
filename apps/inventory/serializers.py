@@ -16,6 +16,7 @@ class InventoryStockSerializer(BaseModelSerializer):
     total_profit = serializers.SerializerMethodField()
     batch_available = serializers.SerializerMethodField()
     business_name = serializers.CharField(source="business.business_name", read_only=True)
+    purchase_sources = serializers.SerializerMethodField()
 
     class Meta:
         model = InventoryStock
@@ -34,6 +35,7 @@ class InventoryStockSerializer(BaseModelSerializer):
             "batch_available",
             "profit_per_unit",
             "total_profit",
+            "purchase_sources",
             "is_active",
             "created_at",
             "updated_at",
@@ -97,3 +99,27 @@ class InventoryStockSerializer(BaseModelSerializer):
             ),
             Decimal("0"),
         )
+
+    def get_purchase_sources(self, obj):
+        batches = (
+            self._get_product_batches(obj)
+            .select_related("purchase_invoice_item__purchase_invoice")
+            .order_by("created_at", "id")
+        )
+        sources = []
+        for batch in batches:
+            invoice_number = "Opening Stock"
+            invoice_date = None
+            item = batch.purchase_invoice_item
+            invoice = getattr(item, "purchase_invoice", None) if item else None
+            if invoice and not invoice.is_deleted:
+                invoice_number = invoice.invoice_number
+                invoice_date = invoice.invoice_date
+            sources.append({
+                "invoice_number": invoice_number,
+                "invoice_date": invoice_date,
+                "batch_number": batch.batch_number or "",
+                "available_quantity": batch.available_quantity,
+                "purchase_price": batch.purchase_price,
+            })
+        return sources
