@@ -178,6 +178,10 @@ body.inv-dashboard-body {
     box-shadow: 0 1px 0 rgba(27, 33, 45, 0.06);
 }
 
+.inv-dashboard-header--superadmin {
+    justify-content: flex-end;
+}
+
 .inv-header-left {
     display: flex;
     align-items: center;
