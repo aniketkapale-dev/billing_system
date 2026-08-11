@@ -2,8 +2,9 @@ from django.conf import settings
 from django.db.models import Exists, OuterRef, Q
 
 from apps.user_roles.models import UserRole
-from apps.users.serializers import UserSerializer, UserWriteSerializer
+from apps.users.serializers import UserDetailSerializer, UserSerializer, UserWriteSerializer
 from apps.users.services import UserService
+from core.base_response import ApiResponse
 from core.base_viewset import BaseViewSet
 from core.permissions import HasRole, IsAuthenticatedUser
 
@@ -53,3 +54,8 @@ class UserViewSet(BaseViewSet):
             queryset = queryset.exclude(email__in=excluded_emails)
 
         return queryset
+
+    def retrieve(self, request, pk=None):
+        instance = self.get_service().get(pk, include_deleted=True)
+        data = UserDetailSerializer(instance, context={"request": request}).data
+        return ApiResponse.success(data=data, message="User details fetched")

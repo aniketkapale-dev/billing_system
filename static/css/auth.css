@@ -311,6 +311,12 @@
     letter-spacing: 0;
 }
 
+.inv-optional {
+    color: var(--inv-secondary, #64748b);
+    font-weight: 400;
+    font-size: 12px;
+}
+
 .inv-input-wrap--password .inv-input {
     padding-right: 52px;
 }

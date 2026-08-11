@@ -69,10 +69,10 @@
                     </div>
 
                     <div class="inv-field">
-                        <label for="email">Work Email</label>
+                        <label for="email">Work Email <span class="inv-optional">(optional)</span></label>
                         <div class="inv-input-wrap">
                             <span class="material-symbols-outlined">mail</span>
-                            <input class="inv-input" id="email" name="email" required type="email" placeholder="name@company.com" autocomplete="email"/>
+                            <input class="inv-input" id="email" name="email" type="email" placeholder="name@company.com" autocomplete="email"/>
                         </div>
                     </div>
 
@@ -80,9 +80,10 @@
                         <label for="mobile_number">Mobile Number</label>
                         <div class="inv-input-wrap">
                             <span class="material-symbols-outlined">call</span>
-                            <input class="inv-input" id="mobile_number" name="mobile_number" required type="text"
-                                   inputmode="numeric" pattern="[0-9]{10}" maxlength="10" minlength="10"
-                                   placeholder="10-digit mobile number" autocomplete="tel"/>
+                            <input class="inv-input" id="mobile_number" name="mobile_number" required type="tel"
+                                   inputmode="numeric" pattern="[0-9]{10}" maxlength="10"
+                                   placeholder="10-digit mobile number" autocomplete="tel"
+                                   title="Enter a 10-digit mobile number"/>
                         </div>
                     </div>
 

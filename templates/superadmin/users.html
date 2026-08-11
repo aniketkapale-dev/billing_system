@@ -4,41 +4,66 @@
 
 {% block content %}
 <div class="inv-users-page">
-    <div class="inv-users-header">
-        <h2 class="inv-dashboard-greeting">Users</h2>
+    <div id="users-list-panel" class="inv-mgmt-page-panel">
+        <div class="inv-users-header">
+            <h2 class="inv-dashboard-greeting">Users</h2>
+        </div>
+
+        <div class="inv-users-card">
+            <div class="inv-users-toolbar">
+                <input type="search" id="users-search" class="inv-users-search" placeholder="Search by name, email, or mobile..."/>
+            </div>
+            <div class="inv-users-table-wrap">
+                <table class="inv-users-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Mobile</th>
+                            <th>Registered</th>
+                            <th>Approved</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-table-body">
+                        <tr>
+                            <td colspan="8" class="inv-users-empty">Loading users...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="users-pagination" class="inv-pagination"></div>
+        </div>
     </div>
 
-    <div class="inv-users-card">
-        <div class="inv-users-toolbar">
-            <input type="search" id="users-search" class="inv-users-search" placeholder="Search by name, email, or mobile..."/>
+    <div id="users-view-panel" class="inv-mgmt-page-panel inv-hidden">
+        <div class="inv-mgmt-panel-header">
+            <h2 id="user-detail-title" class="inv-dashboard-greeting">User Details</h2>
+            <button type="button" class="inv-mgmt-btn inv-page-back-btn" data-page-back="users-list-panel">
+                <span class="material-symbols-outlined">arrow_back</span>
+                Back to List
+            </button>
         </div>
-        <div class="inv-users-table-wrap">
-            <table class="inv-users-table">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Mobile</th>
-                        <th>Role</th>
-                        <th>Status</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody id="users-table-body">
-                    <tr>
-                        <td colspan="6" class="inv-users-empty">Loading users...</td>
-                    </tr>
-                </tbody>
-            </table>
+        <div class="inv-users-card inv-mgmt-panel-card">
+            <div class="inv-mgmt-panel-body">
+                <div id="user-detail-body" class="inv-user-detail-grid"></div>
+                <div id="user-detail-businesses-wrap" class="inv-user-detail-businesses"></div>
+            </div>
         </div>
-        <div id="users-pagination" class="inv-pagination"></div>
     </div>
 </div>
 {% endblock %}
 
 {% block page_scripts %}
+<link href="{% static 'css/inventory-mgmt.css' %}" rel="stylesheet"/>
 <link href="{% static 'css/users.css' %}" rel="stylesheet"/>
 <script src="{% static 'js/inventory-api.js' %}"></script>
+<script src="{% static 'js/inventory-page-panel.js' %}"></script>
 <script src="{% static 'js/inventory-users.js' %}"></script>
-<script>InventoryUsers.init();</script>
+<script>
+InventoryPagePanel.init();
+InventoryUsers.init();
+</script>
 {% endblock %}

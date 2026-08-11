@@ -7,15 +7,20 @@ from core.utils import build_absolute_uri
 
 
 class LoginSerializer(serializers.Serializer):
-    email = serializers.EmailField()
+    email = serializers.CharField(max_length=254)
     password = serializers.CharField(write_only=True)
 
 
 class RegisterSerializer(serializers.Serializer):
     full_name = serializers.CharField(max_length=150)
-    email = serializers.EmailField()
+    email = serializers.EmailField(required=False, allow_blank=True, default="")
     mobile_number = serializers.CharField(min_length=10, max_length=10)
     password = serializers.CharField(min_length=8, write_only=True)
+
+    def validate_email(self, value):
+        if not value or not str(value).strip():
+            return ""
+        return value.strip().lower()
 
     def validate_mobile_number(self, value):
         from core.validators import validate_mobile_number

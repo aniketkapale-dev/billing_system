@@ -5,6 +5,25 @@
 var InventoryAuth = (function () {
     "use strict";
 
+    var INACTIVE_ACCOUNT_MESSAGE =
+        "Your registration is complete and waiting for approval. Please wait till your account is approved.";
+
+    function isInactiveAccountMessage(message) {
+        var msg = String(message || "").toLowerCase();
+        return msg.indexOf("inactive") !== -1 ||
+            msg.indexOf("not active") !== -1 ||
+            msg.indexOf("waiting for approval") !== -1 ||
+            msg.indexOf("registration is complete") !== -1;
+    }
+
+    function notifyLoginError(message) {
+        if (isInactiveAccountMessage(message)) {
+            notify("warning", message || INACTIVE_ACCOUNT_MESSAGE);
+            return;
+        }
+        notify("error", message || "Invalid email/mobile or password.");
+    }
+
     var KEYS = {
         TOKEN: "vrms_access_token",
         REFRESH: "vrms_refresh_token",
@@ -90,7 +109,8 @@ var InventoryAuth = (function () {
     }
 
     function wireMobileInput(input) {
-        if (!input) return;
+        if (!input || input.dataset.mobileWired === "1") return;
+        input.dataset.mobileWired = "1";
 
         function sanitize(value) {
             return String(value || "").replace(/\D/g, "").slice(0, 10);
@@ -103,20 +123,13 @@ var InventoryAuth = (function () {
             }
         }
 
-        input.addEventListener("beforeinput", function (e) {
-            if (
-                e.inputType === "insertFromPaste" ||
-                e.inputType === "insertFromDrop" ||
-                e.inputType === "deleteContentBackward" ||
-                e.inputType === "deleteContentForward" ||
-                e.inputType === "deleteByCut"
-            ) {
-                return;
-            }
-            if (e.data && /\D/.test(e.data)) {
-                e.preventDefault();
-            }
-        });
+        function digitCount() {
+            return String(input.value || "").replace(/\D/g, "").length;
+        }
+
+        function isFullSelection() {
+            return input.selectionStart === 0 && input.selectionEnd === input.value.length;
+        }
 
         input.addEventListener("input", function () {
             applyValue(input.value);
@@ -133,6 +146,14 @@ var InventoryAuth = (function () {
 
             if (e.key.length === 1 && !/\d/.test(e.key)) {
                 e.preventDefault();
+                return;
+            }
+
+            if (e.key.length === 1 && /\d/.test(e.key)) {
+                var hasSelection = input.selectionStart !== input.selectionEnd;
+                if (digitCount() >= 10 && !hasSelection && !isFullSelection()) {
+                    e.preventDefault();
+                }
             }
         });
 
@@ -144,6 +165,60 @@ var InventoryAuth = (function () {
 
         input.addEventListener("drop", function (e) {
             e.preventDefault();
+        });
+    }
+
+    function isMobileOnlyValue(value) {
+        var cleaned = String(value || "").replace(/\s/g, "");
+        return cleaned === "" || /^[0-9]+$/.test(cleaned);
+    }
+
+    function wireLoginIdentifierInput(input) {
+        if (!input || input.dataset.loginIdWired === "1") return;
+        input.dataset.loginIdWired = "1";
+
+        function sanitizeMobile(value) {
+            return String(value || "").replace(/\D/g, "").slice(0, 10);
+        }
+
+        input.addEventListener("input", function () {
+            if (!isMobileOnlyValue(input.value)) return;
+            var next = sanitizeMobile(input.value);
+            if (input.value !== next) {
+                input.value = next;
+            }
+        });
+
+        input.addEventListener("keydown", function (e) {
+            if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+            var allowedKeys = [
+                "Backspace", "Delete", "Tab", "Escape", "Enter",
+                "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"
+            ];
+            if (allowedKeys.indexOf(e.key) !== -1) return;
+
+            if (e.key.length === 1) {
+                if (/[a-zA-Z@._+-]/.test(e.key)) return;
+                if (!/\d/.test(e.key)) {
+                    e.preventDefault();
+                    return;
+                }
+                if (isMobileOnlyValue(input.value)) {
+                    var hasSelection = input.selectionStart !== input.selectionEnd;
+                    var digits = String(input.value || "").replace(/\D/g, "");
+                    if (digits.length >= 10 && !hasSelection) {
+                        e.preventDefault();
+                    }
+                }
+            }
+        });
+
+        input.addEventListener("paste", function (e) {
+            if (!isMobileOnlyValue(input.value)) return;
+            e.preventDefault();
+            var pasted = (e.clipboardData || window.clipboardData).getData("text") || "";
+            input.value = sanitizeMobile(pasted);
         });
     }
 
@@ -260,6 +335,8 @@ var InventoryAuth = (function () {
             }
 
             if (!body.data.is_active) {
+                clear();
+                notify("warning", INACTIVE_ACCOUNT_MESSAGE);
                 goLogin();
                 return false;
             }
@@ -284,6 +361,8 @@ var InventoryAuth = (function () {
         var btn = document.getElementById("login-submit");
 
         if (!form) return;
+
+        wireLoginIdentifierInput(form.email);
 
         // Always require fresh credentials on the login page.
         clear();
@@ -313,27 +392,32 @@ var InventoryAuth = (function () {
 
         form.addEventListener("submit", function (e) {
             e.preventDefault();
-            var email = form.email.value.trim();
+            var loginId = form.email.value.trim();
             var password = form.password.value;
 
-            if (!email || !password) {
-                notify("error", "Email and password are required.");
+            if (!loginId || !password) {
+                notify("error", "Email or mobile number and password are required.");
                 return;
             }
 
             InventoryLoader.button(btn, true, "Signing in...");
 
-            apiPost("/login/", { email: email, password: password })
+            apiPost("/login/", { email: loginId, password: password })
                 .then(function (result) {
                     InventoryLoader.button(btn, false);
                     var body = result.body;
                     if (result.ok && body && body.isSuccess && body.data) {
+                        if (!body.data.user || body.data.user.is_active === false) {
+                            clear();
+                            notify("warning", INACTIVE_ACCOUNT_MESSAGE);
+                            return;
+                        }
                         setSession(body.data.tokens, body.data.user);
-                        notify("success", "Login successful.");
+                        notify("success", "Welcome back! You have signed in successfully.");
                         redirectAfterLogin(body.data.user);
                         return;
                     }
-                    notify("error", (body && body.message) || "Invalid email or password.");
+                    notifyLoginError(body && body.message);
                 })
                 .catch(function () {
                     InventoryLoader.button(btn, false);
@@ -363,18 +447,26 @@ var InventoryAuth = (function () {
 
             InventoryLoader.button(btn, true, "Registering...");
 
-            apiPost("/register/", {
+            var payload = {
                 full_name: form.full_name.value.trim(),
-                email: form.email.value.trim(),
                 mobile_number: mobile,
                 password: form.password.value
-            })
+            };
+            var email = form.email.value.trim();
+            if (email) {
+                payload.email = email;
+            }
+
+            apiPost("/register/", payload)
                 .then(function (result) {
                     InventoryLoader.button(btn, false);
                     var body = result.body;
                     if (result.ok && body && body.isSuccess) {
                         notify("success", body.message || "Registration submitted. Awaiting admin approval.");
                         form.reset();
+                        window.setTimeout(function () {
+                            goLogin();
+                        }, 1200);
                         return;
                     }
                     var err = (body && body.message) || "Registration failed.";

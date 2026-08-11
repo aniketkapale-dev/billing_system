@@ -40,12 +40,31 @@ var InventoryUsers = (function () {
         return div.innerHTML;
     }
 
+    var USERS_LIST_PANEL = "users-list-panel";
+    var USERS_VIEW_PANEL = "users-view-panel";
+
+    function formatDate(value) {
+        if (value === null || value === undefined || String(value).trim() === "") return "—";
+        var d = new Date(value);
+        if (isNaN(d.getTime())) return "—";
+        return d.toLocaleDateString(undefined, {
+            day: "2-digit",
+            month: "short",
+            year: "numeric"
+        });
+    }
+
+    function displayValue(value) {
+        if (value === null || value === undefined || String(value).trim() === "") return "—";
+        return escapeHtml(String(value));
+    }
+
     function renderRows(items) {
         var tbody = document.getElementById("users-table-body");
         if (!tbody) return;
 
         if (!items || !items.length) {
-            tbody.innerHTML = '<tr><td colspan="6" class="inv-users-empty">No users found.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" class="inv-users-empty">No users found.</td></tr>';
             return;
         }
 
@@ -60,12 +79,18 @@ var InventoryUsers = (function () {
 
             return (
                 "<tr data-user-id=\"" + user.id + "\">" +
-                "<td>" + escapeHtml(user.full_name) + "</td>" +
-                "<td>" + escapeHtml(user.email) + "</td>" +
-                "<td>" + escapeHtml(user.mobile_number) + "</td>" +
+                "<td>" + displayValue(user.full_name) + "</td>" +
+                "<td>" + displayValue(user.email) + "</td>" +
+                "<td>" + displayValue(user.mobile_number) + "</td>" +
+                "<td>" + escapeHtml(formatDate(user.created_at)) + "</td>" +
+                "<td>" + escapeHtml(formatDate(user.approved_at)) + "</td>" +
                 "<td>" + escapeHtml(roles) + "</td>" +
                 "<td><span class=\"inv-status-badge " + statusClass + "\">" + statusText + "</span></td>" +
                 "<td class=\"inv-users-actions\">" +
+                "<button type=\"button\" class=\"inv-user-action-btn inv-user-action-btn--icon inv-user-action-btn--view inv-tooltip\" " +
+                "data-id=\"" + user.id + "\" data-name=\"" + escapeHtml(user.full_name) + "\" " +
+                "data-tooltip=\"View user\" aria-label=\"View user\">" +
+                "<span class=\"material-symbols-outlined\">visibility</span></button>" +
                 "<button type=\"button\" class=\"inv-user-action-btn inv-user-action-btn--icon inv-tooltip " + actionClass + "\" " +
                 "data-id=\"" + user.id + "\" data-active=\"" + isActive + "\" " +
                 "data-tooltip=\"" + actionTooltip + "\" aria-label=\"" + actionTooltip + "\">" +
@@ -140,6 +165,108 @@ var InventoryUsers = (function () {
             });
     }
 
+    function renderDetailField(label, value, options) {
+        options = options || {};
+        var cls = options.full ? " inv-user-detail-item--full" : "";
+        var content = options.html ? value : displayValue(value);
+        return (
+            '<div class="inv-user-detail-item' + cls + '">' +
+            '<span class="inv-user-detail-label">' + label + "</span>" +
+            '<div class="inv-user-detail-value">' + content + "</div>" +
+            "</div>"
+        );
+    }
+
+    function renderUserDetail(user) {
+        var container = document.getElementById("user-detail-body");
+        var businessesWrap = document.getElementById("user-detail-businesses-wrap");
+        var titleEl = document.getElementById("user-detail-title");
+        if (!container || !businessesWrap) return;
+
+        if (titleEl) {
+            titleEl.textContent = user.full_name || "User Details";
+        }
+
+        var roles = (user.roles && user.roles.length) ? user.roles.join(", ") : "—";
+        var isActive = user.is_active;
+        var statusClass = isActive ? "inv-status-badge--active" : "inv-status-badge--inactive";
+        var statusText = isActive ? "Active" : "Inactive";
+        var profileHtml = "—";
+
+        if (user.profile_image_url) {
+            profileHtml =
+                '<img src="' + escapeHtml(user.profile_image_url) + '" alt="" class="inv-user-detail-avatar">';
+        }
+
+        container.innerHTML = [
+            renderDetailField("Full Name", user.full_name),
+            renderDetailField("Email", user.email),
+            renderDetailField("Mobile", user.mobile_number),
+            renderDetailField("Role", roles),
+            renderDetailField(
+                "Status",
+                '<span class="inv-status-badge ' + statusClass + '">' + statusText + "</span>",
+                { html: true }
+            ),
+            renderDetailField("Registered", formatDate(user.created_at)),
+            renderDetailField("Approved", formatDate(user.approved_at)),
+            renderDetailField("Profile Photo", profileHtml, { html: true, full: true })
+        ].join("");
+
+        var businesses = user.businesses || [];
+        if (!businesses.length) {
+            businessesWrap.innerHTML =
+                '<h4 class="inv-user-detail-section-title">Businesses</h4>' +
+                '<p class="inv-user-detail-empty">No businesses created yet.</p>';
+            return;
+        }
+
+        businessesWrap.innerHTML =
+            '<h4 class="inv-user-detail-section-title">Businesses (' + businesses.length + ")</h4>" +
+            '<div class="inv-users-table-wrap">' +
+            '<table class="inv-users-table inv-users-table--nested">' +
+            "<thead><tr>" +
+            "<th>Business Name</th><th>GST</th><th>Phone</th><th>Email</th><th>Address</th><th>Status</th><th>Created</th>" +
+            "</tr></thead><tbody>" +
+            businesses.map(function (business) {
+                var bizStatusClass = business.is_active
+                    ? "inv-status-badge--active"
+                    : "inv-status-badge--inactive";
+                var bizStatusText = business.is_active ? "Active" : "Inactive";
+                return (
+                    "<tr>" +
+                    "<td>" + displayValue(business.business_name) + "</td>" +
+                    "<td>" + displayValue(business.gst_number) + "</td>" +
+                    "<td>" + displayValue(business.phone) + "</td>" +
+                    "<td>" + displayValue(business.email) + "</td>" +
+                    "<td>" + displayValue(business.address) + "</td>" +
+                    "<td><span class=\"inv-status-badge " + bizStatusClass + "\">" + bizStatusText + "</span></td>" +
+                    "<td>" + escapeHtml(formatDate(business.created_at)) + "</td>" +
+                    "</tr>"
+                );
+            }).join("") +
+            "</tbody></table></div>";
+    }
+
+    function openUserDetail(userId) {
+        InventoryLoader.show();
+        return request("/" + userId + "/")
+            .then(function (body) {
+                if (body && body.isSuccess && body.data) {
+                    renderUserDetail(body.data);
+                    InventoryPagePanel.showPanel(USERS_LIST_PANEL, USERS_VIEW_PANEL);
+                    return;
+                }
+                InventoryToast.error(body.message || "Failed to load user details.");
+            })
+            .catch(function () {
+                InventoryToast.error("Network error while loading user details.");
+            })
+            .finally(function () {
+                InventoryLoader.hide();
+            });
+    }
+
     function deleteUser(userId, btn) {
         return fetch(InventoryApi.buildUrl(API, "/" + userId + "/"), {
             method: "DELETE",
@@ -181,6 +308,12 @@ var InventoryUsers = (function () {
 
         if (tbody) {
             tbody.addEventListener("click", function (e) {
+                var viewBtn = e.target.closest(".inv-user-action-btn--view");
+                if (viewBtn && !viewBtn.disabled) {
+                    openUserDetail(viewBtn.getAttribute("data-id"));
+                    return;
+                }
+
                 var deleteBtn = e.target.closest(".inv-user-action-btn--delete");
                 if (deleteBtn && !deleteBtn.disabled) {
                     var deleteId = deleteBtn.getAttribute("data-id");
@@ -197,15 +330,17 @@ var InventoryUsers = (function () {
                     return;
                 }
 
-                var btn = e.target.closest(".inv-user-action-btn");
-                if (!btn || btn.disabled) return;
+                var toggleBtn = e.target.closest(
+                    ".inv-user-action-btn--activate, .inv-user-action-btn--deactivate"
+                );
+                if (!toggleBtn || toggleBtn.disabled) return;
 
-                var userId = btn.getAttribute("data-id");
-                var isActive = btn.getAttribute("data-active") === "true";
+                var userId = toggleBtn.getAttribute("data-id");
+                var isActive = toggleBtn.getAttribute("data-active") === "true";
                 var activate = !isActive;
 
-                InventoryLoader.button(btn, true, "");
-                toggleUserStatus(userId, activate, btn);
+                InventoryLoader.button(toggleBtn, true, "");
+                toggleUserStatus(userId, activate, toggleBtn);
             });
         }
     }

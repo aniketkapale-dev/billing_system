@@ -13,12 +13,13 @@ from core.base_entity import BaseEntity
 
 class User(BaseEntity):
     full_name = models.CharField(max_length=150)
-    email = models.EmailField(unique=True)
+    email = models.EmailField(unique=True, null=True, blank=True)
     mobile_number = models.CharField(max_length=20, unique=True)
     password = models.CharField(max_length=255)
     profile_image = models.ImageField(
         upload_to="users/", null=True, blank=True
     )
+    approved_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         db_table = "users"

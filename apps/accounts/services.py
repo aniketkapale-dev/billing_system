@@ -15,30 +15,46 @@ from core.validators import ensure_unique, validate_email_format, validate_mobil
 class AuthService:
     # -- login -------------------------------------------------------------
     def login(self, email, password):
-        if not email or not password:
-            raise ValidationException("Email and password are required.")
-        try:
-            user = User.objects.get(email__iexact=email.strip())
-        except User.DoesNotExist:
-            raise AuthenticationException("Invalid email or password.")
+        login_id = (email or "").strip()
+        if not login_id or not password:
+            raise ValidationException("Email or mobile number and password are required.")
+
+        user = self._find_user_by_login_id(login_id)
+        if not user:
+            raise AuthenticationException("Invalid email/mobile or password.")
 
         if not user.is_active:
-            raise AuthenticationException("This account is inactive.")
+            raise AuthenticationException(
+                "Your registration is complete and waiting for approval. "
+                "Please wait till your account is approved."
+            )
         if not user.check_password(password):
-            raise AuthenticationException("Invalid email or password.")
+            raise AuthenticationException("Invalid email/mobile or password.")
 
         tokens = JWTService.generate_tokens(user.id)
         return {"tokens": tokens, "user": user}
 
+    @staticmethod
+    def _find_user_by_login_id(login_id):
+        cleaned = login_id.replace(" ", "").replace("-", "")
+        if cleaned.isdigit() and len(cleaned) == 10:
+            return User.objects.filter(mobile_number=cleaned).first()
+        return User.objects.filter(email__iexact=login_id.strip()).first()
+
     # -- register (business owner, pending admin approval) -----------------
     @transaction.atomic
     def register(self, full_name, email, mobile_number, password):
-        email = validate_email_format(email).lower()
+        email = (email or "").strip()
+        if email:
+            email = validate_email_format(email).lower()
+            if User.objects.filter(email__iexact=email).exists():
+                raise ValidationException("An account with this email already exists.")
+        else:
+            email = None
+
         mobile_number = validate_mobile_number(mobile_number)
         self._validate_password(password)
 
-        if User.objects.filter(email__iexact=email).exists():
-            raise ValidationException("An account with this email already exists.")
         if User.objects.filter(mobile_number=mobile_number).exists():
             raise ValidationException("An account with this mobile number already exists.")
 
@@ -60,7 +76,7 @@ class AuthService:
         return {
             "message": (
                 "Registration successful. Your account is pending admin approval. "
-                "You can sign in with the same email and password once approved."
+                "You can sign in with your mobile number and password once approved."
             )
         }
 
