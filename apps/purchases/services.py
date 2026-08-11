@@ -130,3 +130,26 @@ class PurchaseService(BaseService):
         purchase.save(update_fields=["total_cost", "total_profit", "updated_at"])
 
         return purchase
+
+    def update_header(self, pk, data):
+        purchase = self.repository.get_by_id(pk)
+        updates = {}
+
+        if "customer_name" in data:
+            customer_name = (data.get("customer_name") or "").strip()
+            validate_required(customer_name, "Customer name")
+            updates["customer_name"] = customer_name
+
+        if "purchase_date" in data and data.get("purchase_date") is not None:
+            updates["purchase_date"] = data["purchase_date"]
+
+        if "reference_no" in data:
+            updates["reference_no"] = (data.get("reference_no") or "").strip()
+
+        if "notes" in data:
+            updates["notes"] = data.get("notes") or ""
+
+        if not updates:
+            return purchase
+
+        return self.repository.update(purchase, **updates)

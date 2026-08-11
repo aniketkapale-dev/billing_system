@@ -17,7 +17,8 @@
             <div class="inv-mgmt-table-wrap">
                 <table class="inv-mgmt-table inv-mgmt-table--purchases">
                     <colgroup>
-                        <col span="6" style="width:16.6667%"/>
+                        <col span="6"/>
+                        <col style="width:88px"/>
                     </colgroup>
                     <thead>
                         <tr>
@@ -27,10 +28,11 @@
                             <th>Sale Amount</th>
                             <th>FIFO Cost</th>
                             <th>Profit</th>
+                            <th class="inv-col-action">Action</th>
                         </tr>
                     </thead>
                     <tbody id="purchases-table-body">
-                        <tr><td colspan="6" class="inv-mgmt-empty">Loading sales...</td></tr>
+                        <tr><td colspan="7" class="inv-mgmt-empty">Loading sales...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -40,7 +42,7 @@
 
     <div id="purchases-form-panel" class="inv-mgmt-page-panel inv-hidden">
         <div class="inv-mgmt-panel-header">
-            <h2 class="inv-dashboard-greeting">Add Sale</h2>
+            <h2 id="purchase-form-title" class="inv-dashboard-greeting">Add Sale</h2>
             <button type="button" class="inv-mgmt-btn inv-page-back-btn" data-page-back="purchases-list-panel">
                 <span class="material-symbols-outlined">arrow_back</span>
                 Back to List
@@ -73,6 +75,25 @@
             <div class="inv-mgmt-panel-footer">
                 <button type="button" class="inv-mgmt-btn" data-page-back="purchases-list-panel">Cancel</button>
                 <button id="purchase-save-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Create Sale</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="purchases-view-panel" class="inv-mgmt-page-panel inv-hidden">
+        <div class="inv-mgmt-panel-header">
+            <h2 id="purchase-view-title" class="inv-dashboard-greeting">Sale Details</h2>
+            <button type="button" class="inv-mgmt-btn inv-page-back-btn" data-page-back="purchases-list-panel">
+                <span class="material-symbols-outlined">arrow_back</span>
+                Back to List
+            </button>
+        </div>
+        <div class="inv-mgmt-card inv-mgmt-panel-card">
+            <div class="inv-mgmt-panel-body">
+                <div id="purchase-view-body" class="inv-product-view-grid"></div>
+                <div id="purchase-view-items-wrap" class="inv-stockin-view-items"></div>
+            </div>
+            <div class="inv-mgmt-panel-footer">
+                <button type="button" class="inv-mgmt-btn inv-mgmt-btn--primary" data-page-back="purchases-list-panel">Close</button>
             </div>
         </div>
     </div>

@@ -64,3 +64,10 @@ class PurchaseWriteSerializer(serializers.Serializer):
     purchase_date = serializers.DateField(required=False)
     notes = serializers.CharField(required=False, allow_blank=True)
     items = PurchaseItemWriteSerializer(many=True)
+
+
+class PurchaseHeaderWriteSerializer(serializers.Serializer):
+    customer_name = serializers.CharField(max_length=150, required=False)
+    purchase_date = serializers.DateField(required=False, allow_null=True)
+    reference_no = serializers.CharField(max_length=50, required=False, allow_blank=True)
+    notes = serializers.CharField(required=False, allow_blank=True)
