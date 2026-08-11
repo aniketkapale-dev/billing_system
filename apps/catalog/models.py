@@ -83,3 +83,28 @@ class Brand(BaseEntity):
 
     def __str__(self):
         return self.name
+
+
+class Manufacturer(BaseEntity):
+    business = models.ForeignKey(
+        "businesses.Business",
+        on_delete=models.CASCADE,
+        related_name="manufacturers",
+        db_column="business_id",
+    )
+    name = models.CharField(max_length=150)
+
+    class Meta:
+        db_table = "manufacturers"
+        verbose_name = "Manufacturer"
+        verbose_name_plural = "Manufacturers"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["business", "name"],
+                condition=models.Q(is_deleted=False),
+                name="uniq_active_business_manufacturer_name",
+            )
+        ]
+
+    def __str__(self):
+        return self.name

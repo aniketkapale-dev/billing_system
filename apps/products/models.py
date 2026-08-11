@@ -35,6 +35,14 @@ class Product(BaseEntity):
         null=True,
         blank=True,
     )
+    manufacturer = models.ForeignKey(
+        "catalog.Manufacturer",
+        on_delete=models.SET_NULL,
+        related_name="products",
+        db_column="manufacturer_id",
+        null=True,
+        blank=True,
+    )
     unit = models.ForeignKey(
         "catalog.Unit",
         on_delete=models.PROTECT,

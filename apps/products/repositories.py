@@ -23,7 +23,7 @@ class ProductRepository(BaseRepository):
         return (
             super()
             .get_queryset()
-            .select_related("owner", "business", "category", "brand", "unit")
+            .select_related("owner", "business", "category", "brand", "manufacturer", "unit")
             .prefetch_related(Prefetch("inventory_stocks", queryset=active_stocks))
             .annotate(
                 sold_quantity=Coalesce(

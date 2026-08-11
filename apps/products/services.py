@@ -217,6 +217,10 @@ class ProductService(BaseService):
         if brand is not None and brand.business_id != business_id:
             raise ValidationException("Selected brand does not belong to this business.")
 
+        manufacturer = data.get("manufacturer")
+        if manufacturer is not None and manufacturer.business_id != business_id:
+            raise ValidationException("Selected manufacturer does not belong to this business.")
+
         unit = data.get("unit")
         if unit is not None:
             if unit.business_id != business_id:
@@ -235,6 +239,11 @@ class ProductService(BaseService):
             brand_obj = data["brand"]
             if brand_obj.is_deleted or not brand_obj.is_active:
                 raise ValidationException("Selected brand is not available.")
+
+        if "manufacturer" in data and data["manufacturer"] is not None:
+            manufacturer_obj = data["manufacturer"]
+            if manufacturer_obj.is_deleted or not manufacturer_obj.is_active:
+                raise ValidationException("Selected manufacturer is not available.")
 
     def _validate(self, data, exclude_pk=None, business_id=None):
         if "name" in data:

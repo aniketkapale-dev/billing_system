@@ -3,10 +3,17 @@ from apps.catalog.serializers import (
     BrandWriteSerializer,
     CategorySerializer,
     CategoryWriteSerializer,
+    ManufacturerSerializer,
+    ManufacturerWriteSerializer,
     UnitSerializer,
     UnitWriteSerializer,
 )
-from apps.catalog.services import BrandService, CategoryService, UnitService
+from apps.catalog.services import (
+    BrandService,
+    CategoryService,
+    ManufacturerService,
+    UnitService,
+)
 from core.base_response import ApiResponse
 from core.base_viewset import BaseViewSet
 from core.business_viewset import BusinessScopedViewSetMixin
@@ -79,5 +86,28 @@ class BrandViewSet(BusinessScopedViewSetMixin, BaseViewSet):
         return ApiResponse.success(
             data=payload,
             message="Brand created",
+            status_code=status.HTTP_201_CREATED,
+        )
+
+
+class ManufacturerViewSet(BusinessScopedViewSetMixin, BaseViewSet):
+    service_class = ManufacturerService
+    serializer_class = ManufacturerSerializer
+    write_serializer_class = ManufacturerWriteSerializer
+    search_fields = ("name",)
+    required_roles = ["Business Owner"]
+
+    def get_permissions(self):
+        return [IsAuthenticatedUser(), HasRole()]
+
+    def create(self, request):
+        serializer = self.get_write_serializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        data = self.inject_business_scope(dict(serializer.validated_data))
+        instance = self.get_service().create(data)
+        payload = self.serializer_class(instance, context={"request": request}).data
+        return ApiResponse.success(
+            data=payload,
+            message="Manufacturer created",
             status_code=status.HTTP_201_CREATED,
         )

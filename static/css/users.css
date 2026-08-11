@@ -177,30 +177,7 @@
 }
 
 .inv-user-detail-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 16px 24px;
     margin-bottom: 24px;
-}
-
-.inv-user-detail-item--full {
-    grid-column: 1 / -1;
-}
-
-.inv-user-detail-label {
-    display: block;
-    margin-bottom: 4px;
-    font-size: 12px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    color: var(--inv-secondary);
-}
-
-.inv-user-detail-value {
-    font-size: 14px;
-    color: var(--inv-primary);
-    word-break: break-word;
 }
 
 .inv-user-detail-avatar {
@@ -266,15 +243,3 @@
 
 .inv-users-table--nested th:nth-child(7),
 .inv-users-table--nested td:nth-child(7) { width: 12%; }
-
-@media (max-width: 900px) {
-    .inv-user-detail-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-}
-
-@media (max-width: 640px) {
-    .inv-user-detail-grid {
-        grid-template-columns: 1fr;
-    }
-}

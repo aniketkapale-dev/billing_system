@@ -200,9 +200,7 @@
     font-variant-numeric: tabular-nums;
 }
 
-/* Products: Buy, Qty, Opening, Action = right */
-.inv-mgmt-table--products th:nth-child(6),
-.inv-mgmt-table--products td:nth-child(6):not(.inv-mgmt-empty),
+/* Products: Qty, Opening, Action = right (Buy Price stays left, next to Brand) */
 .inv-mgmt-table--products th:nth-child(7),
 .inv-mgmt-table--products td:nth-child(7):not(.inv-mgmt-empty),
 .inv-mgmt-table--products th:nth-child(8),
@@ -268,6 +266,22 @@
 .inv-mgmt-table--inventory td.inv-col-sku,
 .inv-mgmt-table--inventory td.inv-col-unit {
     color: var(--inv-secondary);
+}
+
+.inv-mgmt-table--products td.inv-col-brand,
+.inv-mgmt-table--products th:nth-child(5) {
+    max-width: 110px;
+    padding-right: 20px;
+}
+
+.inv-mgmt-table--products td.inv-col-buy,
+.inv-mgmt-table--products th:nth-child(6) {
+    min-width: 84px;
+    max-width: 110px;
+    padding-left: 0;
+    padding-right: 16px;
+    text-align: left;
+    font-variant-numeric: tabular-nums;
 }
 
 .inv-mgmt-table--products {
@@ -492,17 +506,20 @@
     pointer-events: none;
 }
 
-.inv-product-view-grid {
+.inv-product-view-grid,
+.inv-user-detail-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px 24px;
 }
 
-.inv-product-view-item--full {
+.inv-product-view-item--full,
+.inv-user-detail-item--full {
     grid-column: 1 / -1;
 }
 
-.inv-product-view-label {
+.inv-product-view-label,
+.inv-user-detail-label {
     display: block;
     margin-bottom: 4px;
     font-size: 12px;
@@ -512,14 +529,23 @@
     color: var(--inv-secondary);
 }
 
-.inv-product-view-value {
+.inv-product-view-value,
+.inv-user-detail-value {
     font-size: 14px;
     color: var(--inv-primary);
     word-break: break-word;
 }
 
+@media (max-width: 900px) {
+    .inv-product-view-grid,
+    .inv-user-detail-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
 @media (max-width: 640px) {
-    .inv-product-view-grid {
+    .inv-product-view-grid,
+    .inv-user-detail-grid {
         grid-template-columns: 1fr;
     }
 }

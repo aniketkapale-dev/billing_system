@@ -50,6 +50,24 @@
         </div>
     </div>
     <div class="inv-mgmt-field">
+        <label for="product-manufacturer">Manufacturer</label>
+        <div class="inv-field-inline">
+            <select id="product-manufacturer" class="inv-mgmt-select">
+                <option value="">Select manufacturer (optional)</option>
+            </select>
+            <button id="product-manufacturer-add-btn" type="button" class="inv-inline-add-btn" title="Add new manufacturer" aria-label="Add new manufacturer">
+                <span class="material-symbols-outlined">add</span>
+            </button>
+        </div>
+        <div id="product-manufacturer-new-panel" class="inv-inline-add-panel inv-hidden">
+            <input id="product-manufacturer-new-name" class="inv-mgmt-input" type="text" placeholder="New manufacturer name"/>
+            <div class="inv-inline-add-actions">
+                <button id="product-manufacturer-save-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Save Manufacturer</button>
+                <button id="product-manufacturer-cancel-btn" type="button" class="inv-mgmt-btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+    <div class="inv-mgmt-field">
         <label for="product-unit">Unit</label>
         <div class="inv-field-inline">
             <select id="product-unit" class="inv-mgmt-select" required>

@@ -14,6 +14,7 @@ var InventoryProducts = (function () {
     var units = [];
     var categories = [];
     var brands = [];
+    var manufacturers = [];
 
     function request(path, opts) {
         return InventoryApi.request(API, path, opts);
@@ -303,6 +304,70 @@ var InventoryProducts = (function () {
             });
     }
 
+    function renderManufacturerSelect(selectedId) {
+        var select = document.getElementById("product-manufacturer");
+        if (!select) return;
+        var current = selectedId !== undefined && selectedId !== null
+            ? String(selectedId)
+            : select.value;
+        fillSelect("product-manufacturer", manufacturers, "Select manufacturer (optional)", function (item) {
+            return item.name;
+        });
+        if (current) select.value = current;
+    }
+
+    function toggleManufacturerPanel(show) {
+        var panel = document.getElementById("product-manufacturer-new-panel");
+        if (!panel) return;
+        if (show) {
+            panel.classList.remove("inv-hidden");
+            document.getElementById("product-manufacturer-new-name").focus();
+        } else {
+            panel.classList.add("inv-hidden");
+            document.getElementById("product-manufacturer-new-name").value = "";
+        }
+    }
+
+    function loadManufacturers(selectedId) {
+        return catalogRequest("manufacturers", "?page_size=100").then(function (body) {
+            manufacturers = body && body.isSuccess ? (body.data.items || []) : [];
+            renderManufacturerSelect(selectedId);
+            return manufacturers;
+        });
+    }
+
+    function saveNewManufacturer() {
+        var name = document.getElementById("product-manufacturer-new-name").value.trim();
+        if (!name) {
+            InventoryToast.error("Manufacturer name is required.");
+            return;
+        }
+
+        var btn = document.getElementById("product-manufacturer-save-btn");
+        InventoryLoader.button(btn, true, "Saving...");
+
+        catalogRequest("manufacturers", "", {
+            method: "POST",
+            body: { name: name }
+        })
+            .then(function (body) {
+                if (body && body.isSuccess && body.data) {
+                    InventoryToast.success("Manufacturer added.");
+                    toggleManufacturerPanel(false);
+                    return loadManufacturers(body.data.id);
+                }
+                var err = body.message || "Unable to add manufacturer.";
+                if (body.errors && body.errors.length) err = body.errors.join(" • ");
+                InventoryToast.error(err);
+            })
+            .catch(function () {
+                InventoryToast.error("Network error. Please try again.");
+            })
+            .finally(function () {
+                InventoryLoader.button(btn, false);
+            });
+    }
+
     function renderUnitSelect(selectedId) {
         var select = document.getElementById("product-unit");
         if (!select) return;
@@ -385,6 +450,7 @@ var InventoryProducts = (function () {
             loadUnits(),
             loadCategories(),
             loadBrands(),
+            loadManufacturers(),
         ]);
     }
 
@@ -502,12 +568,14 @@ var InventoryProducts = (function () {
         document.getElementById("product-barcode").value = "";
         document.getElementById("product-category").value = "";
         document.getElementById("product-brand").value = "";
+        document.getElementById("product-manufacturer").value = "";
         document.getElementById("product-unit").value = "";
         document.getElementById("product-quantity").value = "";
         document.getElementById("product-purchase-price").value = "";
         document.getElementById("product-description").value = "";
         toggleCategoryPanel(false);
         toggleBrandPanel(false);
+        toggleManufacturerPanel(false);
         toggleUnitPanel(false);
         syncBuyPriceVisibility();
     }
@@ -518,6 +586,7 @@ var InventoryProducts = (function () {
         document.getElementById("product-barcode").value = product.barcode || "";
         document.getElementById("product-category").value = product.category || "";
         document.getElementById("product-brand").value = product.brand || "";
+        document.getElementById("product-manufacturer").value = product.manufacturer || "";
         document.getElementById("product-unit").value = product.unit || "";
         document.getElementById("product-quantity").value = product.quantity != null ? product.quantity : "";
         document.getElementById("product-purchase-price").value = product.purchase_price != null ? product.purchase_price : "";
@@ -535,6 +604,7 @@ var InventoryProducts = (function () {
             { label: "Barcode", value: displayValue(product.barcode) },
             { label: "Category", value: displayValue(product.category_name) },
             { label: "Brand", value: displayValue(product.brand_name) },
+            { label: "Manufacturer", value: displayValue(product.manufacturer_name) },
             { label: "Buy Price", value: cellMoney(product.purchase_price) },
             { label: "Sell Price", value: cellMoney(product.sale_price) },
             { label: "Unit", value: displayValue(product.unit_short_name || product.unit_name) },
@@ -669,6 +739,7 @@ var InventoryProducts = (function () {
         }
 
         var brandId = document.getElementById("product-brand").value;
+        var manufacturerId = document.getElementById("product-manufacturer").value;
         var payload = {
             name: name,
             sku: sku,
@@ -681,6 +752,7 @@ var InventoryProducts = (function () {
 
         if (categoryId) payload.category_id = Number(categoryId);
         if (brandId) payload.brand_id = Number(brandId);
+        if (manufacturerId) payload.manufacturer_id = Number(manufacturerId);
 
         var btn = document.getElementById("product-save-btn");
         InventoryLoader.button(btn, true, editingId ? "Updating..." : "Saving...");
@@ -813,6 +885,21 @@ var InventoryProducts = (function () {
         if (brandSaveBtn) brandSaveBtn.addEventListener("click", saveNewBrand);
         if (brandCancelBtn) brandCancelBtn.addEventListener("click", function () {
             toggleBrandPanel(false);
+        });
+
+        var manufacturerAddBtn = document.getElementById("product-manufacturer-add-btn");
+        var manufacturerSaveBtn = document.getElementById("product-manufacturer-save-btn");
+        var manufacturerCancelBtn = document.getElementById("product-manufacturer-cancel-btn");
+
+        if (manufacturerAddBtn) {
+            manufacturerAddBtn.addEventListener("click", function () {
+                var panel = document.getElementById("product-manufacturer-new-panel");
+                toggleManufacturerPanel(panel.classList.contains("inv-hidden"));
+            });
+        }
+        if (manufacturerSaveBtn) manufacturerSaveBtn.addEventListener("click", saveNewManufacturer);
+        if (manufacturerCancelBtn) manufacturerCancelBtn.addEventListener("click", function () {
+            toggleManufacturerPanel(false);
         });
 
         var unitAddBtn = document.getElementById("product-unit-add-btn");

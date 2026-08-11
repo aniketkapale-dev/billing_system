@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from rest_framework import serializers
 
-from apps.catalog.models import Brand, Category, Unit
+from apps.catalog.models import Brand, Category, Manufacturer, Unit
 from apps.products.models import Product
 from core.base_serializer import BaseModelSerializer
 
@@ -12,6 +12,7 @@ class ProductSerializer(BaseModelSerializer):
     business_name = serializers.CharField(source="business.business_name", read_only=True)
     category_name = serializers.CharField(source="category.name", read_only=True)
     brand_name = serializers.CharField(source="brand.name", read_only=True)
+    manufacturer_name = serializers.CharField(source="manufacturer.name", read_only=True)
     unit_name = serializers.CharField(source="unit.name", read_only=True)
     unit_short_name = serializers.CharField(source="unit.short_name", read_only=True)
     quantity = serializers.SerializerMethodField()
@@ -31,6 +32,8 @@ class ProductSerializer(BaseModelSerializer):
             "category_name",
             "brand",
             "brand_name",
+            "manufacturer",
+            "manufacturer_name",
             "unit",
             "unit_name",
             "unit_short_name",
@@ -77,6 +80,12 @@ class ProductWriteSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True,
     )
+    manufacturer_id = serializers.PrimaryKeyRelatedField(
+        queryset=Manufacturer.objects.none(),
+        source="manufacturer",
+        required=False,
+        allow_null=True,
+    )
     unit_id = serializers.PrimaryKeyRelatedField(
         queryset=Unit.objects.none(),
         source="unit",
@@ -98,6 +107,7 @@ class ProductWriteSerializer(serializers.ModelSerializer):
             "barcode",
             "category_id",
             "brand_id",
+            "manufacturer_id",
             "unit_id",
             "description",
             "purchase_price",
@@ -123,6 +133,11 @@ class ProductWriteSerializer(serializers.ModelSerializer):
             is_active=True,
         )
         self.fields["brand_id"].queryset = Brand.objects.filter(
+            business_id=business.id,
+            is_deleted=False,
+            is_active=True,
+        )
+        self.fields["manufacturer_id"].queryset = Manufacturer.objects.filter(
             business_id=business.id,
             is_deleted=False,
             is_active=True,
