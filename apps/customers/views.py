@@ -13,6 +13,13 @@ class CustomerViewSet(BusinessScopedViewSetMixin, BaseViewSet):
     serializer_class = CustomerSerializer
     write_serializer_class = CustomerWriteSerializer
     search_fields = ("name", "mobile", "email")
+    ordering_default = ("name",)
+    ordering_fields = {
+        "name": "name",
+        "mobile": "mobile",
+        "email": "email",
+        "address": "address",
+    }
     required_roles = ["Business Owner"]
 
     def get_permissions(self):

@@ -12,6 +12,16 @@ class ProductViewSet(BusinessScopedViewSetMixin, BaseViewSet):
     serializer_class = ProductSerializer
     write_serializer_class = ProductWriteSerializer
     search_fields = ("name", "sku", "barcode", "description")
+    ordering_default = ("name",)
+    ordering_fields = {
+        "name": "name",
+        "sku": "sku",
+        "barcode": "barcode",
+        "purchase_price": "purchase_price",
+        "category": "category__name",
+        "brand": "brand__name",
+        "unit": "unit__short_name",
+    }
     required_roles = ["Business Owner"]
 
     def get_permissions(self):

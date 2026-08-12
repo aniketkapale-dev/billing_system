@@ -7,8 +7,146 @@ var InventoryCustomers = (function () {
     var VIEW_PANEL = "customers-view-panel";
     var currentPage = 1;
     var currentSearch = "";
+    var currentOrdering = "name";
     var searchTimer = null;
     var editingId = null;
+    var cachedItems = [];
+    var bulkSelect = null;
+    var columnCtrl = null;
+
+    function getColumnCtrl() {
+        if (!columnCtrl && isListPage()) {
+            columnCtrl = InventoryColumnCustomize.create({
+                tableKey: "customers",
+                theadSelector: ".inv-mgmt-table--customers thead tr",
+                toolbarSelector: "#customers-list-panel .inv-mgmt-toolbar",
+                includeBulkCheck: true,
+                bulkHeaderHtml: '<th class="inv-col-check"><input type="checkbox" class="inv-bulk-select-all" aria-label="Select all"/></th>',
+                sortDefault: "name",
+                onSortChange: function (ordering) {
+                    currentOrdering = ordering;
+                    loadCustomers(1);
+                },
+                columns: [
+                    {
+                        id: "name",
+                        label: "Full Name",
+                        locked: true,
+                        sortKey: "name",
+                        cell: function (item) { return "<td>" + displayValue(item.name) + "</td>"; }
+                    },
+                    {
+                        id: "mobile",
+                        label: "Mobile",
+                        sortKey: "mobile",
+                        cell: function (item) { return "<td>" + displayValue(item.mobile) + "</td>"; }
+                    },
+                    {
+                        id: "email",
+                        label: "Email",
+                        sortKey: "email",
+                        cell: function (item) { return "<td>" + displayValue(item.email) + "</td>"; }
+                    },
+                    {
+                        id: "address",
+                        label: "Address",
+                        sortKey: "address",
+                        cell: function (item) { return "<td>" + displayValue(item.address) + "</td>"; }
+                    }
+                ],
+                onApply: function () {
+                    renderRows(cachedItems);
+                }
+            });
+            columnCtrl.mount();
+            columnCtrl.renderHeader();
+        }
+        return columnCtrl;
+    }
+
+    function getBulkSelect() {
+        if (!bulkSelect && isListPage()) {
+            bulkSelect = InventoryBulkSelect.create({
+                tbodyId: "customers-table-body",
+                tableSelector: ".inv-mgmt-table--customers",
+                entitySingular: "Customer",
+                entityPlural: "Customers",
+                onDelete: bulkDeleteCustomers,
+                onPdf: exportCustomersPdf,
+                onPrint: exportCustomersPrint
+            });
+        }
+        return bulkSelect;
+    }
+
+    function getSelectedItems(ids) {
+        return cachedItems.filter(function (item) {
+            return ids.indexOf(String(item.id)) !== -1;
+        });
+    }
+
+    function exportCustomersPdf(ids) {
+        var items = getSelectedItems(ids);
+        if (!items.length) return;
+        InventoryDocumentExport.downloadTablePdf(
+            "Customers",
+            ["Full Name", "Mobile", "Email", "Address"],
+            items.map(function (item) {
+                return [item.name || "", item.mobile || "", item.email || "", item.address || ""];
+            }),
+            "customers.pdf"
+        );
+    }
+
+    function exportCustomersPrint(ids) {
+        var items = getSelectedItems(ids);
+        if (!items.length) return;
+        var html = InventoryDocumentExport.buildTableHtml(
+            "Customers",
+            ["Full Name", "Mobile", "Email", "Address"],
+            items.map(function (item) {
+                return [item.name || "", item.mobile || "", item.email || "", item.address || ""];
+            })
+        );
+        InventoryDocumentExport.printHtml("Customers", html);
+    }
+
+    function bulkDeleteCustomers(ids) {
+        InventoryConfirm.delete({
+            title: "Delete selected customers?",
+            message: ids.length + " customer(s) will be removed."
+        }).then(function (confirmed) {
+            if (!confirmed) return;
+
+            InventoryLoader.show();
+            var chain = Promise.resolve();
+            var deleted = 0;
+            var failed = 0;
+
+            ids.forEach(function (id) {
+                chain = chain.then(function () {
+                    return request(String(id) + "/", { method: "DELETE" }).then(function (body) {
+                        if (body && body.isSuccess) {
+                            deleted++;
+                            getBulkSelect().removeId(id);
+                        } else {
+                            failed++;
+                        }
+                    }).catch(function () {
+                        failed++;
+                    });
+                });
+            });
+
+            chain.finally(function () {
+                InventoryLoader.hide();
+                if (deleted) InventoryToast.success(deleted + " customer(s) deleted.");
+                if (failed) InventoryToast.error(failed + " customer(s) could not be deleted.");
+                getBulkSelect().clearSelection();
+                loadCustomers(currentPage);
+            });
+        });
+    }
 
     function request(path, opts) {
         return InventoryApi.request(API, path, opts);
@@ -27,6 +165,7 @@ var InventoryCustomers = (function () {
         params.set("page", String(page || 1));
         params.set("page_size", String(InventoryPagination.getPageSize("customers-pagination")));
         if (currentSearch) params.set("search", currentSearch);
+        if (currentOrdering) params.set("ordering", currentOrdering);
         return "?" + params.toString();
     }
 
@@ -46,28 +185,33 @@ var InventoryCustomers = (function () {
         var tbody = document.getElementById("customers-table-body");
         if (!tbody) return;
 
+        var cols = getColumnCtrl();
+        var colspan = cols ? cols.getColspan() : 6;
+
         if (!items || !items.length) {
-            tbody.innerHTML = '<tr><td colspan="5" class="inv-mgmt-empty">No customers found.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="' + colspan + '" class="inv-mgmt-empty">No customers found.</td></tr>';
+            getBulkSelect().afterRender();
             return;
         }
+
+        cachedItems = items;
+        var bulk = getBulkSelect();
 
         tbody.innerHTML = items.map(function (item) {
             return (
                 "<tr>" +
-                "<td>" + displayValue(item.name) + "</td>" +
-                "<td>" + displayValue(item.mobile) + "</td>" +
-                "<td>" + displayValue(item.email) + "</td>" +
-                "<td>" + displayValue(item.address) + "</td>" +
+                bulk.rowCellHtml(item.id, item) +
+                cols.renderRowCells(item) +
                 '<td><div class="inv-row-actions">' +
                 '<button type="button" class="inv-row-action-btn inv-row-action-btn--view customer-view" data-id="' + item.id + '" title="View" aria-label="View customer">' +
                 '<span class="material-symbols-outlined">visibility</span></button>' +
                 '<button type="button" class="inv-row-action-btn inv-row-action-btn--edit customer-edit" data-id="' + item.id + '" title="Edit" aria-label="Edit customer">' +
                 '<span class="material-symbols-outlined">edit</span></button>' +
-                '<button type="button" class="inv-row-action-btn inv-row-action-btn--delete customer-delete" data-id="' + item.id + '" title="Delete" aria-label="Delete customer">' +
-                '<span class="material-symbols-outlined">delete</span></button>' +
                 "</div></td></tr>"
             );
         }).join("");
+
+        bulk.afterRender();
     }
 
     function loadCustomers(page) {
@@ -334,12 +478,18 @@ var InventoryCustomers = (function () {
         var tbody = document.getElementById("customers-table-body");
 
         if (isListPage()) {
+            getColumnCtrl();
             function boot() {
                 if (!InventoryBusiness.getActiveId()) return;
                 loadCustomers(1);
             }
 
-            InventoryBusiness.whenReady(boot);
+            InventoryBusiness.whenReady(function () {
+                boot();
+                if (window.InventorySidebar && InventorySidebar.consumeAddAction()) {
+                    openFormPanel();
+                }
+            });
             window.addEventListener("inventory:business-changed", function () {
                 currentPage = 1;
                 boot();
@@ -369,11 +519,6 @@ var InventoryCustomers = (function () {
                 var editBtn = e.target.closest(".customer-edit");
                 if (editBtn) {
                     openEditPanel(editBtn.getAttribute("data-id"));
-                    return;
-                }
-                var deleteBtn = e.target.closest(".customer-delete");
-                if (deleteBtn) {
-                    deleteCustomer(deleteBtn.getAttribute("data-id"), deleteBtn);
                 }
             });
         }

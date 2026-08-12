@@ -161,6 +161,85 @@ body.inv-dashboard-body {
     color: var(--inv-primary);
 }
 
+.inv-nav-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border-radius: 10px;
+    transition: background 0.2s;
+}
+
+.inv-nav-row > .inv-nav-item {
+    flex: 1;
+    min-width: 0;
+}
+
+.inv-nav-row:hover:not(.inv-nav-row--active) {
+    background: #F7F8FA;
+}
+
+.inv-nav-row--active {
+    background: var(--inv-primary-container);
+}
+
+.inv-nav-row--active > .inv-nav-item {
+    background: transparent;
+    box-shadow: none;
+}
+
+.inv-nav-row:hover:not(.inv-nav-row--active) > .inv-nav-item {
+    background: transparent;
+    color: var(--inv-primary);
+}
+
+.inv-nav-add-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    margin-right: 8px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--inv-secondary);
+    cursor: pointer;
+    opacity: 0;
+    text-decoration: none;
+    transition: opacity 0.2s, background 0.2s, color 0.2s, transform 0.15s;
+}
+
+.inv-nav-row:hover .inv-nav-add-btn,
+.inv-nav-row--active .inv-nav-add-btn {
+    opacity: 1;
+}
+
+.inv-nav-add-btn:hover {
+    background: rgba(27, 33, 45, 0.08);
+    color: var(--inv-primary);
+    transform: scale(1.05);
+}
+
+.inv-nav-row--active .inv-nav-add-btn {
+    background: #FFFFFF;
+    color: var(--inv-primary);
+    box-shadow: 0 1px 2px rgba(27, 33, 45, 0.08);
+}
+
+.inv-nav-row--active .inv-nav-add-btn:hover {
+    background: #FFFFFF;
+    color: var(--inv-primary);
+    box-shadow: 0 2px 4px rgba(27, 33, 45, 0.12);
+}
+
+.inv-nav-add-btn .material-symbols-outlined {
+    margin: 0;
+    font-size: 16px;
+    font-variation-settings: "wght" 600;
+}
+
 .inv-dashboard-header {
     position: fixed;
     top: 0;

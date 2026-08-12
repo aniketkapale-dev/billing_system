@@ -21,6 +21,15 @@ class PurchaseViewSet(BusinessScopedViewSetMixin, BaseViewSet):
     required_roles = ["Business Owner"]
     ordering_default = ("-purchase_date", "-created_at")
 
+    ordering_default = ("-purchase_date", "-created_at")
+    ordering_fields = {
+        "purchase_date": "purchase_date",
+        "customer_name": "customer_name",
+        "total_amount": "total_amount",
+        "total_cost": "total_cost",
+        "total_profit": "total_profit",
+    }
+
     def filter_queryset(self, queryset):
         queryset = super().filter_queryset(queryset)
         date_from = self.request.query_params.get("date_from")

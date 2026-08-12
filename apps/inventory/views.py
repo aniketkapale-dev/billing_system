@@ -12,6 +12,12 @@ class InventoryStockViewSet(BusinessScopedViewSetMixin, BaseViewSet):
     search_fields = ("product__name", "product__sku")
     required_roles = ["Business Owner"]
     ordering_default = ("product__name",)
+    ordering_fields = {
+        "product__name": "product__name",
+        "product__sku": "product__sku",
+        "product__unit__short_name": "product__unit__short_name",
+        "quantity": "quantity",
+    }
 
     def get_permissions(self):
         return [IsAuthenticatedUser(), HasRole()]

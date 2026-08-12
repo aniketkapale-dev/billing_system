@@ -7,6 +7,7 @@ var InventoryProducts = (function () {
     var searchTimer = null;
     var currentPage = 1;
     var currentSearch = "";
+    var currentOrdering = "name";
     var editingId = null;
     var PRODUCTS_LIST_PANEL = "products-list-panel";
     var PRODUCTS_FORM_PANEL = "products-form-panel";
@@ -15,6 +16,167 @@ var InventoryProducts = (function () {
     var categories = [];
     var brands = [];
     var manufacturers = [];
+    var cachedItems = [];
+    var bulkSelect = null;
+    var columnCtrl = null;
+
+    function getColumnCtrl() {
+        if (!columnCtrl) {
+            columnCtrl = InventoryColumnCustomize.create({
+                tableKey: "products",
+                theadSelector: ".inv-mgmt-table--products thead tr",
+                toolbarSelector: "#products-list-panel .inv-mgmt-toolbar",
+                includeBulkCheck: true,
+                bulkHeaderHtml: '<th class="inv-col-check"><input type="checkbox" class="inv-bulk-select-all" aria-label="Select all"/></th>',
+                sortDefault: "name",
+                onSortChange: function (ordering) {
+                    currentOrdering = ordering;
+                    loadProducts(currentSearch, 1);
+                },
+                columns: [
+                    { id: "name", label: "Name", locked: true, sortKey: "name", headerClass: "inv-col-name", cell: function (item) { return '<td class="inv-col-name">' + cellText(item.name) + "</td>"; } },
+                    { id: "sku", label: "SKU", sortKey: "sku", headerClass: "inv-col-sku", cell: function (item) { return '<td class="inv-col-sku">' + cellText(item.sku) + "</td>"; } },
+                    { id: "barcode", label: "Barcode", sortKey: "barcode", headerClass: "inv-col-barcode", cell: function (item) { return '<td class="inv-col-barcode">' + cellText(item.barcode) + "</td>"; } },
+                    { id: "category", label: "Category", sortKey: "category", headerClass: "inv-col-category", cell: function (item) { return '<td class="inv-col-category">' + cellText(item.category_name) + "</td>"; } },
+                    { id: "brand", label: "Brand", sortKey: "brand", headerClass: "inv-col-brand", cell: function (item) { return '<td class="inv-col-brand">' + cellText(item.brand_name) + "</td>"; } },
+                    { id: "buy_price", label: "Buy Price", sortKey: "purchase_price", headerClass: "inv-col-buy", cell: function (item) { return '<td class="inv-col-buy">' + cellMoney(item.purchase_price) + "</td>"; } },
+                    { id: "qty", label: "Qty", headerClass: "inv-col-qty", cell: function (item) { return '<td class="inv-col-qty">' + cellQty(item.quantity) + "</td>"; } },
+                    {
+                        id: "opening_qty",
+                        label: "Opening Qty (Added)",
+                        headerClass: "inv-col-opening-hd",
+                        headerHtml: 'Opening Qty<br/><span class="inv-th-sub">(Added)</span>',
+                        cell: function (item) { return '<td class="inv-col-opening">' + cellOpeningQty(item) + "</td>"; }
+                    },
+                    { id: "unit", label: "Unit", sortKey: "unit", headerClass: "inv-col-unit", cell: function (item) { return '<td class="inv-col-unit">' + cellText(item.unit_short_name || item.unit_name) + "</td>"; } }
+                ],
+                onApply: function () {
+                    renderRows(cachedItems);
+                }
+            });
+            columnCtrl.mount();
+            columnCtrl.renderHeader();
+        }
+        return columnCtrl;
+    }
+
+    function productHasSales(item) {
+        return item.has_sales === true || Number(item.sold_quantity || 0) > 0;
+    }
+
+    function getBulkSelect() {
+        if (!bulkSelect) {
+            bulkSelect = InventoryBulkSelect.create({
+                tbodyId: "products-table-body",
+                tableSelector: ".inv-mgmt-table--products",
+                entitySingular: "Product",
+                entityPlural: "Products",
+                onDelete: bulkDeleteProducts,
+                onPdf: exportProductsPdf,
+                onPrint: exportProductsPrint
+            });
+        }
+        return bulkSelect;
+    }
+
+    function getSelectedItems(ids) {
+        return cachedItems.filter(function (item) {
+            return ids.indexOf(String(item.id)) !== -1;
+        });
+    }
+
+    function exportProductsPdf(ids) {
+        var items = getSelectedItems(ids);
+        if (!items.length) return;
+        InventoryDocumentExport.downloadTablePdf(
+            "Products",
+            ["Name", "SKU", "Category", "Brand", "Buy Price", "Qty", "Unit"],
+            items.map(function (item) {
+                return [
+                    item.name || "",
+                    item.sku || "",
+                    item.category_name || "",
+                    item.brand_name || "",
+                    item.purchase_price || "",
+                    item.quantity || "",
+                    item.unit_short_name || item.unit_name || ""
+                ];
+            }),
+            "products.pdf"
+        );
+    }
+
+    function exportProductsPrint(ids) {
+        var items = getSelectedItems(ids);
+        if (!items.length) return;
+        var html = InventoryDocumentExport.buildTableHtml(
+            "Products",
+            ["Name", "SKU", "Category", "Brand", "Buy Price", "Qty", "Unit"],
+            items.map(function (item) {
+                return [
+                    item.name || "",
+                    item.sku || "",
+                    item.category_name || "",
+                    item.brand_name || "",
+                    item.purchase_price || "",
+                    item.quantity || "",
+                    item.unit_short_name || item.unit_name || ""
+                ];
+            })
+        );
+        InventoryDocumentExport.printHtml("Products", html);
+    }
+
+    function bulkDeleteProducts(ids) {
+        var deletable = ids.filter(function (id) {
+            var item = cachedItems.find(function (row) { return String(row.id) === String(id); });
+            return item && !productHasSales(item);
+        });
+
+        if (!deletable.length) {
+            InventoryToast.error("Selected products with sales cannot be deleted.");
+            return;
+        }
+
+        if (deletable.length < ids.length) {
+            InventoryToast.warning("Products with sales will be skipped.");
+        }
+
+        InventoryConfirm.delete({
+            title: "Delete selected products?",
+            message: deletable.length + " product(s) will be removed."
+        }).then(function (confirmed) {
+            if (!confirmed) return;
+
+            InventoryLoader.show();
+            var chain = Promise.resolve();
+            var deleted = 0;
+            var failed = 0;
+
+            deletable.forEach(function (id) {
+                chain = chain.then(function () {
+                    return request("/" + id + "/", { method: "DELETE" }).then(function (body) {
+                        if (body && body.isSuccess) {
+                            deleted++;
+                            getBulkSelect().removeId(id);
+                        } else {
+                            failed++;
+                        }
+                    }).catch(function () {
+                        failed++;
+                    });
+                });
+            });
+
+            chain.finally(function () {
+                InventoryLoader.hide();
+                if (deleted) InventoryToast.success(deleted + " product(s) deleted.");
+                if (failed) InventoryToast.error(failed + " product(s) could not be deleted.");
+                getBulkSelect().clearSelection();
+                loadProducts(currentSearch, currentPage);
+            });
+        });
+    }
 
     function request(path, opts) {
         return InventoryApi.request(API, path, opts);
@@ -140,22 +302,17 @@ var InventoryProducts = (function () {
     }
 
     function actionButtons(item) {
-        var hasSales = item.has_sales === true || Number(item.sold_quantity || 0) > 0;
+        var hasSales = productHasSales(item);
         var editBtn = hasSales
             ? actionSlot()
             : '<button type="button" class="inv-row-action-btn inv-row-action-btn--edit inv-product-edit" data-id="' + item.id + '" title="Edit" aria-label="Edit product">' +
               '<span class="material-symbols-outlined">edit</span></button>';
-        var deleteBtn = hasSales
-            ? actionSlot()
-            : '<button type="button" class="inv-row-action-btn inv-row-action-btn--delete inv-product-delete" data-id="' + item.id + '" title="Delete" aria-label="Delete product">' +
-              '<span class="material-symbols-outlined">delete</span></button>';
 
         return (
             '<div class="inv-row-actions">' +
             '<button type="button" class="inv-row-action-btn inv-row-action-btn--view inv-product-view" data-id="' + item.id + '" title="View" aria-label="View product">' +
             '<span class="material-symbols-outlined">visibility</span></button>' +
             editBtn +
-            deleteBtn +
             "</div>"
         );
     }
@@ -458,27 +615,29 @@ var InventoryProducts = (function () {
         var tbody = document.getElementById("products-table-body");
         if (!tbody) return;
 
+        var cols = getColumnCtrl();
+        var colspan = cols.getColspan();
+
         if (!items || !items.length) {
-            tbody.innerHTML = '<tr><td colspan="10" class="inv-mgmt-empty">No products found.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="' + colspan + '" class="inv-mgmt-empty">No products found.</td></tr>';
+            getBulkSelect().afterRender();
             return;
         }
+
+        cachedItems = items;
+        var bulk = getBulkSelect();
 
         tbody.innerHTML = items.map(function (item) {
             return (
                 "<tr>" +
-                "<td class=\"inv-col-name\">" + cellText(item.name) + "</td>" +
-                "<td class=\"inv-col-sku\">" + cellText(item.sku) + "</td>" +
-                "<td class=\"inv-col-barcode\">" + cellText(item.barcode) + "</td>" +
-                "<td class=\"inv-col-category\">" + cellText(item.category_name) + "</td>" +
-                "<td class=\"inv-col-brand\">" + cellText(item.brand_name) + "</td>" +
-                "<td class=\"inv-col-buy\">" + cellMoney(item.purchase_price) + "</td>" +
-                "<td class=\"inv-col-qty\">" + cellQty(item.quantity) + "</td>" +
-                "<td class=\"inv-col-opening\">" + cellOpeningQty(item) + "</td>" +
-                "<td class=\"inv-col-unit\">" + cellText(item.unit_short_name || item.unit_name) + "</td>" +
-                "<td class=\"inv-col-action\">" + actionButtons(item) + "</td>" +
+                bulk.rowCellHtml(item.id, item) +
+                cols.renderRowCells(item) +
+                '<td class="inv-col-action">' + actionButtons(item) + "</td>" +
                 "</tr>"
             );
         }).join("");
+
+        bulk.afterRender();
     }
 
     function buildQuery(search, page) {
@@ -486,6 +645,7 @@ var InventoryProducts = (function () {
         params.set("page", String(page || 1));
         params.set("page_size", String(InventoryPagination.getPageSize("products-pagination")));
         if (search) params.set("search", search);
+        if (currentOrdering) params.set("ordering", currentOrdering);
         return "?" + params.toString();
     }
 
@@ -827,6 +987,8 @@ var InventoryProducts = (function () {
             InventoryPagePanel.init();
         }
 
+        getColumnCtrl();
+
         function boot() {
             if (!InventoryBusiness.getActiveId()) return;
             loadCatalogOptions().then(function () {
@@ -834,7 +996,12 @@ var InventoryProducts = (function () {
             });
         }
 
-        InventoryBusiness.whenReady(boot);
+        InventoryBusiness.whenReady(function () {
+            boot();
+            if (window.InventorySidebar && InventorySidebar.consumeAddAction()) {
+                openAddModal();
+            }
+        });
         window.addEventListener("inventory:business-changed", boot);
 
         if (openBtn) {
@@ -927,11 +1094,6 @@ var InventoryProducts = (function () {
                 var editBtn = e.target.closest(".inv-product-edit");
                 if (editBtn) {
                     openEditModal(editBtn.getAttribute("data-id"));
-                    return;
-                }
-                var deleteBtn = e.target.closest(".inv-product-delete");
-                if (deleteBtn) {
-                    deleteProduct(deleteBtn.getAttribute("data-id"), deleteBtn);
                 }
             });
         }

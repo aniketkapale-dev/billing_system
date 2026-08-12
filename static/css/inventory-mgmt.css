@@ -80,11 +80,143 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     gap: 12px;
     padding: 16px;
     border-bottom: 1px solid #EEF0F4;
     background: #FFFFFF;
+}
+
+.inv-columns-btn-wrap {
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.inv-columns-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 1px solid var(--inv-input-border);
+    border-radius: var(--inv-radius);
+    background: #FFFFFF;
+    color: var(--inv-secondary);
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.inv-columns-btn:hover {
+    background: #F7F8FA;
+    border-color: var(--inv-primary);
+    color: var(--inv-primary);
+}
+
+.inv-columns-btn .material-symbols-outlined {
+    font-size: 20px;
+}
+
+.inv-columns-dialog {
+    width: min(420px, calc(100vw - 32px));
+}
+
+.inv-columns-modal-header {
+    align-items: flex-start;
+}
+
+.inv-columns-modal-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.inv-columns-modal-title-wrap .material-symbols-outlined {
+    color: var(--inv-secondary);
+    font-size: 22px;
+}
+
+.inv-columns-modal-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+#inv-columns-selected-count {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--inv-secondary);
+    white-space: nowrap;
+}
+
+.inv-columns-modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.inv-columns-search {
+    max-width: none;
+}
+
+.inv-columns-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 360px;
+    overflow-y: auto;
+}
+
+.inv-columns-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid #E5E7EB;
+    border-radius: 10px;
+    background: #FFFFFF;
+    cursor: grab;
+}
+
+.inv-columns-item--dragging {
+    opacity: 0.55;
+}
+
+.inv-columns-drag {
+    display: inline-flex;
+    color: #9CA3AF;
+}
+
+.inv-columns-drag .material-symbols-outlined {
+    font-size: 20px;
+}
+
+.inv-columns-lock {
+    display: inline-flex;
+    width: 16px;
+    height: 16px;
+    align-items: center;
+    justify-content: center;
+    color: #9CA3AF;
+}
+
+.inv-columns-lock .material-symbols-outlined {
+    font-size: 16px;
+}
+
+.inv-columns-check {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    accent-color: var(--inv-primary);
+}
+
+.inv-columns-label {
+    font-size: 14px;
+    color: var(--inv-on-bg);
 }
 
 .inv-mgmt-toolbar--filters {
@@ -93,6 +225,10 @@
     align-items: center;
     justify-content: flex-start;
     gap: 12px 16px;
+}
+
+.inv-mgmt-toolbar--filters .inv-columns-btn-wrap {
+    margin-left: auto;
 }
 
 .inv-mgmt-toolbar--filters .inv-mgmt-search {
@@ -133,6 +269,166 @@
     box-sizing: border-box;
 }
 
+.inv-bulk-toolbar {
+    display: flex;
+    align-items: center;
+    padding: 10px 16px;
+    border-bottom: 1px solid #EEF0F4;
+    background: #F7F9FC;
+}
+
+.inv-bulk-toolbar-inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 16px;
+    width: 100%;
+}
+
+.inv-bulk-toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.inv-bulk-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 1px solid #D7DCE5;
+    border-radius: 8px;
+    background: #FFFFFF;
+    color: var(--inv-primary);
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.inv-bulk-action-btn:hover {
+    background: #EEF2FF;
+    border-color: #C7D2FE;
+}
+
+.inv-bulk-action-btn--delete {
+    color: var(--inv-error);
+}
+
+.inv-bulk-action-btn--delete:hover {
+    background: var(--inv-error-container);
+    border-color: #f5c2c7;
+}
+
+.inv-bulk-action-btn .material-symbols-outlined {
+    font-size: 18px;
+}
+
+.inv-bulk-toolbar-count {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #4F46E5;
+}
+
+.inv-bulk-toolbar-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #4F46E5;
+    flex-shrink: 0;
+}
+
+.inv-col-check {
+    width: 42px;
+    min-width: 42px;
+    max-width: 42px;
+    text-align: center;
+    vertical-align: middle;
+    overflow: visible;
+    text-overflow: clip;
+}
+
+colgroup .inv-col-check-col {
+    width: 42px;
+}
+
+.inv-col-check input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    cursor: pointer;
+    accent-color: var(--inv-primary);
+}
+
+.inv-mgmt-table tbody tr.inv-table-row--selected {
+    background: #EEF2FF;
+}
+
+.inv-mgmt-table tbody tr.inv-table-row--selected td {
+    background: transparent;
+}
+
+.inv-col-sortable {
+    padding: 0;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.inv-col-sort-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    width: 100%;
+    min-height: 44px;
+    padding: 0 14px;
+    border: none;
+    background: transparent;
+    color: var(--inv-secondary);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-family: inherit;
+    cursor: pointer;
+    text-align: left;
+}
+
+.inv-col-sort-btn:hover {
+    color: var(--inv-primary);
+}
+
+.inv-col-sort-label {
+    line-height: 1.3;
+}
+
+.inv-col-sort-icons {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-left: 2px;
+    line-height: 0;
+}
+
+.inv-col-sort-up,
+.inv-col-sort-down {
+    font-size: 18px;
+    color: #C5CAD3;
+    margin: -5px 0;
+}
+
+.inv-col-sort-btn--asc .inv-col-sort-up {
+    color: #4F46E5;
+}
+
+.inv-col-sort-btn--desc .inv-col-sort-down {
+    color: #4F46E5;
+}
+
 .inv-mgmt-search,
 .inv-mgmt-input,
 .inv-mgmt-select,
@@ -166,7 +462,7 @@
 .inv-mgmt-table {
     width: 100%;
     border-collapse: collapse;
-    table-layout: fixed;
+    table-layout: auto;
     font-size: 14px;
 }
 
@@ -190,8 +486,8 @@
 }
 
 .inv-mgmt-table td {
-    overflow: hidden;
-    text-overflow: ellipsis;
+    overflow: visible;
+    text-overflow: clip;
     white-space: nowrap;
 }
 

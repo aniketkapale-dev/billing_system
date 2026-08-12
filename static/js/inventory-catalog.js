@@ -87,7 +87,135 @@ var InventoryCatalog = (function () {
     var editingId = null;
     var currentPage = 1;
     var currentSearch = "";
+    var currentOrdering = "name";
     var searchTimer = null;
+    var cachedItems = [];
+    var bulkSelect = null;
+    var columnCtrl = null;
+
+    function buildCatalogColumnDefs() {
+        if (!config) return [];
+        return config.columns.map(function (col, index) {
+            return {
+                id: col.key,
+                label: col.label,
+                locked: index === 0,
+                sortKey: col.key,
+                cell: function (item) {
+                    return "<td>" + cellValue(item, col.key) + "</td>";
+                }
+            };
+        });
+    }
+
+    function getColumnCtrl() {
+        if (!columnCtrl && config) {
+            columnCtrl = InventoryColumnCustomize.create({
+                tableKey: "catalog-" + resource,
+                theadSelector: "#catalog-page .inv-mgmt-table thead tr",
+                toolbarSelector: "#catalog-page .inv-mgmt-toolbar",
+                includeBulkCheck: true,
+                bulkHeaderHtml: '<th class="inv-col-check"><input type="checkbox" class="inv-bulk-select-all" aria-label="Select all"/></th>',
+                sortDefault: "name",
+                onSortChange: function (ordering) {
+                    currentOrdering = ordering;
+                    loadList(1);
+                },
+                columns: buildCatalogColumnDefs(),
+                onApply: function () {
+                    renderRows(cachedItems);
+                }
+            });
+            columnCtrl.mount();
+            columnCtrl.renderHeader();
+        }
+        return columnCtrl;
+    }
+
+    function getBulkSelect() {
+        if (!bulkSelect) {
+            bulkSelect = InventoryBulkSelect.create({
+                tbodyId: resource + "-table-body",
+                tableSelector: "#catalog-page .inv-mgmt-table",
+                entitySingular: config ? config.title : "Record",
+                entityPlural: config ? config.plural : "Records",
+                onDelete: bulkDeleteItems,
+                onPdf: exportCatalogPdf,
+                onPrint: exportCatalogPrint
+            });
+        }
+        return bulkSelect;
+    }
+
+    function getSelectedItems(ids) {
+        return cachedItems.filter(function (item) {
+            return ids.indexOf(String(item.id)) !== -1;
+        });
+    }
+
+    function exportCatalogPdf(ids) {
+        var items = getSelectedItems(ids);
+        if (!items.length || !config) return;
+        var headers = config.columns.map(function (col) { return col.label; });
+        var rows = items.map(function (item) {
+            return config.columns.map(function (col) {
+                var value = item[col.key];
+                return value == null ? "" : String(value);
+            });
+        });
+        InventoryDocumentExport.downloadTablePdf(config.plural, headers, rows, resource + ".pdf");
+    }
+
+    function exportCatalogPrint(ids) {
+        var items = getSelectedItems(ids);
+        if (!items.length || !config) return;
+        var headers = config.columns.map(function (col) { return col.label; });
+        var rows = items.map(function (item) {
+            return config.columns.map(function (col) {
+                var value = item[col.key];
+                return value == null ? "" : String(value);
+            });
+        });
+        var html = InventoryDocumentExport.buildTableHtml(config.plural, headers, rows);
+        InventoryDocumentExport.printHtml(config.plural, html);
+    }
+
+    function bulkDeleteItems(ids) {
+        InventoryConfirm.delete({
+            title: "Delete selected " + (config ? config.plural.toLowerCase() : "records") + "?",
+            message: ids.length + " record(s) will be removed."
+        }).then(function (confirmed) {
+            if (!confirmed) return;
+
+            InventoryLoader.show();
+            var chain = Promise.resolve();
+            var deleted = 0;
+            var failed = 0;
+
+            ids.forEach(function (id) {
+                chain = chain.then(function () {
+                    return request(String(id) + "/", { method: "DELETE" }).then(function (body) {
+                        if (body && body.isSuccess) {
+                            deleted++;
+                            getBulkSelect().removeId(id);
+                        } else {
+                            failed++;
+                        }
+                    }).catch(function () {
+                        failed++;
+                    });
+                });
+            });
+
+            chain.finally(function () {
+                InventoryLoader.hide();
+                if (deleted) InventoryToast.success(deleted + " record(s) deleted.");
+                if (failed) InventoryToast.error(failed + " record(s) could not be deleted.");
+                getBulkSelect().clearSelection();
+                loadList(currentPage);
+            });
+        });
+    }
 
     function request(path, opts) {
         path = path == null ? "" : String(path);
@@ -105,16 +233,13 @@ var InventoryCatalog = (function () {
         params.set("page", String(page || 1));
         params.set("page_size", String(InventoryPagination.getPageSize(resource + "-pagination")));
         if (currentSearch) params.set("search", currentSearch);
+        if (currentOrdering) params.set("ordering", currentOrdering);
         return "?" + params.toString();
     }
 
     function renderTableHead() {
-        var thead = document.getElementById(resource + "-table-head");
-        if (!thead || !config) return;
-        var cols = config.columns.map(function (col) {
-            return "<th>" + col.label + "</th>";
-        }).join("");
-        thead.innerHTML = "<tr>" + cols + "<th>Action</th></tr>";
+        var ctrl = getColumnCtrl();
+        if (ctrl) ctrl.renderHeader();
     }
 
     function renderFormFields() {
@@ -148,28 +273,32 @@ var InventoryCatalog = (function () {
     function renderRows(items) {
         var tbody = document.getElementById(resource + "-table-body");
         if (!tbody || !config) return;
-        var colCount = config.columns.length + 1;
+        var colCount = (getColumnCtrl() ? getColumnCtrl().getColspan() : config.columns.length + 2);
+        var bulk = getBulkSelect();
+        var cols = getColumnCtrl();
 
         if (!items || !items.length) {
             tbody.innerHTML = '<tr><td colspan="' + colCount + '" class="inv-mgmt-empty">No ' +
                 config.plural.toLowerCase() + " found.</td></tr>";
+            bulk.afterRender();
             return;
         }
 
+        cachedItems = items;
+
         tbody.innerHTML = items.map(function (item) {
-            var cells = config.columns.map(function (col) {
-                return "<td>" + cellValue(item, col.key) + "</td>";
-            }).join("");
             return (
-                "<tr>" + cells +
+                "<tr>" +
+                bulk.rowCellHtml(item.id, item) +
+                cols.renderRowCells(item) +
                 '<td><div class="inv-row-actions">' +
                 '<button type="button" class="inv-row-action-btn inv-row-action-btn--edit catalog-edit" data-id="' + item.id + '" title="Edit" aria-label="Edit">' +
                 '<span class="material-symbols-outlined">edit</span></button>' +
-                '<button type="button" class="inv-row-action-btn inv-row-action-btn--delete catalog-delete" data-id="' + item.id + '" title="Delete" aria-label="Delete">' +
-                '<span class="material-symbols-outlined">delete</span></button>' +
                 "</div></td></tr>"
             );
         }).join("");
+
+        bulk.afterRender();
     }
 
     function loadList(page) {
@@ -324,7 +453,12 @@ var InventoryCatalog = (function () {
             loadList(1);
         }
 
-        InventoryBusiness.whenReady(boot);
+        InventoryBusiness.whenReady(function () {
+            boot();
+            if (window.InventorySidebar && InventorySidebar.consumeAddAction()) {
+                openFormPanel();
+            }
+        });
         window.addEventListener("inventory:business-changed", function () {
             currentPage = 1;
             boot();
@@ -348,11 +482,6 @@ var InventoryCatalog = (function () {
                 var editBtn = e.target.closest(".catalog-edit");
                 if (editBtn) {
                     openEditPanel(editBtn.getAttribute("data-id"));
-                    return;
-                }
-                var deleteBtn = e.target.closest(".catalog-delete");
-                if (deleteBtn) {
-                    deleteItem(deleteBtn.getAttribute("data-id"), deleteBtn);
                 }
             });
         }

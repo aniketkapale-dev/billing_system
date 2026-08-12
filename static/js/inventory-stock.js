@@ -10,9 +10,178 @@ var InventoryStock = (function () {
     var currentSearch = "";
     var batchPage = 1;
     var batchSearch = "";
+    var currentSummaryOrdering = "product__name";
+    var currentBatchOrdering = "created_at";
     var activeTab = "summary";
     var LIST_PANEL = "inventory-list-panel";
     var VIEW_PANEL = "inventory-view-panel";
+    var cachedSummaryItems = [];
+    var cachedBatchItems = [];
+    var summaryColumnCtrl = null;
+    var batchColumnCtrl = null;
+
+    function getSummaryColumnCtrl() {
+        if (!summaryColumnCtrl) {
+            summaryColumnCtrl = InventoryColumnCustomize.create({
+                tableKey: "inventory-summary",
+                theadSelector: ".inv-mgmt-table--inventory thead tr",
+                toolbarSelector: "#inventory-summary-panel .inv-mgmt-toolbar",
+                includeBulkCheck: false,
+                sortDefault: "product__name",
+                onSortChange: function (ordering) {
+                    currentSummaryOrdering = ordering;
+                    loadSummary(currentSearch, 1);
+                },
+                columns: [
+                    {
+                        id: "product",
+                        label: "Product",
+                        locked: true,
+                        sortKey: "product__name",
+                        headerClass: "inv-col-name",
+                        cell: function (item) {
+                            return '<td class="inv-col-name">' + InventoryApi.escapeHtml(item.product_name) + "</td>";
+                        }
+                    },
+                    {
+                        id: "sku",
+                        label: "SKU",
+                        sortKey: "product__sku",
+                        headerClass: "inv-col-sku",
+                        cell: function (item) {
+                            return '<td class="inv-col-sku">' + InventoryApi.escapeHtml(item.product_sku || "—") + "</td>";
+                        }
+                    },
+                    {
+                        id: "unit",
+                        label: "Unit",
+                        sortKey: "product__unit__short_name",
+                        headerClass: "inv-col-unit",
+                        cell: function (item) {
+                            return '<td class="inv-col-unit">' + InventoryApi.escapeHtml(item.product_unit || "pcs") + "</td>";
+                        }
+                    },
+                    {
+                        id: "qty",
+                        label: "In Stock",
+                        sortKey: "quantity",
+                        headerClass: "inv-col-qty",
+                        cell: function (item) {
+                            return '<td class="inv-col-qty"><strong>' + InventoryApi.escapeHtml(item.quantity) + "</strong></td>";
+                        }
+                    }
+                ],
+                onApply: function () {
+                    renderSummaryRows(cachedSummaryItems);
+                }
+            });
+            summaryColumnCtrl.mount();
+            summaryColumnCtrl.renderHeader();
+        }
+        return summaryColumnCtrl;
+    }
+
+    function getBatchColumnCtrl() {
+        if (!batchColumnCtrl) {
+            batchColumnCtrl = InventoryColumnCustomize.create({
+                tableKey: "inventory-batches",
+                theadSelector: ".inv-mgmt-table--batches thead tr",
+                toolbarSelector: "#inventory-batches-panel .inv-mgmt-toolbar",
+                includeBulkCheck: false,
+                includeAction: false,
+                sortDefault: "created_at",
+                onSortChange: function (ordering) {
+                    currentBatchOrdering = ordering;
+                    loadBatches(batchSearch, 1);
+                },
+                columns: [
+                    {
+                        id: "fifo",
+                        label: "FIFO #",
+                        locked: true,
+                        cell: function (item) {
+                            return "<td><strong>" + (item._fifoIndex || "—") + "</strong></td>";
+                        }
+                    },
+                    {
+                        id: "product",
+                        label: "Product",
+                        locked: true,
+                        sortKey: "product_name",
+                        cell: function (item) {
+                            return "<td>" + InventoryApi.escapeHtml(item.product_name) + "</td>";
+                        }
+                    },
+                    {
+                        id: "batch_no",
+                        label: "Batch No.",
+                        sortKey: "batch_number",
+                        cell: function (item) {
+                            return "<td><code>" + InventoryApi.escapeHtml(item.batch_number || "—") + "</code></td>";
+                        }
+                    },
+                    {
+                        id: "invoice",
+                        label: "Purchase Invoice",
+                        sortKey: "invoice_number",
+                        cell: function (item) {
+                            return "<td>" + InventoryApi.escapeHtml(item.invoice_number || "—") + "</td>";
+                        }
+                    },
+                    {
+                        id: "available",
+                        label: "Available",
+                        sortKey: "available_quantity",
+                        cell: function (item) {
+                            var avail = Number(item.available_quantity || 0);
+                            var availClass = avail > 0 ? "inv-batch-available" : "inv-batch-empty";
+                            return '<td class="inv-mgmt-cell--num ' + availClass + '"><strong>' +
+                                InventoryApi.escapeHtml(item.available_quantity) + "</strong></td>";
+                        }
+                    },
+                    {
+                        id: "buy_price",
+                        label: "Buy Price",
+                        sortKey: "purchase_price",
+                        cell: function (item) {
+                            return '<td class="inv-mgmt-cell--num">' + InventoryApi.formatMoney(item.purchase_price) + "</td>";
+                        }
+                    },
+                    {
+                        id: "sell_price",
+                        label: "Sell Price",
+                        sortKey: "selling_price",
+                        cell: function (item) {
+                            var sell = Number(item.product_sale_price != null ? item.product_sale_price : item.selling_price || 0);
+                            return '<td class="inv-mgmt-cell--num">' + InventoryApi.formatMoney(sell) + "</td>";
+                        }
+                    },
+                    {
+                        id: "expiry",
+                        label: "Expiry",
+                        sortKey: "expiry_date",
+                        cell: function (item) {
+                            return "<td>" + formatDate(item.expiry_date) + "</td>";
+                        }
+                    },
+                    {
+                        id: "received",
+                        label: "Received",
+                        sortKey: "created_at",
+                        cell: function (item) {
+                            return "<td>" + formatDate(String(item.created_at || "").slice(0, 10)) + "</td>";
+                        }
+                    }
+                ],
+                onApply: function () {
+                    renderBatchRows(cachedBatchItems, batchPage, InventoryPagination.getPageSize("batch-pagination"));
+                }
+            });
+            batchColumnCtrl.mount();
+            batchColumnCtrl.renderHeader();
+        }
+        return batchColumnCtrl;
+    }
 
     function summaryRequest(path, opts) {
         return InventoryApi.request(SUMMARY_API, path, opts);
@@ -45,19 +214,21 @@ var InventoryStock = (function () {
         var tbody = document.getElementById("inventory-table-body");
         if (!tbody) return;
 
+        var cols = getSummaryColumnCtrl();
+        var colspan = cols.getColspan();
+
         if (!items || !items.length) {
-            tbody.innerHTML = '<tr><td colspan="5" class="inv-mgmt-empty">No stock yet. Record a purchase to add inventory.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="' + colspan + '" class="inv-mgmt-empty">No stock yet. Record a purchase to add inventory.</td></tr>';
             return;
         }
+
+        cachedSummaryItems = items;
 
         tbody.innerHTML = items.map(function (item) {
             return (
                 "<tr>" +
-                "<td class=\"inv-col-name\">" + InventoryApi.escapeHtml(item.product_name) + "</td>" +
-                "<td class=\"inv-col-sku\">" + InventoryApi.escapeHtml(item.product_sku || "—") + "</td>" +
-                "<td class=\"inv-col-unit\">" + InventoryApi.escapeHtml(item.product_unit || "pcs") + "</td>" +
-                "<td class=\"inv-col-qty\"><strong>" + InventoryApi.escapeHtml(item.quantity) + "</strong></td>" +
-                "<td class=\"inv-col-action\">" + actionButtons(item) + "</td>" +
+                cols.renderRowCells(item) +
+                '<td class="inv-col-action">' + actionButtons(item) + "</td>" +
                 "</tr>"
             );
         }).join("");
@@ -148,30 +319,20 @@ var InventoryStock = (function () {
         var tbody = document.getElementById("batch-table-body");
         if (!tbody) return;
 
+        var cols = getBatchColumnCtrl();
+        var colspan = cols.getColspan();
+
         if (!items || !items.length) {
-            tbody.innerHTML = '<tr><td colspan="9" class="inv-mgmt-empty">No batches yet. Step 1: Record a purchase invoice to add stock.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="' + colspan + '" class="inv-mgmt-empty">No batches yet. Step 1: Record a purchase invoice to add stock.</td></tr>';
             return;
         }
 
+        cachedBatchItems = items;
         var offset = ((page || 1) - 1) * (pageSize || PAGE_SIZE);
+
         tbody.innerHTML = items.map(function (item, index) {
-            var avail = Number(item.available_quantity || 0);
-            var availClass = avail > 0 ? "inv-batch-available" : "inv-batch-empty";
-            var buy = Number(item.purchase_price || 0);
-            var sell = Number(item.product_sale_price != null ? item.product_sale_price : item.selling_price || 0);
-            return (
-                "<tr>" +
-                "<td><strong>" + (offset + index + 1) + "</strong></td>" +
-                "<td>" + InventoryApi.escapeHtml(item.product_name) + "</td>" +
-                "<td><code>" + InventoryApi.escapeHtml(item.batch_number || "—") + "</code></td>" +
-                "<td>" + InventoryApi.escapeHtml(item.invoice_number || "—") + "</td>" +
-                "<td class=\"inv-mgmt-cell--num " + availClass + "\"><strong>" + InventoryApi.escapeHtml(item.available_quantity) + "</strong></td>" +
-                "<td class=\"inv-mgmt-cell--num\">" + InventoryApi.formatMoney(buy) + "</td>" +
-                "<td class=\"inv-mgmt-cell--num\">" + InventoryApi.formatMoney(sell) + "</td>" +
-                "<td>" + formatDate(item.expiry_date) + "</td>" +
-                "<td>" + formatDate(String(item.created_at || "").slice(0, 10)) + "</td>" +
-                "</tr>"
-            );
+            item._fifoIndex = offset + index + 1;
+            return "<tr>" + cols.renderRowCells(item) + "</tr>";
         }).join("");
     }
 
@@ -195,7 +356,7 @@ var InventoryStock = (function () {
         currentPage = page || 1;
         InventoryLoader.show();
 
-        return summaryRequest(buildQuery(currentSearch, currentPage, null, "inventory-pagination"))
+        return summaryRequest(buildQuery(currentSearch, currentPage, { ordering: currentSummaryOrdering }, "inventory-pagination"))
             .then(function (body) {
                 if (body && body.isSuccess && body.data) {
                     renderSummaryRows(body.data.items || []);
@@ -225,7 +386,7 @@ var InventoryStock = (function () {
         batchSearch = search || "";
         batchPage = page || 1;
         var inStockEl = document.getElementById("batch-in-stock-only");
-        var extra = {};
+        var extra = { ordering: currentBatchOrdering };
         if (inStockEl && inStockEl.checked) {
             extra.in_stock = "true";
         }
@@ -278,6 +439,9 @@ var InventoryStock = (function () {
     }
 
     function init() {
+        getSummaryColumnCtrl();
+        getBatchColumnCtrl();
+
         var searchEl = document.getElementById("inventory-search");
         var batchSearchEl = document.getElementById("batch-search");
         var inStockEl = document.getElementById("batch-in-stock-only");

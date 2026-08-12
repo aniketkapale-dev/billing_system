@@ -25,6 +25,12 @@ class PurchaseInvoiceViewSet(BusinessScopedViewSetMixin, BaseViewSet):
     filter_fields = ("invoice_number",)
     required_roles = ["Business Owner"]
     ordering_default = ("-invoice_date", "-created_at")
+    ordering_fields = {
+        "invoice_date": "invoice_date",
+        "invoice_number": "invoice_number",
+        "subtotal": "subtotal",
+        "grand_total": "grand_total",
+    }
 
     def filter_queryset(self, queryset):
         queryset = super().filter_queryset(queryset)
@@ -108,6 +114,10 @@ class InventoryBatchViewSet(BusinessScopedViewSetMixin, BaseViewSet):
         "expiry_date": "expiry_date",
         "available_quantity": "available_quantity",
         "product_name": "product__name",
+        "batch_number": "batch_number",
+        "purchase_price": "purchase_price",
+        "selling_price": "selling_price",
+        "invoice_number": "purchase_invoice_item__purchase_invoice__invoice_number",
     }
 
     def get_permissions(self):

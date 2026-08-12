@@ -7,6 +7,7 @@ var InventoryPurchases = (function () {
     var CUSTOMERS_API = "/api/customers";
     var PAGE_SIZE = (window.InventoryConstants && InventoryConstants.PAGE_SIZE) || 10;
     var currentPage = 1;
+    var currentOrdering = "-purchase_date";
     var searchTimer = null;
     var products = [];
     var paymentTypes = [];
@@ -15,6 +16,105 @@ var InventoryPurchases = (function () {
     var PURCHASES_LIST_PANEL = "purchases-list-panel";
     var PURCHASES_FORM_PANEL = "purchases-form-panel";
     var PURCHASES_VIEW_PANEL = "purchases-view-panel";
+    var cachedItems = [];
+    var bulkSelect = null;
+    var columnCtrl = null;
+
+    function getColumnCtrl() {
+        if (!columnCtrl) {
+            columnCtrl = InventoryColumnCustomize.create({
+                tableKey: "purchases",
+                theadSelector: ".inv-mgmt-table--purchases thead tr",
+                toolbarSelector: "#purchases-list-panel .inv-mgmt-toolbar",
+                includeBulkCheck: true,
+                bulkHeaderHtml: '<th class="inv-col-check"><input type="checkbox" class="inv-bulk-select-all" aria-label="Select all"/></th>',
+                sortDefault: "-purchase_date",
+                onSortChange: function (ordering) {
+                    currentOrdering = ordering;
+                    loadPurchases(1);
+                },
+                columns: [
+                    { id: "date", label: "Date", locked: true, sortKey: "purchase_date", cell: function (p) { return "<td>" + InventoryApi.escapeHtml(p.purchase_date) + "</td>"; } },
+                    { id: "customer", label: "Customer", locked: true, sortKey: "customer_name", cell: function (p) { return "<td>" + formatCustomerDisplay(p) + "</td>"; } },
+                    { id: "products", label: "Products Sold", cell: function (p) { return '<td class="inv-col-name">' + formatProductsSoldCell(p.items || [], p.id) + "</td>"; } },
+                    { id: "sale_amount", label: "Sale Amount", sortKey: "total_amount", cell: function (p) { return '<td class="inv-mgmt-cell--num">' + InventoryApi.formatMoney(p.total_amount) + "</td>"; } },
+                    { id: "total_cost", label: "Total Cost", sortKey: "total_cost", cell: function (p) { return '<td class="inv-mgmt-cell--num">' + InventoryApi.formatMoney(p.total_cost) + "</td>"; } },
+                    {
+                        id: "profit",
+                        label: "Profit",
+                        sortKey: "total_profit",
+                        cell: function (p) {
+                            var profit = Number(p.total_profit || 0);
+                            var profitClass = profit >= 0 ? "inv-profit-positive" : "inv-profit-negative";
+                            return '<td class="inv-mgmt-cell--num ' + profitClass + '"><strong>' + formatProfit(profit) + "</strong></td>";
+                        }
+                    }
+                ],
+                onApply: function () {
+                    renderPurchaseRows(cachedItems);
+                }
+            });
+            columnCtrl.mount();
+            columnCtrl.renderHeader();
+        }
+        return columnCtrl;
+    }
+
+    function getBulkSelect() {
+        if (!bulkSelect) {
+            bulkSelect = InventoryBulkSelect.create({
+                tbodyId: "purchases-table-body",
+                tableSelector: ".inv-mgmt-table--purchases",
+                entitySingular: "Sale",
+                entityPlural: "Sales",
+                enableDelete: false,
+                onPdf: exportSalesPdf,
+                onPrint: exportSalesPrint
+            });
+        }
+        return bulkSelect;
+    }
+
+    function getSelectedItems(ids) {
+        return cachedItems.filter(function (item) {
+            return ids.indexOf(String(item.id)) !== -1;
+        });
+    }
+
+    function fetchSalesDetails(ids) {
+        return Promise.all(ids.map(function (id) {
+            return fetchPurchase(id);
+        })).then(function (results) {
+            return results.filter(Boolean);
+        });
+    }
+
+    function exportSalesPdf(ids) {
+        fetchSalesDetails(ids)
+            .then(function (sales) {
+                if (!sales.length) {
+                    InventoryToast.error("Unable to load selected sales.");
+                    return;
+                }
+                InventoryDocumentExport.downloadSalesPdf(sales, "sales.pdf");
+            });
+    }
+
+    function exportSalesPrint(ids) {
+        InventoryLoader.show();
+        fetchSalesDetails(ids)
+            .then(function (sales) {
+                if (!sales.length) {
+                    InventoryToast.error("Unable to load selected sales.");
+                    return;
+                }
+                var html = InventoryDocumentExport.buildSalesDocumentHtml(sales);
+                InventoryDocumentExport.printHtml("Sales", html);
+            })
+            .finally(function () {
+                InventoryLoader.hide();
+            });
+    }
 
     function request(path, opts) {
         return InventoryApi.request(API, path, opts);
@@ -483,29 +583,29 @@ var InventoryPurchases = (function () {
         var tbody = document.getElementById("purchases-table-body");
         if (!tbody) return;
 
+        var cols = getColumnCtrl();
+        var colspan = cols.getColspan();
+
         if (!items || !items.length) {
-            tbody.innerHTML = '<tr><td colspan="7" class="inv-mgmt-empty">No sales yet. Record a purchase first, then create a sale.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="' + colspan + '" class="inv-mgmt-empty">No sales yet. Record a purchase first, then create a sale.</td></tr>';
+            getBulkSelect().afterRender();
             return;
         }
 
+        cachedItems = items;
+        var bulk = getBulkSelect();
+
         tbody.innerHTML = items.map(function (purchase) {
-            var productNames = formatProductsSoldCell(purchase.items || [], purchase.id);
-
-            var profit = Number(purchase.total_profit || 0);
-            var profitClass = profit >= 0 ? "inv-profit-positive" : "inv-profit-negative";
-
             return (
                 "<tr>" +
-                "<td>" + InventoryApi.escapeHtml(purchase.purchase_date) + "</td>" +
-                "<td>" + formatCustomerDisplay(purchase) + "</td>" +
-                "<td class=\"inv-col-name\">" + productNames + "</td>" +
-                "<td class=\"inv-mgmt-cell--num\">" + InventoryApi.formatMoney(purchase.total_amount) + "</td>" +
-                "<td class=\"inv-mgmt-cell--num\">" + InventoryApi.formatMoney(purchase.total_cost) + "</td>" +
-                "<td class=\"inv-mgmt-cell--num " + profitClass + "\"><strong>" + formatProfit(profit) + "</strong></td>" +
-                "<td class=\"inv-col-action\">" + actionButtons(purchase) + "</td>" +
+                bulk.rowCellHtml(purchase.id, purchase) +
+                cols.renderRowCells(purchase) +
+                '<td class="inv-col-action">' + actionButtons(purchase) + "</td>" +
                 "</tr>"
             );
         }).join("");
+
+        bulk.afterRender();
     }
 
     function fetchPurchase(id) {
@@ -644,6 +744,9 @@ var InventoryPurchases = (function () {
         }
         if (dateToEl && dateToEl.value) {
             params.set("date_to", dateToEl.value);
+        }
+        if (currentOrdering) {
+            params.set("ordering", currentOrdering);
         }
 
         return "?" + params.toString();
@@ -870,6 +973,8 @@ var InventoryPurchases = (function () {
             InventoryPagePanel.init();
         }
 
+        getColumnCtrl();
+
         function boot() {
             if (!InventoryBusiness.getActiveId()) return;
             loadProducts().then(function () {
@@ -879,7 +984,13 @@ var InventoryPurchases = (function () {
             });
         }
 
-        InventoryBusiness.whenReady(boot);
+        InventoryBusiness.whenReady(function () {
+            boot();
+            if (window.InventorySidebar && InventorySidebar.consumeAddAction()) {
+                var openSaleBtn = document.getElementById("purchase-open-modal-btn");
+                if (openSaleBtn) openSaleBtn.click();
+            }
+        });
         window.addEventListener("inventory:business-changed", boot);
 
         document.getElementById("purchase-open-modal-btn").addEventListener("click", function () {

@@ -29,6 +29,8 @@ class UnitViewSet(BusinessScopedViewSetMixin, BaseViewSet):
     serializer_class = UnitSerializer
     write_serializer_class = UnitWriteSerializer
     search_fields = ("name", "short_name")
+    ordering_default = ("name",)
+    ordering_fields = {"name": "name", "short_name": "short_name"}
     required_roles = ["Business Owner"]
 
     def get_permissions(self):
@@ -52,6 +54,8 @@ class CategoryViewSet(BusinessScopedViewSetMixin, BaseViewSet):
     serializer_class = CategorySerializer
     write_serializer_class = CategoryWriteSerializer
     search_fields = ("name", "description")
+    ordering_default = ("name",)
+    ordering_fields = {"name": "name", "description": "description"}
     required_roles = ["Business Owner"]
 
     def get_permissions(self):
@@ -75,6 +79,8 @@ class BrandViewSet(BusinessScopedViewSetMixin, BaseViewSet):
     serializer_class = BrandSerializer
     write_serializer_class = BrandWriteSerializer
     search_fields = ("name",)
+    ordering_default = ("name",)
+    ordering_fields = {"name": "name"}
     required_roles = ["Business Owner"]
 
     def get_permissions(self):
