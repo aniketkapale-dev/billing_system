@@ -140,31 +140,83 @@
     </ul>
 </nav>
 
-<header class="inv-dashboard-header">
-    <div class="inv-header-left">
+<header class="inv-dashboard-header inv-chrome-header">
+    <div class="inv-chrome-header-row">
         <div class="inv-business-switcher">
-            <span class="inv-business-label">Business</span>
-            <div id="inv-business-tabs" class="inv-business-tabs" role="tablist" aria-label="Select business"></div>
-            <button id="inv-business-add-btn" type="button" class="inv-business-add-btn" title="Add business" aria-label="Add business">
+            <div id="inv-business-tabs" class="inv-business-tabs" role="tablist" aria-label="Business tabs"></div>
+            <button id="inv-business-add-btn" type="button" class="inv-business-tab-add" title="New business tab" aria-label="Add business">
                 <span class="material-symbols-outlined">add</span>
             </button>
         </div>
-    </div>
-    <div class="inv-profile">
-        <div class="inv-profile-user">
-            <div id="profile-avatar" class="inv-profile-avatar">
-                <span class="material-symbols-outlined">person</span>
+        <div class="inv-header-right">
+            <div class="inv-quick-access" id="inv-quick-access">
+                <button type="button" id="inv-quick-access-btn" class="inv-quick-access-trigger" aria-expanded="false" aria-haspopup="true" title="Quick create" aria-label="Quick create">
+                    <span class="material-symbols-outlined">add</span>
+                </button>
+                <div id="inv-quick-access-panel" class="inv-quick-access-panel inv-hidden" role="menu" aria-label="Quick create">
+                    <div class="inv-quick-access-grid">
+                        <div class="inv-quick-access-col">
+                            <h3 class="inv-quick-access-heading">
+                                <span class="material-symbols-outlined">apps</span>
+                                General
+                            </h3>
+                            <ul class="inv-quick-access-list">
+                                <li><a href="#" data-quick-action="business" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Business</a></li>
+                                <li><a href="/dashboard/products/?action=add" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Item</a></li>
+                                <li><a href="/dashboard/units/?action=add" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Unit</a></li>
+                                <li><a href="/dashboard/categories/?action=add" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Category</a></li>
+                                <li><a href="/dashboard/brands/?action=add" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Brand</a></li>
+                            </ul>
+                        </div>
+                        <div class="inv-quick-access-col">
+                            <h3 class="inv-quick-access-heading">
+                                <span class="material-symbols-outlined">point_of_sale</span>
+                                Sales
+                            </h3>
+                            <ul class="inv-quick-access-list">
+                                <li><a href="/dashboard/customers/?action=add" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Customer</a></li>
+                                <li><a href="/dashboard/purchases/?action=add" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Sale</a></li>
+                            </ul>
+                        </div>
+                        <div class="inv-quick-access-col">
+                            <h3 class="inv-quick-access-heading">
+                                <span class="material-symbols-outlined">shopping_bag</span>
+                                Purchases
+                            </h3>
+                            <ul class="inv-quick-access-list">
+                                <li><a href="/dashboard/stock-in/?action=add" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Purchase (Stock In)</a></li>
+                            </ul>
+                        </div>
+                        <div class="inv-quick-access-col">
+                            <h3 class="inv-quick-access-heading">
+                                <span class="material-symbols-outlined">warehouse</span>
+                                Inventory
+                            </h3>
+                            <ul class="inv-quick-access-list">
+                                <li><a href="/dashboard/inventory/" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> View Stock</a></li>
+                                <li><a href="/dashboard/stock-in/?action=add" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Add Stock via Purchase</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <span id="profile-role" class="inv-profile-role">Business Owner</span>
+            <div class="inv-profile">
+                <div class="inv-profile-user">
+                    <div id="profile-avatar" class="inv-profile-avatar">
+                        <span class="material-symbols-outlined">person</span>
+                    </div>
+                    <span id="profile-role" class="inv-profile-role">Business Owner</span>
+                </div>
+                <button id="inventory-logout-btn" type="button" class="inv-profile-logout-btn">
+                    <span class="material-symbols-outlined">logout</span>
+                    Logout
+                </button>
+            </div>
         </div>
-        <button id="inventory-logout-btn" type="button" class="inv-profile-logout-btn">
-            <span class="material-symbols-outlined">logout</span>
-            Logout
-        </button>
     </div>
 </header>
 
-<main class="inv-dashboard-main">
+<main class="inv-dashboard-main inv-chrome-page">
     <div id="inv-business-empty" class="inv-business-empty inv-hidden">
         <p>Create your first business to manage products, purchases, and inventory.</p>
         <button type="button" class="inv-mgmt-btn inv-mgmt-btn--primary" id="inv-business-empty-add-btn">
@@ -232,6 +284,7 @@
 <script src="{% static 'js/inventory-document-export.js' %}"></script>
 <script src="{% static 'js/inventory-column-customize.js' %}"></script>
 <script src="{% static 'js/inventory-sidebar.js' %}"></script>
+<script src="{% static 'js/inventory-quick-access.js' %}"></script>
 <script src="{% static 'js/inventory-auth.js' %}"></script>
 <script>
 InventoryAuth.guardUser();

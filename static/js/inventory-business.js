@@ -39,6 +39,20 @@ var InventoryBusiness = (function () {
         return item.business_name || item.name || "Business";
     }
 
+    function tabIconHtml(item) {
+        if (item.logo_url) {
+            return (
+                '<span class="inv-business-tab-icon inv-business-tab-icon--img">' +
+                '<img src="' + escapeHtml(item.logo_url) + '" alt=""/>' +
+                "</span>"
+            );
+        }
+        return (
+            '<span class="inv-business-tab-icon inv-business-tab-icon--default" aria-hidden="true">' +
+            '<span class="material-symbols-outlined">store</span></span>'
+        );
+    }
+
     function notifyChange() {
         window.dispatchEvent(new CustomEvent("inventory:business-changed", {
             detail: { business: getActiveBusiness() }
@@ -57,12 +71,14 @@ var InventoryBusiness = (function () {
         var activeId = getActiveId();
         tabsEl.innerHTML = businesses.map(function (item) {
             var isActive = String(item.id) === String(activeId);
+            var label = escapeHtml(businessLabel(item));
             return (
                 '<button type="button" class="inv-business-tab' + (isActive ? " inv-business-tab--active" : "") + '"' +
                 ' role="tab" aria-selected="' + (isActive ? "true" : "false") + '"' +
                 ' data-business-id="' + item.id + '">' +
-                escapeHtml(businessLabel(item)) +
-                "</button>"
+                (isActive ? '<span class="inv-business-tab-curve" aria-hidden="true"></span>' : "") +
+                tabIconHtml(item) +
+                '<span class="inv-business-tab-label">' + label + "</span></button>"
             );
         }).join("");
     }

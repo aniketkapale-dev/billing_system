@@ -333,7 +333,12 @@ var InventoryColumnCustomize = (function () {
             if (ctrl.ordering === sortKey) {
                 ctrl.ordering = "-" + sortKey;
             } else if (ctrl.ordering === "-" + sortKey) {
-                ctrl.ordering = ctrl.sortDefault || "";
+                // When default is the same desc sort, toggle to asc instead of no-op reset.
+                if (ctrl.sortDefault === "-" + sortKey) {
+                    ctrl.ordering = sortKey;
+                } else {
+                    ctrl.ordering = ctrl.sortDefault || "";
+                }
             } else {
                 ctrl.ordering = sortKey;
             }

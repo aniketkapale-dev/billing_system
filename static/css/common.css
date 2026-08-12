@@ -1,37 +1,45 @@
 /* Billing System — common styles (variables, reset, shared components) */
 
 :root {
-    --inv-bg: #F5F5F5;
-    --inv-on-bg: #222222;
-    --inv-primary: #1B212D;
-    --inv-primary-container: #C8EE44;
-    --inv-primary-fixed-dim: #b0d42a;
-    --inv-primary-fixed: #cbf147;
-    --inv-secondary: #6F7782;
-    --inv-on-secondary-container: #5e6472;
+    /* Zoho Books–inspired palette */
+    --inv-bg: #FFFFFF;
+    --inv-on-bg: #333333;
+    --inv-primary: #0067FF;
+    --inv-primary-hover: #0056D6;
+    --inv-primary-container: #EBF3FF;
+    --inv-primary-dark: #1C2434;
+    --inv-primary-fixed-dim: #0056D6;
+    --inv-primary-fixed: #3385FF;
+    --inv-secondary: #666666;
+    --inv-on-secondary-container: #666666;
+    --inv-accent: #007BFF;
+    --inv-sidebar-bg: #F8FAFF;
+    --inv-nav-text: #4A5568;
+    --inv-topbar-bg: #1C2434;
     --inv-surface: #FFFFFF;
-    --inv-surface-bright: #fcf9f8;
-    --inv-surface-container: #f0eded;
-    --inv-surface-variant: #e5e2e1;
-    --inv-outline-variant: #E5E7EB;
-    --inv-border: #E5E7EB;
+    --inv-surface-bright: #F5F7FA;
+    --inv-surface-container: #F5F7FA;
+    --inv-surface-variant: #E0E0E0;
+    --inv-outline-variant: #E0E0E0;
+    --inv-border: #E0E0E0;
     --inv-input-border: #D1D5DB;
-    --inv-inverse-surface: #1B212D;
-    --inv-error: #ba1a1a;
-    --inv-error-container: #ffdad6;
-    --inv-on-error-container: #93000a;
-    --inv-success-bg: #EEFDF2;
-    --inv-success-text: #48B975;
+    --inv-inverse-surface: #1C2434;
+    --inv-error: #DC2626;
+    --inv-error-container: #FEE2E2;
+    --inv-on-error-container: #991B1B;
+    --inv-success-bg: #ECFDF5;
+    --inv-success-text: #059669;
     --inv-white: #ffffff;
     --inv-gray-300: #d1d5db;
-    --inv-radius: 0.5rem;
-    --inv-radius-xl: 0.75rem;
-    --inv-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    --inv-radius: 0.375rem;
+    --inv-radius-xl: 0.5rem;
+    --inv-shadow: 0 1px 3px rgba(28, 36, 52, 0.08);
     --inv-sidebar-width: 16rem;
-    --inv-header-height: 4rem;
+    --inv-chrome-page-bg: #FFFFFF;
+    --inv-header-height: 5rem;
     --inv-max-width: 80rem;
-    --inv-font: 'Inter', sans-serif;
-    --inv-font-display: 'Public Sans', sans-serif;
+    --inv-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --inv-font-display: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -110,12 +118,12 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 }
 
 .inv-btn-primary {
-    background: var(--inv-primary-container);
-    color: var(--inv-primary);
+    background: var(--inv-primary);
+    color: var(--inv-white);
 }
 
 .inv-btn-primary:hover {
-    background: var(--inv-primary-fixed-dim);
+    background: var(--inv-primary-hover);
     box-shadow: var(--inv-shadow);
 }
 

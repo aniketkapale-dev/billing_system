@@ -113,7 +113,7 @@
     padding: 6px 28px 6px 10px;
     border: none;
     border-radius: 999px;
-    background: #F7F8FA;
+    background: var(--inv-surface-bright);
     font-size: 13px;
     font-weight: 600;
     font-family: inherit;
@@ -127,7 +127,7 @@
 
 .inv-pagination-size-select:focus {
     outline: none;
-    box-shadow: 0 0 0 2px rgba(200, 238, 68, 0.35);
+    box-shadow: 0 0 0 2px rgba(0, 103, 255, 0.25);
 }
 
 .inv-pagination-right {

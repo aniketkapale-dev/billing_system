@@ -33,7 +33,7 @@ var InventoryStockIn = (function () {
                     loadInvoices(1);
                 },
                 columns: [
-                    { id: "date", label: "Date", locked: true, sortKey: "invoice_date", cell: function (item) { return "<td>" + InventoryApi.escapeHtml(formatDate(item.invoice_date)) + "</td>"; } },
+                    { id: "date", label: "Date", locked: true, cell: function (item) { return "<td>" + InventoryApi.escapeHtml(formatDate(item.invoice_date)) + "</td>"; } },
                     { id: "invoice_no", label: "Invoice No.", locked: true, sortKey: "invoice_number", cell: function (item) { return "<td><strong>" + InventoryApi.escapeHtml(item.invoice_number) + "</strong></td>"; } },
                     { id: "qty", label: "Qty", cell: function (item) { return '<td class="inv-mgmt-cell--num">' + InventoryApi.escapeHtml(formatQty(item.total_quantity)) + "</td>"; } },
                     { id: "subtotal", label: "Subtotal", sortKey: "subtotal", cell: function (item) { return '<td class="inv-mgmt-cell--num">' + InventoryApi.formatMoney(item.subtotal) + "</td>"; } },

@@ -34,7 +34,7 @@ var InventoryPurchases = (function () {
                     loadPurchases(1);
                 },
                 columns: [
-                    { id: "date", label: "Date", locked: true, sortKey: "purchase_date", cell: function (p) { return "<td>" + InventoryApi.escapeHtml(p.purchase_date) + "</td>"; } },
+                    { id: "date", label: "Date", locked: true, cell: function (p) { return "<td>" + InventoryApi.escapeHtml(p.purchase_date) + "</td>"; } },
                     { id: "customer", label: "Customer", locked: true, sortKey: "customer_name", cell: function (p) { return "<td>" + formatCustomerDisplay(p) + "</td>"; } },
                     { id: "products", label: "Products Sold", cell: function (p) { return '<td class="inv-col-name">' + formatProductsSoldCell(p.items || [], p.id) + "</td>"; } },
                     { id: "sale_amount", label: "Sale Amount", sortKey: "total_amount", cell: function (p) { return '<td class="inv-mgmt-cell--num">' + InventoryApi.formatMoney(p.total_amount) + "</td>"; } },
