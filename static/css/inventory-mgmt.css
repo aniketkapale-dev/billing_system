@@ -1009,6 +1009,11 @@ colgroup .inv-col-check-col {
     padding-bottom: 0;
 }
 
+.inv-mgmt-item-row--sale .inv-mgmt-item-row-remove {
+    align-self: end;
+    padding-bottom: 0;
+}
+
 #stockin-items-container {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
@@ -1243,6 +1248,11 @@ colgroup .inv-col-check-col {
     background: #FAFBFC;
 }
 
+#purchase-items-container,
+#stockin-items-container {
+    overflow-x: auto;
+}
+
 .inv-mgmt-items-header {
     display: flex;
     align-items: center;
@@ -1266,8 +1276,8 @@ colgroup .inv-col-check-col {
 }
 
 .inv-mgmt-item-row.inv-mgmt-item-row--sale {
-    grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto;
-    min-width: 920px;
+    grid-template-columns: minmax(150px, 1.5fr) minmax(60px, 0.7fr) minmax(72px, 0.75fr) minmax(72px, 0.75fr) minmax(72px, 0.75fr) minmax(95px, 0.95fr) minmax(80px, 0.85fr) minmax(88px, 0.9fr) minmax(80px, 0.85fr) 40px;
+    min-width: 1180px;
 }
 
 @media (max-width: 900px) {

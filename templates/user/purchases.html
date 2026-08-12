@@ -97,11 +97,33 @@
                     <div class="inv-mgmt-items-header">
                         <div>
                             <h4 style="margin:0;font-size:16px;font-weight:600;color:var(--inv-primary);">Products to Sell</h4>
-                            <p class="inv-mgmt-items-help">Stock is deducted using FIFO. Profit = sale price − batch purchase cost.</p>
                         </div>
                         <button id="purchase-add-item-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Add Product Row</button>
                     </div>
                     <div id="purchase-items-container"></div>
+                    <div id="purchase-totals" class="inv-stockin-totals">
+                        <div class="inv-stockin-total-row">
+                            <div class="inv-stockin-total-label">
+                                <span>Total Cost</span>
+                                <small>Total purchase cost of items sold</small>
+                            </div>
+                            <strong id="purchase-total-cost" class="inv-stockin-total-value">0.00</strong>
+                        </div>
+                        <div class="inv-stockin-total-row">
+                            <div class="inv-stockin-total-label">
+                                <span>Sale Amount</span>
+                                <small>Total amount received from the sale</small>
+                            </div>
+                            <strong id="purchase-sale-amount" class="inv-stockin-total-value">0.00</strong>
+                        </div>
+                        <div class="inv-stockin-total-row inv-stockin-total-row--grand">
+                            <div class="inv-stockin-total-label">
+                                <span>Profit</span>
+                                <small>Sale amount minus total cost</small>
+                            </div>
+                            <strong id="purchase-total-profit" class="inv-stockin-total-value">0.00</strong>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="inv-mgmt-panel-footer">

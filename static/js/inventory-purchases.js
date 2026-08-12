@@ -5,11 +5,13 @@ var InventoryPurchases = (function () {
     var PRODUCTS_API = "/api/products";
     var CATALOG_API = "/api/catalog";
     var CUSTOMERS_API = "/api/customers";
+    var TAXES_API = "/api/settings/taxes";
     var PAGE_SIZE = (window.InventoryConstants && InventoryConstants.PAGE_SIZE) || 10;
     var currentPage = 1;
     var currentOrdering = "-purchase_date";
     var searchTimer = null;
     var products = [];
+    var taxes = [];
     var paymentTypes = [];
     var customers = [];
     var editingPurchaseId = null;
@@ -275,6 +277,185 @@ var InventoryPurchases = (function () {
             });
     }
 
+    function taxLabel(item) {
+        return item.key + " (" + item.value + "%)";
+    }
+
+    function getTax(taxId) {
+        return taxes.find(function (tax) {
+            return String(tax.id) === String(taxId);
+        });
+    }
+
+    function getTaxRate(taxId) {
+        var tax = getTax(taxId);
+        return tax ? Number(tax.value || 0) : 0;
+    }
+
+    function roundMoney(value) {
+        return Math.round(Number(value || 0) * 100) / 100;
+    }
+
+    function computeWithGst(actualPrice, taxRate) {
+        var actual = Number(actualPrice || 0);
+        var rate = Number(taxRate || 0);
+        if (isNaN(actual)) actual = 0;
+        if (isNaN(rate)) rate = 0;
+        return roundMoney(actual * (1 + rate / 100));
+    }
+
+    function computeGstAmount(actualPrice, taxRate) {
+        var actual = Number(actualPrice || 0);
+        var rate = Number(taxRate || 0);
+        if (isNaN(actual)) actual = 0;
+        if (isNaN(rate)) rate = 0;
+        return roundMoney(actual * rate / 100);
+    }
+
+    function rowTaxOptions(selectedId) {
+        var options = '<option value="">No GST</option>';
+        options += taxes.map(function (tax) {
+            var selected = String(tax.id) === String(selectedId) ? " selected" : "";
+            return '<option value="' + tax.id + '"' + selected + '>' +
+                InventoryApi.escapeHtml(taxLabel(tax)) + "</option>";
+        }).join("");
+        return options;
+    }
+
+    function renderRowTaxSelect(select, selectedId) {
+        if (!select) return;
+        var current = selectedId !== undefined && selectedId !== null
+            ? String(selectedId)
+            : select.value;
+        select.innerHTML = rowTaxOptions(current);
+        if (current) select.value = current;
+    }
+
+    function refreshAllRowTaxSelects() {
+        document.querySelectorAll("#purchase-items-container .inv-item-sale-gst").forEach(function (select) {
+            renderRowTaxSelect(select, select.value);
+        });
+    }
+
+    function loadTaxes() {
+        return InventoryApi.request(TAXES_API, "?page_size=100&ordering=key").then(function (body) {
+            taxes = body && body.isSuccess ? (body.data.items || []) : [];
+            refreshAllRowTaxSelects();
+        });
+    }
+
+    function getProductBuyDetails(product) {
+        if (!product) {
+            return { actual: 0, gstAmount: 0, buyPrice: 0 };
+        }
+        var rate = product.tax ? Number(product.tax_value || 0) : 0;
+        var actual = Number(product.actual_price || 0);
+        if (!actual && product.purchase_price) {
+            actual = rate > 0
+                ? roundMoney(Number(product.purchase_price) / (1 + rate / 100))
+                : Number(product.purchase_price);
+        }
+        var gstAmount = computeGstAmount(actual, rate);
+        var buyPrice = Number(product.purchase_price || 0) || computeWithGst(actual, rate);
+        return {
+            actual: actual,
+            gstAmount: gstAmount,
+            buyPrice: buyPrice
+        };
+    }
+
+    function getRowFinalSalePrice(row) {
+        var saleActualEl = row.querySelector(".inv-item-sale-actual");
+        var saleGstEl = row.querySelector(".inv-item-sale-gst");
+        if (!saleActualEl) return 0;
+        return computeWithGst(saleActualEl.value, getTaxRate(saleGstEl ? saleGstEl.value : ""));
+    }
+
+    function updateRowPricing(row, skipTotals) {
+        if (!row) return;
+        var product = getProduct(row.querySelector(".inv-item-product").value);
+        var actualEl = row.querySelector(".inv-item-actual");
+        var buyGstEl = row.querySelector(".inv-item-buy-gst");
+        var buyEl = row.querySelector(".inv-item-buy");
+        var finalEl = row.querySelector(".inv-item-final-price");
+        var totalEl = row.querySelector(".inv-item-total");
+
+        if (product) {
+            var buyDetails = getProductBuyDetails(product);
+            if (actualEl) actualEl.value = InventoryApi.formatMoney(buyDetails.actual);
+            if (buyGstEl) buyGstEl.value = InventoryApi.formatMoney(buyDetails.gstAmount);
+            if (buyEl) buyEl.value = InventoryApi.formatMoney(buyDetails.buyPrice);
+        } else {
+            if (actualEl) actualEl.value = InventoryApi.formatMoney(0);
+            if (buyGstEl) buyGstEl.value = InventoryApi.formatMoney(0);
+            if (buyEl) buyEl.value = InventoryApi.formatMoney(0);
+        }
+
+        var finalUnit = getRowFinalSalePrice(row);
+        if (finalEl) finalEl.value = InventoryApi.formatMoney(finalUnit);
+        var qty = Number(row.querySelector(".inv-item-qty").value || 0);
+        if (isNaN(qty) || qty <= 0) qty = 0;
+        if (totalEl) totalEl.value = InventoryApi.formatMoney(roundMoney(finalUnit * (qty || 1)));
+        if (!skipTotals) {
+            updateSaleTotals();
+        }
+    }
+
+    function getRowSaleAmounts(row) {
+        var productId = row.querySelector(".inv-item-product").value;
+        if (!productId) {
+            return { saleAmount: 0, totalCost: 0, profit: 0 };
+        }
+        var product = getProduct(productId);
+        if (!product) {
+            return { saleAmount: 0, totalCost: 0, profit: 0 };
+        }
+        var qty = Number(row.querySelector(".inv-item-qty").value || 0);
+        if (isNaN(qty) || qty <= 0) qty = 0;
+        var saleAmount = roundMoney(getRowFinalSalePrice(row) * (qty || 1));
+        var totalCost = roundMoney(getProductBuyDetails(product).buyPrice * (qty || 1));
+        return {
+            saleAmount: saleAmount,
+            totalCost: totalCost,
+            profit: roundMoney(saleAmount - totalCost)
+        };
+    }
+
+    function calculateSaleTotals() {
+        var saleAmount = 0;
+        var totalCost = 0;
+        var profit = 0;
+        document.querySelectorAll("#purchase-items-container .inv-mgmt-item-row").forEach(function (row) {
+            if (!row.querySelector(".inv-item-product").value) return;
+            var amounts = getRowSaleAmounts(row);
+            saleAmount += amounts.saleAmount;
+            totalCost += amounts.totalCost;
+            profit += amounts.profit;
+        });
+        return {
+            saleAmount: roundMoney(saleAmount),
+            totalCost: roundMoney(totalCost),
+            profit: roundMoney(profit)
+        };
+    }
+
+    function setSaleTotalsDisplay(totalCost, saleAmount, profit) {
+        var costEl = document.getElementById("purchase-total-cost");
+        var saleEl = document.getElementById("purchase-sale-amount");
+        var profitEl = document.getElementById("purchase-total-profit");
+        if (costEl) costEl.textContent = InventoryApi.formatMoney(totalCost);
+        if (saleEl) saleEl.textContent = InventoryApi.formatMoney(saleAmount);
+        if (profitEl) {
+            profitEl.textContent = formatProfit(profit);
+            profitEl.className = "inv-stockin-total-value " + (Number(profit || 0) >= 0 ? "inv-profit-positive" : "inv-profit-negative");
+        }
+    }
+
+    function updateSaleTotals() {
+        var totals = calculateSaleTotals();
+        setSaleTotalsDisplay(totals.totalCost, totals.saleAmount, totals.profit);
+    }
+
     function formatQty(value) {
         var num = Number(value || 0);
         return Number.isInteger(num) ? String(num) : num.toFixed(2);
@@ -380,7 +561,7 @@ var InventoryPurchases = (function () {
         if (!product) {
             qtyInput.removeAttribute("max");
             row.dataset.maxQty = "";
-            updateRowTotal(row);
+            updateRowPricing(row);
             return;
         }
 
@@ -400,39 +581,38 @@ var InventoryPurchases = (function () {
                 qtyInput.value = 1;
             }
         }
-        updateRowTotal(row);
+        updateRowPricing(row);
     }
 
     function applyProductToRow(row, product, options) {
         options = options || {};
-        var priceInput = row.querySelector(".inv-item-price");
-        var buyInput = row.querySelector(".inv-item-buy");
+        var saleActualInput = row.querySelector(".inv-item-sale-actual");
+        var saleGstSelect = row.querySelector(".inv-item-sale-gst");
         if (!product) {
             updateRowQtyLimits(row, null);
-            if (priceInput) priceInput.value = "";
-            if (buyInput) buyInput.value = InventoryApi.formatMoney(0);
+            if (saleActualInput) saleActualInput.value = "";
+            if (saleGstSelect) saleGstSelect.value = "";
+            updateRowPricing(row);
             return;
         }
 
         updateRowQtyLimits(row, product);
 
-        if (buyInput) {
-            buyInput.value = InventoryApi.formatMoney(product.purchase_price || 0);
+        if (saleGstSelect && product.tax) {
+            saleGstSelect.value = String(product.tax);
         }
 
-        if (priceInput && options.updatePrice !== false) {
-            var shouldSetPrice = options.forcePrice || priceInput.value === "";
+        if (saleActualInput && options.updatePrice !== false) {
+            var shouldSetPrice = options.forcePrice || saleActualInput.value === "";
             if (shouldSetPrice) {
-                priceInput.value = defaultSalePrice(product);
+                saleActualInput.value = defaultSalePrice(product);
             }
         }
-        updateRowTotal(row);
+        updateRowPricing(row);
     }
 
     function updateRowTotal(row) {
-        var qty = Number(row.querySelector(".inv-item-qty").value || 0);
-        var price = Number(row.querySelector(".inv-item-price").value || 0);
-        row.querySelector(".inv-item-total").value = InventoryApi.formatMoney(qty * price);
+        updateRowPricing(row);
     }
 
     function createItemRow(data) {
@@ -442,10 +622,16 @@ var InventoryPurchases = (function () {
         row.innerHTML =
             '<div class="inv-mgmt-field"><label>Available Product</label><select class="inv-mgmt-select inv-item-product" required>' + productOptions(data.product_id, row) + "</select></div>" +
             '<div class="inv-mgmt-field"><label>Quantity</label><input class="inv-mgmt-input inv-item-qty" type="number" min="0.01" step="0.01" value="' + (data.quantity || 1) + '" required/></div>' +
+            '<div class="inv-mgmt-field"><label>Actual Price</label><input class="inv-mgmt-input inv-item-actual" type="text" readonly value="0.00"/></div>' +
+            '<div class="inv-mgmt-field"><label>GST Price</label><input class="inv-mgmt-input inv-item-buy-gst" type="text" readonly value="0.00"/></div>' +
             '<div class="inv-mgmt-field"><label>Buy Price</label><input class="inv-mgmt-input inv-item-buy" type="text" readonly value="0.00"/></div>' +
-            '<div class="inv-mgmt-field"><label>Sale Price</label><input class="inv-mgmt-input inv-item-price" type="number" min="0" step="0.01" placeholder="0.00" value="' + (data.unit_price != null && data.unit_price !== "" ? data.unit_price : "") + '" required/></div>' +
+            '<div class="inv-mgmt-field"><label>GST for Sale</label><select class="inv-mgmt-select inv-item-sale-gst">' + rowTaxOptions(data.sale_tax_id || "") + "</select></div>" +
+            '<div class="inv-mgmt-field"><label>Sale Price</label><input class="inv-mgmt-input inv-item-sale-actual" type="number" min="0" step="0.01" placeholder="0.00" value="' + (data.sale_actual_price != null && data.sale_actual_price !== "" ? data.sale_actual_price : "") + '" required/></div>' +
+            '<div class="inv-mgmt-field"><label>Final Sale Price</label><input class="inv-mgmt-input inv-item-final-price" type="text" readonly value="0.00"/></div>' +
             '<div class="inv-mgmt-field"><label>Total Price</label><input class="inv-mgmt-input inv-item-total" type="text" readonly value="0.00"/></div>' +
-            '<div class="inv-mgmt-field"><label>&nbsp;</label><button type="button" class="inv-mgmt-btn inv-mgmt-btn--danger inv-item-remove">Remove</button></div>';
+            '<div class="inv-mgmt-item-row-remove">' +
+            '<button type="button" class="inv-row-action-btn inv-row-action-btn--delete inv-item-remove" title="Remove" aria-label="Remove product row">' +
+            '<span class="material-symbols-outlined">delete</span></button></div>';
 
         row.querySelector(".inv-item-qty").addEventListener("input", function () {
             var product = getProduct(row.querySelector(".inv-item-product").value);
@@ -457,15 +643,19 @@ var InventoryPurchases = (function () {
                     InventoryToast.warning("Quantity cannot exceed available stock (" + formatQty(max) + ").");
                 }
             }
-            updateRowTotal(row);
+            updateRowPricing(row);
             refreshAllProductSelects();
         });
-        row.querySelector(".inv-item-price").addEventListener("input", function () {
-            updateRowTotal(row);
+        row.querySelector(".inv-item-sale-actual").addEventListener("input", function () {
+            updateRowPricing(row);
+        });
+        row.querySelector(".inv-item-sale-gst").addEventListener("change", function () {
+            updateRowPricing(row);
         });
         row.querySelector(".inv-item-remove").addEventListener("click", function () {
             row.remove();
             refreshAllProductSelects();
+            updateSaleTotals();
         });
 
         var select = row.querySelector(".inv-item-product");
@@ -476,10 +666,10 @@ var InventoryPurchases = (function () {
 
         if (data.product_id) {
             applyProductToRow(row, getProduct(data.product_id), {
-                updatePrice: data.unit_price == null || data.unit_price === ""
+                updatePrice: data.sale_actual_price == null || data.sale_actual_price === ""
             });
         } else {
-            updateRowTotal(row);
+            updateRowPricing(row);
         }
         return row;
     }
@@ -491,15 +681,22 @@ var InventoryPurchases = (function () {
         }
         var qty = Number(line.quantity || 0);
         var unitCost = qty > 0 ? Number(line.cost_amount || 0) / qty : 0;
+        var unitSale = Number(line.unit_price || 0);
         var row = document.createElement("div");
         row.className = "inv-mgmt-item-row inv-mgmt-item-row--sale";
         row.innerHTML =
             '<div class="inv-mgmt-field"><label>Product</label><input class="inv-mgmt-input" type="text" readonly value="' + label + '"/></div>' +
             '<div class="inv-mgmt-field"><label>Quantity</label><input class="inv-mgmt-input" type="text" readonly value="' + InventoryApi.escapeHtml(formatQty(line.quantity)) + '"/></div>' +
+            '<div class="inv-mgmt-field"><label>Actual Price</label><input class="inv-mgmt-input" type="text" readonly value="—"/></div>' +
+            '<div class="inv-mgmt-field"><label>GST Price</label><input class="inv-mgmt-input" type="text" readonly value="—"/></div>' +
             '<div class="inv-mgmt-field"><label>Buy Price</label><input class="inv-mgmt-input inv-item-buy" type="text" readonly value="' + InventoryApi.formatMoney(unitCost) + '"/></div>' +
-            '<div class="inv-mgmt-field"><label>Sale Price</label><input class="inv-mgmt-input" type="text" readonly value="' + InventoryApi.formatMoney(line.unit_price) + '"/></div>' +
+            '<div class="inv-mgmt-field"><label>GST for Sale</label><input class="inv-mgmt-input" type="text" readonly value="—"/></div>' +
+            '<div class="inv-mgmt-field"><label>Sale Price</label><input class="inv-mgmt-input" type="text" readonly value="' + InventoryApi.formatMoney(unitSale) + '"/></div>' +
+            '<div class="inv-mgmt-field"><label>Final Sale Price</label><input class="inv-mgmt-input" type="text" readonly value="' + InventoryApi.formatMoney(unitSale) + '"/></div>' +
             '<div class="inv-mgmt-field"><label>Total Price</label><input class="inv-mgmt-input" type="text" readonly value="' + InventoryApi.formatMoney(line.line_total) + '"/></div>' +
-            '<div class="inv-mgmt-field"><label>&nbsp;</label><button type="button" class="inv-mgmt-btn inv-mgmt-btn--danger inv-item-remove inv-hidden" disabled>Remove</button></div>';
+            '<div class="inv-mgmt-item-row-remove">' +
+            '<button type="button" class="inv-row-action-btn inv-row-action-btn--delete inv-item-remove inv-hidden" disabled title="Remove" aria-label="Remove product row">' +
+            '<span class="material-symbols-outlined">delete</span></button></div>';
         return row;
     }
 
@@ -509,7 +706,6 @@ var InventoryPurchases = (function () {
         var addItemBtn = document.getElementById("purchase-add-item-btn");
         var itemsPanel = document.querySelector("#purchases-form-panel .inv-mgmt-items-panel");
         var itemsTitle = itemsPanel ? itemsPanel.querySelector("h4") : null;
-        var itemsHelp = itemsPanel ? itemsPanel.querySelector(".inv-mgmt-items-help") : null;
 
         if (mode === "edit") {
             if (titleEl) titleEl.textContent = "Edit Sale";
@@ -517,14 +713,12 @@ var InventoryPurchases = (function () {
             if (addItemBtn) addItemBtn.classList.add("inv-hidden");
             if (itemsPanel) itemsPanel.classList.add("inv-sale-items--readonly");
             if (itemsTitle) itemsTitle.textContent = "Products Sold";
-            if (itemsHelp) itemsHelp.textContent = "Sold items cannot be changed after the sale is recorded.";
         } else {
             if (titleEl) titleEl.textContent = "Add Sale";
             if (saveBtn) saveBtn.textContent = "Create Sale";
             if (addItemBtn) addItemBtn.classList.remove("inv-hidden");
             if (itemsPanel) itemsPanel.classList.remove("inv-sale-items--readonly");
             if (itemsTitle) itemsTitle.textContent = "Products to Sell";
-            if (itemsHelp) itemsHelp.textContent = "Stock is deducted using FIFO. Profit = sale price − batch purchase cost.";
         }
     }
 
@@ -540,6 +734,7 @@ var InventoryPurchases = (function () {
         (purchase.items || []).forEach(function (line) {
             container.appendChild(createReadonlySaleRow(line));
         });
+        setSaleTotalsDisplay(purchase.total_cost, purchase.total_amount, purchase.total_profit);
     }
 
     function formatProfit(value) {
@@ -697,7 +892,15 @@ var InventoryPurchases = (function () {
                     "</tr>"
                 );
             }).join("") +
-            "</tbody></table></div>";
+            "</tbody></table></div>" +
+            '<div class="inv-stockin-totals">' +
+            '<div class="inv-stockin-total-row"><div class="inv-stockin-total-label"><span>Total Cost</span></div>' +
+            '<strong class="inv-stockin-total-value">' + InventoryApi.formatMoney(purchase.total_cost) + "</strong></div>" +
+            '<div class="inv-stockin-total-row"><div class="inv-stockin-total-label"><span>Sale Amount</span></div>' +
+            '<strong class="inv-stockin-total-value">' + InventoryApi.formatMoney(purchase.total_amount) + "</strong></div>" +
+            '<div class="inv-stockin-total-row inv-stockin-total-row--grand"><div class="inv-stockin-total-label"><span>Profit</span></div>' +
+            '<strong class="inv-stockin-total-value ' + profitClass + '">' + formatProfit(profit) + "</strong></div>" +
+            "</div>";
     }
 
     function openEditPurchase(id) {
@@ -812,7 +1015,8 @@ var InventoryPurchases = (function () {
             var row = rows[i];
             var productId = row.querySelector(".inv-item-product").value;
             var quantity = Number(row.querySelector(".inv-item-qty").value || 0);
-            var unitPrice = Number(row.querySelector(".inv-item-price").value || 0);
+            var saleActualEl = row.querySelector(".inv-item-sale-actual");
+            var unitPrice = getRowFinalSalePrice(row);
             if (!productId) continue;
 
             var product = getProduct(productId);
@@ -821,7 +1025,7 @@ var InventoryPurchases = (function () {
                 return null;
             }
 
-            if (row.querySelector(".inv-item-price").value === "") {
+            if (!saleActualEl || saleActualEl.value === "") {
                 InventoryToast.error("Enter a sale price for " + product.name + ".");
                 return null;
             }
@@ -884,6 +1088,7 @@ var InventoryPurchases = (function () {
         togglePaymentTypePanel(false);
         document.getElementById("purchase-items-container").innerHTML = "";
         addItemRow(null, isSilent !== false);
+        updateSaleTotals();
     }
 
     function getSaleHeaderPayload() {
@@ -991,6 +1196,7 @@ var InventoryPurchases = (function () {
             loadProducts().then(function () {
                 loadPaymentTypes();
                 loadCustomers();
+                loadTaxes();
                 loadPurchases(1);
             });
         }
@@ -1010,7 +1216,7 @@ var InventoryPurchases = (function () {
                 return;
             }
             loadProducts().then(function () {
-                return Promise.all([loadPaymentTypes(), loadCustomers()]);
+                return Promise.all([loadTaxes(), loadPaymentTypes(), loadCustomers()]);
             }).then(function () {
                 resetForm(true);
                 if (!hasAvailableProducts(null)) {

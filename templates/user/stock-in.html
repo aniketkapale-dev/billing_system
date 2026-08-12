@@ -81,7 +81,6 @@
                     <div class="inv-mgmt-items-header">
                         <div>
                             <h4 style="margin:0;font-size:16px;font-weight:600;color:var(--inv-primary);">Purchase Items</h4>
-                            <p class="inv-mgmt-items-help">Each line creates an inventory batch. Stock is added and ready for FIFO sales.</p>
                         </div>
                         <button id="stockin-add-item-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Add Product Row</button>
                     </div>
@@ -101,6 +100,13 @@
                                 <small>Total before taxes and other charges</small>
                             </div>
                             <strong id="stockin-subtotal" class="inv-stockin-total-value">0.00</strong>
+                        </div>
+                        <div class="inv-stockin-total-row">
+                            <div class="inv-stockin-total-label">
+                                <span>GST Price</span>
+                                <small>Total GST applied on all items</small>
+                            </div>
+                            <strong id="stockin-gst-total" class="inv-stockin-total-value">0.00</strong>
                         </div>
                         <div class="inv-stockin-total-row inv-stockin-total-row--grand">
                             <div class="inv-stockin-total-label">

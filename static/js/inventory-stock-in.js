@@ -260,15 +260,18 @@ var InventoryStockIn = (function () {
 
     function calculateInvoiceTotals() {
         var subtotal = 0;
+        var gstTotal = 0;
         var grandTotal = 0;
         document.querySelectorAll("#stockin-items-container .inv-mgmt-item-row").forEach(function (row) {
             if (!row.querySelector(".inv-item-product").value) return;
             var amounts = getRowLineAmounts(row);
             subtotal += amounts.subtotal;
+            gstTotal += amounts.tax;
             grandTotal += amounts.grand;
         });
         return {
             subtotal: roundMoney(subtotal),
+            gstTotal: roundMoney(gstTotal),
             grandTotal: roundMoney(grandTotal)
         };
     }
@@ -276,8 +279,10 @@ var InventoryStockIn = (function () {
     function updateInvoiceTotals() {
         var totals = calculateInvoiceTotals();
         var subEl = document.getElementById("stockin-subtotal");
+        var gstEl = document.getElementById("stockin-gst-total");
         var grandEl = document.getElementById("stockin-grand-total");
         if (subEl) subEl.textContent = InventoryApi.formatMoney(totals.subtotal);
+        if (gstEl) gstEl.textContent = InventoryApi.formatMoney(totals.gstTotal);
         if (grandEl) grandEl.textContent = InventoryApi.formatMoney(totals.grandTotal);
     }
 
@@ -670,6 +675,7 @@ var InventoryStockIn = (function () {
             { label: "Purchase Date", value: displayValue(formatDate(invoice.invoice_date)) },
             { label: "Total Quantity", value: displayValue(formatQty(invoice.total_quantity)) },
             { label: "Subtotal", value: InventoryApi.formatMoney(invoice.subtotal) },
+            { label: "GST Price", value: InventoryApi.formatMoney(invoice.tax) },
             { label: "Grand Total", value: InventoryApi.formatMoney(invoice.grand_total) },
             { label: "Remarks", value: displayValue(invoice.remarks), full: true }
         ];
