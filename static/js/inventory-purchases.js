@@ -37,12 +37,13 @@ var InventoryPurchases = (function () {
                     { id: "date", label: "Date", locked: true, cell: function (p) { return "<td>" + InventoryApi.escapeHtml(p.purchase_date) + "</td>"; } },
                     { id: "customer", label: "Customer", locked: true, sortKey: "customer_name", cell: function (p) { return "<td>" + formatCustomerDisplay(p) + "</td>"; } },
                     { id: "products", label: "Products Sold", cell: function (p) { return '<td class="inv-col-name">' + formatProductsSoldCell(p.items || [], p.id) + "</td>"; } },
-                    { id: "sale_amount", label: "Sale Amount", sortKey: "total_amount", cell: function (p) { return '<td class="inv-mgmt-cell--num">' + InventoryApi.formatMoney(p.total_amount) + "</td>"; } },
-                    { id: "total_cost", label: "Total Cost", sortKey: "total_cost", cell: function (p) { return '<td class="inv-mgmt-cell--num">' + InventoryApi.formatMoney(p.total_cost) + "</td>"; } },
+                    { id: "sale_amount", label: "Sale Amount", sortKey: "total_amount", headerClass: "inv-mgmt-cell--num", cell: function (p) { return '<td class="inv-mgmt-cell--num">' + InventoryApi.formatMoney(p.total_amount) + "</td>"; } },
+                    { id: "total_cost", label: "Total Cost", sortKey: "total_cost", headerClass: "inv-mgmt-cell--num", cell: function (p) { return '<td class="inv-mgmt-cell--num">' + InventoryApi.formatMoney(p.total_cost) + "</td>"; } },
                     {
                         id: "profit",
                         label: "Profit",
                         sortKey: "total_profit",
+                        headerClass: "inv-mgmt-cell--num",
                         cell: function (p) {
                             var profit = Number(p.total_profit || 0);
                             var profitClass = profit >= 0 ? "inv-profit-positive" : "inv-profit-negative";
@@ -405,13 +406,19 @@ var InventoryPurchases = (function () {
     function applyProductToRow(row, product, options) {
         options = options || {};
         var priceInput = row.querySelector(".inv-item-price");
+        var buyInput = row.querySelector(".inv-item-buy");
         if (!product) {
             updateRowQtyLimits(row, null);
             if (priceInput) priceInput.value = "";
+            if (buyInput) buyInput.value = InventoryApi.formatMoney(0);
             return;
         }
 
         updateRowQtyLimits(row, product);
+
+        if (buyInput) {
+            buyInput.value = InventoryApi.formatMoney(product.purchase_price || 0);
+        }
 
         if (priceInput && options.updatePrice !== false) {
             var shouldSetPrice = options.forcePrice || priceInput.value === "";
@@ -435,6 +442,7 @@ var InventoryPurchases = (function () {
         row.innerHTML =
             '<div class="inv-mgmt-field"><label>Available Product</label><select class="inv-mgmt-select inv-item-product" required>' + productOptions(data.product_id, row) + "</select></div>" +
             '<div class="inv-mgmt-field"><label>Quantity</label><input class="inv-mgmt-input inv-item-qty" type="number" min="0.01" step="0.01" value="' + (data.quantity || 1) + '" required/></div>' +
+            '<div class="inv-mgmt-field"><label>Buy Price</label><input class="inv-mgmt-input inv-item-buy" type="text" readonly value="0.00"/></div>' +
             '<div class="inv-mgmt-field"><label>Sale Price</label><input class="inv-mgmt-input inv-item-price" type="number" min="0" step="0.01" placeholder="0.00" value="' + (data.unit_price != null && data.unit_price !== "" ? data.unit_price : "") + '" required/></div>' +
             '<div class="inv-mgmt-field"><label>Total Price</label><input class="inv-mgmt-input inv-item-total" type="text" readonly value="0.00"/></div>' +
             '<div class="inv-mgmt-field"><label>&nbsp;</label><button type="button" class="inv-mgmt-btn inv-mgmt-btn--danger inv-item-remove">Remove</button></div>';
@@ -481,11 +489,14 @@ var InventoryPurchases = (function () {
         if (line.product_sku) {
             label += " (" + InventoryApi.escapeHtml(line.product_sku) + ")";
         }
+        var qty = Number(line.quantity || 0);
+        var unitCost = qty > 0 ? Number(line.cost_amount || 0) / qty : 0;
         var row = document.createElement("div");
         row.className = "inv-mgmt-item-row inv-mgmt-item-row--sale";
         row.innerHTML =
             '<div class="inv-mgmt-field"><label>Product</label><input class="inv-mgmt-input" type="text" readonly value="' + label + '"/></div>' +
             '<div class="inv-mgmt-field"><label>Quantity</label><input class="inv-mgmt-input" type="text" readonly value="' + InventoryApi.escapeHtml(formatQty(line.quantity)) + '"/></div>' +
+            '<div class="inv-mgmt-field"><label>Buy Price</label><input class="inv-mgmt-input inv-item-buy" type="text" readonly value="' + InventoryApi.formatMoney(unitCost) + '"/></div>' +
             '<div class="inv-mgmt-field"><label>Sale Price</label><input class="inv-mgmt-input" type="text" readonly value="' + InventoryApi.formatMoney(line.unit_price) + '"/></div>' +
             '<div class="inv-mgmt-field"><label>Total Price</label><input class="inv-mgmt-input" type="text" readonly value="' + InventoryApi.formatMoney(line.line_total) + '"/></div>' +
             '<div class="inv-mgmt-field"><label>&nbsp;</label><button type="button" class="inv-mgmt-btn inv-mgmt-btn--danger inv-item-remove inv-hidden" disabled>Remove</button></div>';

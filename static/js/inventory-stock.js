@@ -65,9 +65,9 @@ var InventoryStock = (function () {
                         id: "qty",
                         label: "In Stock",
                         sortKey: "quantity",
-                        headerClass: "inv-col-qty",
+                        headerClass: "inv-col-qty inv-mgmt-cell--num",
                         cell: function (item) {
-                            return '<td class="inv-col-qty"><strong>' + InventoryApi.escapeHtml(item.quantity) + "</strong></td>";
+                            return '<td class="inv-col-qty inv-mgmt-cell--num"><strong>' + InventoryApi.escapeHtml(item.quantity) + "</strong></td>";
                         }
                     }
                 ],
@@ -132,6 +132,7 @@ var InventoryStock = (function () {
                         id: "available",
                         label: "Available",
                         sortKey: "available_quantity",
+                        headerClass: "inv-mgmt-cell--num",
                         cell: function (item) {
                             var avail = Number(item.available_quantity || 0);
                             var availClass = avail > 0 ? "inv-batch-available" : "inv-batch-empty";
@@ -143,6 +144,7 @@ var InventoryStock = (function () {
                         id: "buy_price",
                         label: "Buy Price",
                         sortKey: "purchase_price",
+                        headerClass: "inv-mgmt-cell--num",
                         cell: function (item) {
                             return '<td class="inv-mgmt-cell--num">' + InventoryApi.formatMoney(item.purchase_price) + "</td>";
                         }
@@ -151,6 +153,7 @@ var InventoryStock = (function () {
                         id: "sell_price",
                         label: "Sell Price",
                         sortKey: "selling_price",
+                        headerClass: "inv-mgmt-cell--num",
                         cell: function (item) {
                             var sell = Number(item.product_sale_price != null ? item.product_sale_price : item.selling_price || 0);
                             return '<td class="inv-mgmt-cell--num">' + InventoryApi.formatMoney(sell) + "</td>";

@@ -4,6 +4,7 @@ from rest_framework import serializers
 
 from apps.catalog.models import Brand, Category, Manufacturer, Unit
 from apps.products.models import Product
+from apps.settings.models import Tax
 from core.base_serializer import BaseModelSerializer
 
 
@@ -15,6 +16,8 @@ class ProductSerializer(BaseModelSerializer):
     manufacturer_name = serializers.CharField(source="manufacturer.name", read_only=True)
     unit_name = serializers.CharField(source="unit.name", read_only=True)
     unit_short_name = serializers.CharField(source="unit.short_name", read_only=True)
+    tax_key = serializers.CharField(source="tax.key", read_only=True)
+    tax_value = serializers.DecimalField(source="tax.value", max_digits=6, decimal_places=2, read_only=True)
     quantity = serializers.SerializerMethodField()
     opening_quantity = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
     sold_quantity = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
@@ -37,10 +40,14 @@ class ProductSerializer(BaseModelSerializer):
             "unit",
             "unit_name",
             "unit_short_name",
+            "tax",
+            "tax_key",
+            "tax_value",
             "name",
             "sku",
             "barcode",
             "description",
+            "actual_price",
             "purchase_price",
             "sale_price",
             "quantity",
@@ -90,11 +97,23 @@ class ProductWriteSerializer(serializers.ModelSerializer):
         queryset=Unit.objects.none(),
         source="unit",
     )
+    tax_id = serializers.PrimaryKeyRelatedField(
+        queryset=Tax.objects.none(),
+        source="tax",
+        required=False,
+        allow_null=True,
+    )
     quantity = serializers.DecimalField(
         max_digits=12, decimal_places=2, min_value=0, required=False, default=0, write_only=True
     )
-    purchase_price = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=0, required=False, default=0)
+    actual_price = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=0, required=False, default=0)
+    purchase_price = serializers.DecimalField(
+        max_digits=12, decimal_places=2, min_value=0, required=False, read_only=True
+    )
     sale_price = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=0, required=False, default=0)
+
+    def validate_actual_price(self, value):
+        return Decimal(str(value or 0)).quantize(Decimal("0.01"))
 
     def validate_sku(self, value):
         return (value or "").strip()
@@ -109,7 +128,9 @@ class ProductWriteSerializer(serializers.ModelSerializer):
             "brand_id",
             "manufacturer_id",
             "unit_id",
+            "tax_id",
             "description",
+            "actual_price",
             "purchase_price",
             "sale_price",
             "quantity",
@@ -143,6 +164,11 @@ class ProductWriteSerializer(serializers.ModelSerializer):
             is_active=True,
         )
         self.fields["unit_id"].queryset = Unit.objects.filter(
+            business_id=business.id,
+            is_deleted=False,
+            is_active=True,
+        )
+        self.fields["tax_id"].queryset = Tax.objects.filter(
             business_id=business.id,
             is_deleted=False,
             is_active=True,

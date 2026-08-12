@@ -23,6 +23,29 @@ class ProductService(BaseService):
         self._business_id = None
         self._update_quantity = None
 
+    def _compute_purchase_price(self, actual_price, tax):
+        actual = Decimal(str(actual_price or 0))
+        if tax is not None and tax.value:
+            rate = Decimal(str(tax.value))
+            return (actual * (Decimal("1") + rate / Decimal("100"))).quantize(Decimal("0.01"))
+        return actual.quantize(Decimal("0.01"))
+
+    def _resolve_prices(self, data, tax=None, instance=None):
+        if "actual_price" in data:
+            actual_price = Decimal(str(data.get("actual_price") or 0))
+        elif instance is not None:
+            actual_price = Decimal(str(instance.actual_price or 0))
+        else:
+            actual_price = Decimal(str(data.get("purchase_price") or 0))
+        if actual_price < 0:
+            raise ValidationException("Actual price cannot be negative.")
+        if tax is None:
+            tax = data.get("tax")
+        purchase_price = self._compute_purchase_price(actual_price, tax)
+        data["actual_price"] = actual_price
+        data["purchase_price"] = purchase_price
+        return actual_price, purchase_price
+
     def before_create(self, data):
         user = get_current_user()
         if not user:
@@ -37,18 +60,17 @@ class ProductService(BaseService):
         self._initial_quantity = Decimal(str(data.pop("quantity", 0) or 0))
         if self._initial_quantity < 0:
             raise ValidationException("Quantity cannot be negative.")
-        purchase_price = data.pop("purchase_price", None)
-        sale_price = data.pop("sale_price", None)
+        data.pop("purchase_price", None)
+        actual_price, purchase_price = self._resolve_prices(data)
         if self._initial_quantity > 0:
-            if purchase_price is None:
-                raise ValidationException("Buy price is required when opening stock is added.")
-            self._opening_purchase_price = Decimal(str(purchase_price))
+            if actual_price <= 0:
+                raise ValidationException("Actual price is required when opening stock is added.")
+            self._opening_purchase_price = purchase_price
             if self._opening_purchase_price < 0:
                 raise ValidationException("Buy price cannot be negative.")
-            data["purchase_price"] = self._opening_purchase_price
         else:
-            data["purchase_price"] = Decimal("0")
             self._opening_purchase_price = Decimal("0")
+        sale_price = data.pop("sale_price", None)
         data["sale_price"] = Decimal(str(sale_price or 0))
         self._opening_sale_price = data["sale_price"]
         data["sku"] = self._resolve_sku(data, business_id)
@@ -101,12 +123,14 @@ class ProductService(BaseService):
                 raise ValidationException("Quantity cannot be negative.")
         else:
             self._update_quantity = None
-        if self._update_quantity is not None and self._update_quantity > 0 and "purchase_price" in data:
-            purchase_price = data.get("purchase_price")
-            if purchase_price is None:
-                raise ValidationException("Buy price is required when stock quantity is set.")
-            if purchase_price < 0:
-                raise ValidationException("Buy price cannot be negative.")
+        if self._update_quantity is not None and self._update_quantity > 0:
+            actual_price = data.get("actual_price", instance.actual_price)
+            if actual_price is not None and Decimal(str(actual_price)) <= 0:
+                raise ValidationException("Actual price is required when stock quantity is set.")
+        if "actual_price" in data or "tax" in data:
+            tax = data["tax"] if "tax" in data else instance.tax
+            data.pop("purchase_price", None)
+            self._resolve_prices(data, tax=tax, instance=instance)
         if "sku" in data:
             data["sku"] = self._resolve_sku(data, instance.business_id, exclude_pk=instance.pk)
         self._validate_catalog_refs(data, instance.business_id, instance=instance)
@@ -245,9 +269,21 @@ class ProductService(BaseService):
             if manufacturer_obj.is_deleted or not manufacturer_obj.is_active:
                 raise ValidationException("Selected manufacturer is not available.")
 
+        tax = data.get("tax")
+        if tax is not None and tax.business_id != business_id:
+            raise ValidationException("Selected GST does not belong to this business.")
+        if "tax" in data and data["tax"] is not None:
+            tax_obj = data["tax"]
+            if tax_obj.is_deleted or not tax_obj.is_active:
+                raise ValidationException("Selected GST is not available.")
+
     def _validate(self, data, exclude_pk=None, business_id=None):
         if "name" in data:
             validate_required(data["name"], "Product name")
+
+        if "actual_price" in data and data.get("actual_price") is not None:
+            if data["actual_price"] < 0:
+                raise ValidationException("Actual price cannot be negative.")
 
         if "purchase_price" in data and data.get("purchase_price") is not None:
             if data["purchase_price"] < 0:

@@ -85,7 +85,31 @@
                         </div>
                         <button id="stockin-add-item-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Add Product Row</button>
                     </div>
+                    <div id="stockin-gst-new-panel" class="inv-inline-add-panel inv-inline-add-panel--fields-row inv-hidden" style="margin-bottom:12px;">
+                        <input id="stockin-gst-new-key" class="inv-mgmt-input" type="text" placeholder="Key (e.g. gst12%)"/>
+                        <input id="stockin-gst-new-value" class="inv-mgmt-input" type="number" min="0" max="100" step="0.01" placeholder="Value % (e.g. 12)"/>
+                        <div class="inv-inline-add-actions">
+                            <button id="stockin-gst-save-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Save GST</button>
+                            <button id="stockin-gst-cancel-btn" type="button" class="inv-mgmt-btn">Cancel</button>
+                        </div>
+                    </div>
                     <div id="stockin-items-container"></div>
+                    <div id="stockin-totals" class="inv-stockin-totals">
+                        <div class="inv-stockin-total-row">
+                            <div class="inv-stockin-total-label">
+                                <span>Subtotal</span>
+                                <small>Total before taxes and other charges</small>
+                            </div>
+                            <strong id="stockin-subtotal" class="inv-stockin-total-value">0.00</strong>
+                        </div>
+                        <div class="inv-stockin-total-row inv-stockin-total-row--grand">
+                            <div class="inv-stockin-total-label">
+                                <span>Grand Total</span>
+                                <small>Final amount after all additions and deductions</small>
+                            </div>
+                            <strong id="stockin-grand-total" class="inv-stockin-total-value">0.00</strong>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="inv-mgmt-panel-footer">

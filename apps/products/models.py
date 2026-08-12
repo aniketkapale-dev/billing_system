@@ -49,10 +49,19 @@ class Product(BaseEntity):
         related_name="products",
         db_column="unit_id",
     )
+    tax = models.ForeignKey(
+        "settings.Tax",
+        on_delete=models.SET_NULL,
+        related_name="products",
+        db_column="tax_id",
+        null=True,
+        blank=True,
+    )
     name = models.CharField(max_length=150)
     sku = models.CharField(max_length=50, blank=True, default="")
     barcode = models.CharField(max_length=100, blank=True, default="")
     description = models.TextField(blank=True, default="")
+    actual_price = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0"))
     purchase_price = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0"))
     sale_price = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0"))
 

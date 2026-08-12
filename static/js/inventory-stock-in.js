@@ -3,12 +3,15 @@ var InventoryStockIn = (function () {
 
     var API = "/api/invoicing/purchase-invoices";
     var PRODUCTS_API = "/api/products";
+    var TAXES_API = "/api/settings/taxes";
     var PAGE_SIZE = (window.InventoryConstants && InventoryConstants.PAGE_SIZE) || 10;
     var currentPage = 1;
     var currentOrdering = "-invoice_date";
     var searchTimer = null;
     var products = [];
+    var taxes = [];
     var pendingProductRow = null;
+    var pendingTaxRow = null;
     var editingInvoiceId = null;
     var existingAttachment = null;
     var ALLOWED_ATTACHMENT_EXT = ["pdf", "jpg", "jpeg", "png", "webp", "gif"];
@@ -35,9 +38,9 @@ var InventoryStockIn = (function () {
                 columns: [
                     { id: "date", label: "Date", locked: true, cell: function (item) { return "<td>" + InventoryApi.escapeHtml(formatDate(item.invoice_date)) + "</td>"; } },
                     { id: "invoice_no", label: "Invoice No.", locked: true, sortKey: "invoice_number", cell: function (item) { return "<td><strong>" + InventoryApi.escapeHtml(item.invoice_number) + "</strong></td>"; } },
-                    { id: "qty", label: "Qty", cell: function (item) { return '<td class="inv-mgmt-cell--num">' + InventoryApi.escapeHtml(formatQty(item.total_quantity)) + "</td>"; } },
-                    { id: "subtotal", label: "Subtotal", sortKey: "subtotal", cell: function (item) { return '<td class="inv-mgmt-cell--num">' + InventoryApi.formatMoney(item.subtotal) + "</td>"; } },
-                    { id: "grand_total", label: "Grand Total", sortKey: "grand_total", cell: function (item) { return '<td class="inv-mgmt-cell--num"><strong>' + InventoryApi.formatMoney(item.grand_total) + "</strong></td>"; } },
+                    { id: "qty", label: "Qty", headerClass: "inv-mgmt-cell--num", cell: function (item) { return '<td class="inv-mgmt-cell--num">' + InventoryApi.escapeHtml(formatQty(item.total_quantity)) + "</td>"; } },
+                    { id: "subtotal", label: "Subtotal", sortKey: "subtotal", locked: true, headerClass: "inv-mgmt-cell--num", cell: function (item) { return '<td class="inv-mgmt-cell--num">' + InventoryApi.formatMoney(item.subtotal) + "</td>"; } },
+                    { id: "grand_total", label: "Grand Total", sortKey: "grand_total", locked: true, headerClass: "inv-mgmt-cell--num", cell: function (item) { return '<td class="inv-mgmt-cell--num"><strong>' + InventoryApi.formatMoney(item.grand_total) + "</strong></td>"; } },
                     { id: "file", label: "File", headerClass: "inv-col-file", cell: function (item) { return '<td class="inv-col-file">' + cellFile(item) + "</td>"; } }
                 ],
                 onApply: function () {
@@ -150,6 +153,215 @@ var InventoryStockIn = (function () {
         return InventoryApi.request(API, path, opts);
     }
 
+    function taxRequest(path, opts) {
+        return InventoryApi.request(TAXES_API, path, opts);
+    }
+
+    function taxLabel(item) {
+        return item.key + " (" + item.value + "%)";
+    }
+
+    function getTax(taxId) {
+        return taxes.find(function (tax) {
+            return String(tax.id) === String(taxId);
+        });
+    }
+
+    function getTaxRate(taxId) {
+        var tax = getTax(taxId);
+        return tax ? Number(tax.value || 0) : 0;
+    }
+
+    function roundMoney(value) {
+        return Math.round(Number(value || 0) * 100) / 100;
+    }
+
+    function computeBuyPrice(actualPrice, taxRate) {
+        var actual = Number(actualPrice || 0);
+        var rate = Number(taxRate || 0);
+        if (isNaN(actual)) actual = 0;
+        if (isNaN(rate)) rate = 0;
+        return roundMoney(actual * (1 + rate / 100));
+    }
+
+    function rowTaxOptions(selectedId) {
+        var options = '<option value="">Select GST (optional)</option>';
+        options += taxes.map(function (tax) {
+            var selected = String(tax.id) === String(selectedId) ? " selected" : "";
+            return '<option value="' + tax.id + '"' + selected + '>' +
+                InventoryApi.escapeHtml(taxLabel(tax)) + "</option>";
+        }).join("");
+        return options;
+    }
+
+    function renderRowTaxSelect(select, selectedId) {
+        if (!select) return;
+        var current = selectedId !== undefined && selectedId !== null
+            ? String(selectedId)
+            : select.value;
+        select.innerHTML = rowTaxOptions(current);
+        if (current) select.value = current;
+    }
+
+    function refreshAllRowTaxSelects() {
+        document.querySelectorAll("#stockin-items-container .inv-item-tax").forEach(function (select) {
+            renderRowTaxSelect(select, select.value);
+        });
+        updateAllRowBuyPrices();
+    }
+
+    function getRowTaxId(row) {
+        var rowTax = row.querySelector(".inv-item-tax");
+        return rowTax ? rowTax.value : "";
+    }
+
+    function getEffectiveTaxRate(row) {
+        return getTaxRate(getRowTaxId(row));
+    }
+
+    function updateRowBuyPrice(row, skipTotals) {
+        var actualEl = row.querySelector(".inv-item-actual");
+        var qtyEl = row.querySelector(".inv-item-qty");
+        var buyEl = row.querySelector(".inv-item-buy");
+        var totalEl = row.querySelector(".inv-item-total");
+        if (!actualEl || !buyEl) return;
+        var unitBuy = computeBuyPrice(actualEl.value, getEffectiveTaxRate(row));
+        buyEl.value = InventoryApi.formatMoney(unitBuy);
+        var qty = qtyEl ? Number(qtyEl.value || 0) : 0;
+        if (isNaN(qty) || qty <= 0) qty = 0;
+        if (totalEl) {
+            totalEl.value = InventoryApi.formatMoney(roundMoney(unitBuy * (qty || 1)));
+        }
+        if (!skipTotals) {
+            updateInvoiceTotals();
+        }
+    }
+
+    function getRowUnitBuyPrice(row) {
+        var actualEl = row.querySelector(".inv-item-actual");
+        if (!actualEl) return 0;
+        return computeBuyPrice(actualEl.value, getEffectiveTaxRate(row));
+    }
+
+    function getRowLineAmounts(row) {
+        var actualPrice = roundMoney(row.querySelector(".inv-item-actual").value);
+        var qty = Number(row.querySelector(".inv-item-qty").value || 0);
+        if (isNaN(qty) || qty <= 0) qty = 0;
+        var lineSubtotal = roundMoney(actualPrice * qty);
+        var lineGrand = roundMoney(getRowUnitBuyPrice(row) * (qty || 1));
+        var lineTax = roundMoney(lineGrand - lineSubtotal);
+        if (lineTax < 0) lineTax = 0;
+        return {
+            subtotal: lineSubtotal,
+            tax: lineTax,
+            grand: lineGrand
+        };
+    }
+
+    function calculateInvoiceTotals() {
+        var subtotal = 0;
+        var grandTotal = 0;
+        document.querySelectorAll("#stockin-items-container .inv-mgmt-item-row").forEach(function (row) {
+            if (!row.querySelector(".inv-item-product").value) return;
+            var amounts = getRowLineAmounts(row);
+            subtotal += amounts.subtotal;
+            grandTotal += amounts.grand;
+        });
+        return {
+            subtotal: roundMoney(subtotal),
+            grandTotal: roundMoney(grandTotal)
+        };
+    }
+
+    function updateInvoiceTotals() {
+        var totals = calculateInvoiceTotals();
+        var subEl = document.getElementById("stockin-subtotal");
+        var grandEl = document.getElementById("stockin-grand-total");
+        if (subEl) subEl.textContent = InventoryApi.formatMoney(totals.subtotal);
+        if (grandEl) grandEl.textContent = InventoryApi.formatMoney(totals.grandTotal);
+    }
+
+    function updateAllRowBuyPrices() {
+        document.querySelectorAll("#stockin-items-container .inv-mgmt-item-row").forEach(function (row) {
+            updateRowBuyPrice(row, true);
+        });
+        updateInvoiceTotals();
+    }
+
+    function loadTaxes(selectedId) {
+        return taxRequest("?page_size=100&ordering=key").then(function (body) {
+            if (body && body.isSuccess && body.data) {
+                taxes = body.data.items || [];
+            } else {
+                taxes = [];
+            }
+            refreshAllRowTaxSelects();
+            if (selectedId && pendingTaxRow) {
+                var select = pendingTaxRow.querySelector(".inv-item-tax");
+                if (select) {
+                    select.value = String(selectedId);
+                    updateRowBuyPrice(pendingTaxRow);
+                }
+                pendingTaxRow = null;
+            }
+        });
+    }
+
+    function toggleGstPanel(show) {
+        var panel = document.getElementById("stockin-gst-new-panel");
+        if (!panel) return;
+        if (show) {
+            panel.classList.remove("inv-hidden");
+            document.getElementById("stockin-gst-new-key").focus();
+        } else {
+            panel.classList.add("inv-hidden");
+            document.getElementById("stockin-gst-new-key").value = "";
+            document.getElementById("stockin-gst-new-value").value = "";
+        }
+    }
+
+    function saveNewGst() {
+        var key = document.getElementById("stockin-gst-new-key").value.trim();
+        var valueRaw = document.getElementById("stockin-gst-new-value").value.trim();
+        if (!key) {
+            InventoryToast.error("GST key is required (e.g. gst12%).");
+            return;
+        }
+        if (valueRaw === "") {
+            InventoryToast.error("GST value is required (e.g. 12).");
+            return;
+        }
+        var value = parseFloat(valueRaw);
+        if (Number.isNaN(value) || value < 0 || value > 100) {
+            InventoryToast.error("GST value must be between 0 and 100.");
+            return;
+        }
+
+        var btn = document.getElementById("stockin-gst-save-btn");
+        InventoryLoader.button(btn, true, "Saving...");
+
+        taxRequest("", {
+            method: "POST",
+            body: { key: key, value: value }
+        })
+            .then(function (body) {
+                if (body && body.isSuccess && body.data) {
+                    InventoryToast.success("GST added.");
+                    toggleGstPanel(false);
+                    return loadTaxes(body.data.id);
+                }
+                var err = body.message || "Unable to add GST.";
+                if (body.errors && body.errors.length) err = body.errors.join(" • ");
+                InventoryToast.error(err);
+            })
+            .catch(function () {
+                InventoryToast.error("Network error. Please try again.");
+            })
+            .finally(function () {
+                InventoryLoader.button(btn, false);
+            });
+    }
+
     function loadProducts() {
         return InventoryApi.request(PRODUCTS_API, "?page_size=100")
             .then(function (body) {
@@ -182,11 +394,28 @@ var InventoryStockIn = (function () {
     }
 
     function applyProductToRow(row, product) {
-        if (!product) return;
-        var buyEl = row.querySelector(".inv-item-buy");
-        if (buyEl && product.purchase_price != null) {
-            buyEl.value = product.purchase_price;
+        var actualEl = row.querySelector(".inv-item-actual");
+        var taxSelect = row.querySelector(".inv-item-tax");
+        if (!product) {
+            updateRowBuyPrice(row);
+            return;
         }
+        if (taxSelect && product.tax) {
+            taxSelect.value = String(product.tax);
+        }
+        if (actualEl) {
+            if (product.actual_price != null && String(product.actual_price).trim() !== "" && Number(product.actual_price) > 0) {
+                actualEl.value = product.actual_price;
+            } else if (product.purchase_price != null && Number(product.purchase_price) > 0) {
+                var rate = product.tax ? getTaxRate(product.tax) : 0;
+                actualEl.value = rate > 0
+                    ? roundMoney(Number(product.purchase_price) / (1 + rate / 100))
+                    : product.purchase_price;
+            } else {
+                actualEl.value = "";
+            }
+        }
+        updateRowBuyPrice(row);
     }
 
     function updateAllProductSelects(newProductId, focusRow) {
@@ -222,7 +451,14 @@ var InventoryStockIn = (function () {
             '<button type="button" class="inv-inline-add-btn inv-item-product-add" title="Add product" aria-label="Add product">' +
             '<span class="material-symbols-outlined">add</span></button></div></div>' +
             '<div class="inv-mgmt-field"><label>Quantity</label><input class="inv-mgmt-input inv-item-qty" type="number" min="0.01" step="0.01" value="' + (data.quantity || 1) + '" required/></div>' +
-            '<div class="inv-mgmt-field"><label>Buy Price</label><input class="inv-mgmt-input inv-item-buy" type="number" min="0" step="0.01" value="' + (data.purchase_price || 0) + '" required/></div>' +
+            '<div class="inv-mgmt-field"><label>Actual Price</label><input class="inv-mgmt-input inv-item-actual" type="number" min="0" step="0.01" placeholder="0.00" value="' + (data.actual_price != null ? data.actual_price : "") + '"/></div>' +
+            '<div class="inv-mgmt-field"><label>GST</label>' +
+            '<div class="inv-field-inline">' +
+            '<select class="inv-mgmt-select inv-item-tax">' + rowTaxOptions(data.tax_id || "") + "</select>" +
+            '<button type="button" class="inv-inline-add-btn inv-item-tax-add" title="Add GST" aria-label="Add GST">' +
+            '<span class="material-symbols-outlined">add</span></button></div></div>' +
+            '<div class="inv-mgmt-field"><label>Buy Price</label><input class="inv-mgmt-input inv-item-buy" type="text" readonly value="0.00"/></div>' +
+            '<div class="inv-mgmt-field"><label>Total Price</label><input class="inv-mgmt-input inv-item-total" type="text" readonly value="0.00"/></div>' +
             '<div class="inv-mgmt-field"><label>Batch No.</label><input class="inv-mgmt-input inv-item-batch" type="text" placeholder="B001" value="' + InventoryApi.escapeHtml(data.batch_number || "") + '"/></div>' +
             '<div class="inv-mgmt-field"><label>Expiry</label><input class="inv-mgmt-input inv-item-expiry" type="date" value="' + (data.expiry_date || "") + '"/></div>' +
             '<div class="inv-mgmt-item-row-remove">' +
@@ -231,6 +467,7 @@ var InventoryStockIn = (function () {
 
         row.querySelector(".inv-item-remove").addEventListener("click", function () {
             row.remove();
+            updateInvoiceTotals();
         });
         row.querySelector(".inv-item-product").addEventListener("change", function () {
             applyProductToRow(row, getProduct(this.value));
@@ -241,6 +478,8 @@ var InventoryStockIn = (function () {
 
         if (data.product_id) {
             applyProductToRow(row, getProduct(data.product_id));
+        } else {
+            updateRowBuyPrice(row);
         }
         return row;
     }
@@ -468,7 +707,7 @@ var InventoryStockIn = (function () {
             '<div class="inv-mgmt-table-wrap">' +
             '<table class="inv-mgmt-table">' +
             "<thead><tr>" +
-            "<th>Product</th><th>SKU</th><th>Qty</th><th>Buy Price</th><th>Batch</th><th>Expiry</th><th>Total Price</th>" +
+            "<th>Product</th><th>SKU</th><th>Qty</th><th>Actual Price</th><th>Buy Price</th><th>Batch</th><th>Expiry</th><th>Total Price</th>" +
             "</tr></thead><tbody>" +
             lines.map(function (line) {
                 return (
@@ -476,6 +715,7 @@ var InventoryStockIn = (function () {
                     "<td>" + displayValue(line.product_name) + "</td>" +
                     "<td>" + displayValue(line.product_sku) + "</td>" +
                     "<td class=\"inv-mgmt-cell--num\">" + displayValue(line.quantity) + "</td>" +
+                    "<td class=\"inv-mgmt-cell--num\">" + InventoryApi.formatMoney(line.actual_price || line.purchase_price) + "</td>" +
                     "<td class=\"inv-mgmt-cell--num\">" + InventoryApi.formatMoney(line.purchase_price) + "</td>" +
                     "<td>" + displayValue(line.batch_number) + "</td>" +
                     "<td>" + displayValue(line.expiry_date) + "</td>" +
@@ -507,7 +747,7 @@ var InventoryStockIn = (function () {
 
     function setItemsEditable(editable) {
         document.querySelectorAll("#stockin-items-container .inv-mgmt-item-row").forEach(function (row) {
-            row.querySelectorAll("input, select, button.inv-item-product-add, button.inv-item-remove").forEach(function (el) {
+            row.querySelectorAll("input, select, button.inv-item-product-add, button.inv-item-tax-add, button.inv-item-remove").forEach(function (el) {
                 el.disabled = !editable;
             });
         });
@@ -526,6 +766,7 @@ var InventoryStockIn = (function () {
             container.appendChild(createItemRow({
                 product_id: line.product,
                 quantity: line.quantity,
+                actual_price: line.actual_price,
                 purchase_price: line.purchase_price,
                 batch_number: line.batch_number,
                 expiry_date: line.expiry_date || ""
@@ -540,12 +781,15 @@ var InventoryStockIn = (function () {
         document.getElementById("stockin-invoice-no").value = "";
         document.getElementById("stockin-remarks").value = "";
         resetAttachmentField();
+        toggleGstPanel(false);
+        pendingTaxRow = null;
         var dateEl = document.getElementById("stockin-invoice-date");
         if (dateEl) dateEl.value = new Date().toISOString().slice(0, 10);
         var container = document.getElementById("stockin-items-container");
         container.innerHTML = "";
         container.appendChild(createItemRow());
         setItemsEditable(true);
+        updateInvoiceTotals();
     }
 
     function openViewInvoice(id) {
@@ -568,7 +812,7 @@ var InventoryStockIn = (function () {
 
     function openEditInvoice(id) {
         InventoryLoader.show();
-        loadProducts()
+        Promise.all([loadProducts(), loadTaxes()])
             .then(function () {
                 return fetchInvoice(id);
             })
@@ -676,7 +920,7 @@ var InventoryStockIn = (function () {
     }
 
     function openModal() {
-        loadProducts().then(function () {
+        Promise.all([loadProducts(), loadTaxes()]).then(function () {
             resetForm();
             InventoryPagePanel.showPanel(STOCKIN_LIST_PANEL, STOCKIN_FORM_PANEL);
             document.getElementById("stockin-invoice-no").focus();
@@ -690,10 +934,19 @@ var InventoryStockIn = (function () {
             var productId = row.querySelector(".inv-item-product").value;
             if (!productId) return;
             var expiry = row.querySelector(".inv-item-expiry").value;
+            var qty = row.querySelector(".inv-item-qty").value;
+            var actualPrice = roundMoney(row.querySelector(".inv-item-actual").value);
+            var unitBuyPrice = getRowUnitBuyPrice(row);
+            var amounts = getRowLineAmounts(row);
+            if (actualPrice <= 0) {
+                unitBuyPrice = 0;
+                amounts = { subtotal: 0, tax: 0, grand: 0 };
+            }
             items.push({
                 product_id: Number(productId),
-                quantity: row.querySelector(".inv-item-qty").value,
-                purchase_price: row.querySelector(".inv-item-buy").value,
+                quantity: qty,
+                purchase_price: unitBuyPrice,
+                tax: amounts.tax,
                 batch_number: row.querySelector(".inv-item-batch").value.trim(),
                 expiry_date: expiry || null,
             });
@@ -793,7 +1046,7 @@ var InventoryStockIn = (function () {
 
         function boot() {
             if (!InventoryBusiness.getActiveId()) return;
-            loadProducts().then(function () {
+            Promise.all([loadProducts(), loadTaxes()]).then(function () {
                 loadInvoices(1);
             });
         }
@@ -825,6 +1078,37 @@ var InventoryStockIn = (function () {
             });
         }
         if (saveBtn) saveBtn.addEventListener("click", saveInvoice);
+
+        var itemsContainer = document.getElementById("stockin-items-container");
+        if (itemsContainer) {
+            itemsContainer.addEventListener("input", function (e) {
+                if (!e.target.matches(".inv-item-actual, .inv-item-qty")) return;
+                var row = e.target.closest(".inv-mgmt-item-row");
+                if (row) updateRowBuyPrice(row);
+            });
+            itemsContainer.addEventListener("change", function (e) {
+                if (!e.target.matches(".inv-item-tax")) return;
+                var row = e.target.closest(".inv-mgmt-item-row");
+                if (row) updateRowBuyPrice(row);
+            });
+            itemsContainer.addEventListener("click", function (e) {
+                var taxAddBtn = e.target.closest(".inv-item-tax-add");
+                if (!taxAddBtn) return;
+                var row = taxAddBtn.closest(".inv-mgmt-item-row");
+                if (!row) return;
+                pendingTaxRow = row;
+                var panel = document.getElementById("stockin-gst-new-panel");
+                toggleGstPanel(panel.classList.contains("inv-hidden"));
+            });
+        }
+
+        var gstSaveBtn = document.getElementById("stockin-gst-save-btn");
+        var gstCancelBtn = document.getElementById("stockin-gst-cancel-btn");
+        if (gstSaveBtn) gstSaveBtn.addEventListener("click", saveNewGst);
+        if (gstCancelBtn) gstCancelBtn.addEventListener("click", function () {
+            pendingTaxRow = null;
+            toggleGstPanel(false);
+        });
 
         var searchEl = document.getElementById("stockin-search");
         var dateFromEl = document.getElementById("stockin-date-from");

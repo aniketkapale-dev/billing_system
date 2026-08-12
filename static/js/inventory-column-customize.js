@@ -245,8 +245,10 @@ var InventoryColumnCustomize = (function () {
         }
 
         colgroup.innerHTML = "";
+        var colWidth = (100 / colCount).toFixed(4) + "%";
         for (var i = 0; i < colCount; i++) {
             var col = document.createElement("col");
+            col.style.width = colWidth;
             if (ctrl.includeBulkCheck && i === 0) {
                 col.className = "inv-col-check-col";
             }

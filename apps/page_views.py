@@ -7,7 +7,7 @@ so these endpoints simply return the templates.
 """
 import logging
 
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.views.decorators.cache import never_cache
 
 logger = logging.getLogger(__name__)
@@ -98,5 +98,28 @@ def user_catalog_brands(request):
         "catalog_resource": "brands",
         "catalog_title": "Brands",
         "catalog_add_label": "Add Brand",
+    })
+
+
+@never_cache
+def user_settings(request):
+    return redirect("user-settings-tax")
+
+
+@never_cache
+def user_settings_tax(request):
+    return render(request, "user/settings.html", {
+        "active_nav": "settings-tax",
+        "settings_section": "tax",
+        "settings_title": "Tax",
+    })
+
+
+@never_cache
+def user_settings_invoice(request):
+    return render(request, "user/settings.html", {
+        "active_nav": "settings-invoice",
+        "settings_section": "invoice",
+        "settings_title": "Invoice",
     })
 

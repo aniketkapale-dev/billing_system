@@ -38,6 +38,7 @@ class PurchaseInvoiceService(BaseService):
             raise ValidationException("Invoice number already exists for this business.")
 
         subtotal = Decimal("0")
+        invoice_tax = Decimal("0")
         prepared_items = []
 
         for item in items_data:
@@ -63,8 +64,12 @@ class PurchaseInvoiceService(BaseService):
 
             selling_price = Decimal(str(product.sale_price or 0))
 
-            line_total = (quantity * purchase_price) - discount + tax
-            subtotal += line_total
+            line_total = (quantity * purchase_price) - discount
+            line_subtotal = line_total - tax
+            if line_subtotal < 0:
+                line_subtotal = Decimal("0")
+            subtotal += line_subtotal
+            invoice_tax += tax
             prepared_items.append({
                 "product": product,
                 "quantity": quantity,
@@ -78,7 +83,6 @@ class PurchaseInvoiceService(BaseService):
             })
 
         invoice_discount = Decimal(str(data.pop("discount", 0) or 0))
-        invoice_tax = Decimal(str(data.pop("tax", 0) or 0))
         data["subtotal"] = subtotal
         data["discount"] = invoice_discount
         data["tax"] = invoice_tax
