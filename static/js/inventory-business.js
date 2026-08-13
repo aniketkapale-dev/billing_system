@@ -59,12 +59,55 @@ var InventoryBusiness = (function () {
         }));
     }
 
+    function activeBusinessIconHtml(item) {
+        if (item && item.logo_url) {
+            return '<img src="' + escapeHtml(item.logo_url) + '" alt=""/>';
+        }
+        return '<span class="material-symbols-outlined">store</span>';
+    }
+
+    function updateActiveBusinessDisplay() {
+        var nameEl = document.getElementById("inv-active-business-name");
+        var iconEl = document.getElementById("inv-active-business-icon");
+        var wrapEl = document.getElementById("inv-active-business");
+        var active = getActiveBusiness();
+
+        if (!active) {
+            var activeTab = document.querySelector(".inv-business-tab--active");
+            if (activeTab) {
+                var activeId = activeTab.getAttribute("data-business-id");
+                if (activeId) {
+                    active = businesses.find(function (item) {
+                        return String(item.id) === String(activeId);
+                    }) || null;
+                }
+            }
+        }
+
+        if (nameEl) {
+            if (active) {
+                nameEl.textContent = businessLabel(active);
+            } else {
+                var labelEl = document.querySelector(".inv-business-tab--active .inv-business-tab-label");
+                nameEl.textContent = labelEl ? labelEl.textContent.trim() : "Select business";
+            }
+        }
+        if (iconEl) {
+            iconEl.innerHTML = active ? activeBusinessIconHtml(active) : '<span class="material-symbols-outlined">store</span>';
+        }
+        if (wrapEl) {
+            var hasActive = !!(active || document.querySelector(".inv-business-tab--active"));
+            wrapEl.classList.toggle("inv-chrome-active-business--empty", !hasActive);
+        }
+    }
+
     function renderSelector() {
         var tabsEl = document.getElementById("inv-business-tabs");
         if (!tabsEl) return;
 
         if (!businesses.length) {
             tabsEl.innerHTML = '<span class="inv-business-tabs-empty">No business yet</span>';
+            updateActiveBusinessDisplay();
             return;
         }
 
@@ -76,11 +119,11 @@ var InventoryBusiness = (function () {
                 '<button type="button" class="inv-business-tab' + (isActive ? " inv-business-tab--active" : "") + '"' +
                 ' role="tab" aria-selected="' + (isActive ? "true" : "false") + '"' +
                 ' data-business-id="' + item.id + '">' +
-                (isActive ? '<span class="inv-business-tab-curve" aria-hidden="true"></span>' : "") +
                 tabIconHtml(item) +
                 '<span class="inv-business-tab-label">' + label + "</span></button>"
             );
         }).join("");
+        updateActiveBusinessDisplay();
     }
 
     function toggleEmptyState(show) {
@@ -116,6 +159,8 @@ var InventoryBusiness = (function () {
                     });
                     if (!exists) {
                         selectBusiness(businesses[0].id, false);
+                    } else {
+                        updateActiveBusinessDisplay();
                     }
                     return;
                 }
@@ -250,6 +295,8 @@ var InventoryBusiness = (function () {
         if (saveBtn) {
             saveBtn.addEventListener("click", saveBusiness);
         }
+
+        window.addEventListener("inventory:business-changed", updateActiveBusinessDisplay);
 
         if (window.InventoryAuth && typeof InventoryAuth.wireMobileInput === "function") {
             InventoryAuth.wireMobileInput(document.getElementById("business-phone"));

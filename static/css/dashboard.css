@@ -21,25 +21,31 @@ body.inv-dashboard-body {
 }
 
 .inv-sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
     padding: 0 20px;
     margin-bottom: 24px;
 }
 
+.inv-sidebar-brand-icon {
+    flex-shrink: 0;
+    font-size: 30px;
+    color: var(--inv-primary);
+}
+
+.inv-sidebar-brand-text {
+    min-width: 0;
+}
+
 .inv-sidebar-brand h1 {
-    margin: 0 0 4px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    margin: 0 0 2px;
     font-family: var(--inv-font-display);
     font-size: 18px;
     font-weight: 700;
     color: var(--inv-on-bg);
     letter-spacing: -0.01em;
-}
-
-.inv-sidebar-brand h1 .material-symbols-outlined {
-    color: var(--inv-primary);
-    font-size: 24px;
+    line-height: 1.2;
 }
 
 .inv-sidebar-brand p {
@@ -47,6 +53,7 @@ body.inv-dashboard-body {
     font-size: 12px;
     font-weight: 500;
     color: var(--inv-secondary);
+    line-height: 1.2;
 }
 
 .inv-sidebar-nav {
@@ -63,16 +70,31 @@ body.inv-dashboard-body {
     display: flex;
     align-items: center;
     height: 44px;
-    padding: 0 14px;
+    padding: 0 12px 0 10px;
     border-left: none;
     border-radius: 8px;
     color: var(--inv-nav-text);
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 600;
     transition: background 0.15s, color 0.15s;
 }
 
-.inv-nav-item .material-symbols-outlined {
+.inv-nav-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-right: 12px;
+    font-size: 22px;
+    color: var(--inv-nav-text);
+    transition: color 0.15s;
+}
+
+.inv-nav-icon--sub {
+    font-size: 20px;
+}
+
+.inv-nav-item .material-symbols-outlined:not(.inv-nav-icon):not(.inv-nav-group-chevron) {
     margin-right: 12px;
     font-size: 22px;
     color: var(--inv-nav-text);
@@ -83,7 +105,8 @@ body.inv-dashboard-body {
     color: var(--inv-primary);
 }
 
-.inv-nav-item:hover:not(.inv-nav-item--active) .material-symbols-outlined {
+.inv-nav-item:hover:not(.inv-nav-item--active) .inv-nav-icon,
+.inv-nav-item:hover:not(.inv-nav-item--active) .material-symbols-outlined:not(.inv-nav-icon):not(.inv-nav-group-chevron) {
     color: var(--inv-primary);
 }
 
@@ -94,7 +117,7 @@ body.inv-dashboard-body {
     border-radius: 8px;
 }
 
-.inv-nav-group--open > .inv-nav-group-toggle .material-symbols-outlined,
+.inv-nav-group--open > .inv-nav-group-toggle .inv-nav-icon,
 .inv-nav-group--open > .inv-nav-group-toggle .inv-nav-group-chevron {
     color: var(--inv-primary);
 }
@@ -108,7 +131,7 @@ body.inv-dashboard-body {
     color: var(--inv-primary);
 }
 
-.inv-nav-group--has-active-child:not(.inv-nav-group--open) > .inv-nav-group-toggle .material-symbols-outlined,
+.inv-nav-group--has-active-child:not(.inv-nav-group--open) > .inv-nav-group-toggle .inv-nav-icon,
 .inv-nav-group--has-active-child:not(.inv-nav-group--open) > .inv-nav-group-toggle .inv-nav-group-chevron {
     color: var(--inv-primary);
 }
@@ -121,7 +144,12 @@ body.inv-dashboard-body {
     box-shadow: none;
 }
 
-.inv-nav-item--active .material-symbols-outlined {
+.inv-nav-item--active .inv-nav-icon,
+.inv-nav-row--active .inv-nav-icon {
+    color: var(--inv-white);
+}
+
+.inv-nav-item--active .material-symbols-outlined:not(.inv-nav-icon):not(.inv-nav-group-chevron) {
     color: var(--inv-white);
 }
 
@@ -149,7 +177,7 @@ body.inv-dashboard-body {
 .inv-nav-sub {
     list-style: none;
     margin: 4px 0 0;
-    padding: 0 0 0 8px;
+    padding: 0 0 0 12px;
     max-height: 0;
     overflow: hidden;
     transition: max-height 0.25s ease;
@@ -163,17 +191,13 @@ body.inv-dashboard-body {
     margin-top: 2px;
 }
 
-/* Sub-items — indented, no icon (Zoho style) */
+/* Sub-items — compact row with icon */
 .inv-nav-item--sub {
-    padding-left: 36px;
+    padding-left: 10px;
     height: 40px;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 600;
     color: var(--inv-nav-text);
-}
-
-.inv-nav-item--sub .material-symbols-outlined {
-    display: none;
 }
 
 .inv-nav-item--sub:hover:not(.inv-nav-item--active) {
@@ -266,14 +290,101 @@ body.inv-dashboard-body {
     font-variation-settings: "wght" 600;
 }
 
-/* Dark top bar — single-row Chrome-style layout */
+/* Dark top bar — two-row layout (brand/actions + business switcher) */
 .inv-chrome-header {
     display: flex;
+    flex-direction: column;
     align-items: stretch;
     height: var(--inv-header-height);
     padding: 0;
     background: var(--inv-topbar-bg);
     box-shadow: none;
+}
+
+.inv-chrome-header-top {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex: 0 0 var(--inv-header-top-height);
+    min-height: var(--inv-header-top-height);
+    padding: 0 20px 0 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.inv-chrome-header-bottom {
+    display: flex;
+    align-items: flex-end;;
+    flex: 0 0 var(--inv-header-bottom-height);
+    min-height: var(--inv-header-bottom-height);
+    padding: 0 12px 0 8px;
+    min-width: 0;
+}
+
+.inv-chrome-active-business {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+}
+
+.inv-chrome-active-business--empty .inv-active-business-name {
+    color: rgba(255, 255, 255, 0.55);
+    font-weight: 500;
+}
+
+.inv-chrome-active-business--empty .inv-active-business-label {
+    color: rgba(255, 255, 255, 0.42);
+}
+
+.inv-active-business-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.inv-active-business-label {
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.52);
+}
+
+.inv-active-business-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.inv-active-business-icon .material-symbols-outlined {
+    font-size: 20px;
+}
+
+.inv-active-business-icon img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.inv-active-business-name {
+    font-size: 19px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--inv-white);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .inv-chrome-header-row {
@@ -301,8 +412,8 @@ body.inv-dashboard-body {
 
 .inv-business-switcher {
     display: flex;
-    align-items: flex-end;
-    gap: 4px;
+    align-items: center;
+    gap: 6px;
     flex: 1;
     min-width: 0;
     overflow-x: auto;
@@ -318,8 +429,8 @@ body.inv-dashboard-body {
 
 .inv-business-tabs {
     display: flex;
-    align-items: flex-end;
-    gap: 0;
+    align-items: center;
+    gap: 4px;
     flex: 0 0 auto;
     min-width: 0;
     overflow: visible;
@@ -330,34 +441,34 @@ body.inv-dashboard-body {
     display: inline-flex;
     align-items: center;
     height: 42px;
-    padding: 0 16px;
-    font-size: 17px;
+    padding: 0 14px;
+    font-size: 15px;
     font-weight: 500;
-    color: rgba(255, 255, 255, 0.65);
+    color: rgba(255, 255, 255, 0.55);
     white-space: nowrap;
 }
 
-/* Chrome browser tabs — single row */
+/* Business switcher tabs — pill style on dark bar */
 .inv-business-tab {
     position: relative;
     display: inline-flex;
     align-items: center;
     flex-shrink: 0;
-    max-width: 280px;
-    height: 40px;
+    max-width: 240px;
+    height: 42px;
     margin: 0;
-    padding: 0 18px 0 14px;
+    padding: 0 16px 0 12px;
     border: none;
-    border-radius: 10px 10px 0 0;
+    border-radius: 2px;
     background: transparent;
-    font-size: 17px;
+    font-size: 15px;
     font-weight: 500;
     font-family: inherit;
-    color: rgba(255, 255, 255, 0.78);
+    color: rgba(255, 255, 255, 0.72);
     white-space: nowrap;
     overflow: hidden;
     cursor: pointer;
-    transition: background 0.15s, color 0.15s;
+    transition: background 0.15s, color 0.15s, box-shadow 0.15s;
 }
 
 .inv-business-tab-icon {
@@ -365,8 +476,8 @@ body.inv-dashboard-body {
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    width: 24px;
-    height: 24px;
+    width: 26px;
+    height: 26px;
     margin-right: 10px;
     border-radius: 50%;
     overflow: hidden;
@@ -396,19 +507,15 @@ body.inv-dashboard-body {
 }
 
 .inv-business-tab:hover:not(.inv-business-tab--active) {
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.1);
     color: rgba(255, 255, 255, 0.95);
 }
 
 .inv-business-tab--active {
-    z-index: 2;
-    height: 44px;
-    margin-bottom: -1px;
-    padding-bottom: 1px;
+    z-index: 1;
     background: var(--inv-chrome-page-bg);
-    color: #202124;
+    color: #1C2434;
     font-weight: 600;
-    font-size: 18px;
 }
 
 .inv-business-tab--active .inv-business-tab-icon--default {
@@ -416,32 +523,8 @@ body.inv-dashboard-body {
     color: var(--inv-primary);
 }
 
-.inv-business-tab--active::after {
-    content: "";
-    position: absolute;
-    right: -8px;
-    bottom: 0;
-    width: 8px;
-    height: 8px;
-    pointer-events: none;
-    border-radius: 0 0 0 8px;
-    box-shadow: -4px 0 0 0 var(--inv-chrome-page-bg);
-}
-
 .inv-business-tab-curve {
     display: none;
-    position: absolute;
-    left: -8px;
-    bottom: 0;
-    width: 8px;
-    height: 8px;
-    border-radius: 0 0 8px 0;
-    box-shadow: 4px 0 0 0 var(--inv-chrome-page-bg);
-    pointer-events: none;
-}
-
-.inv-business-tab--active .inv-business-tab-curve {
-    display: block;
 }
 
 .inv-business-tab-add {
@@ -449,12 +532,12 @@ body.inv-dashboard-body {
     align-items: center;
     justify-content: center;
     flex: 0 0 auto;
-    width: 32px;
-    height: 32px;
-    margin: 0 0 6px 4px;
+    width: 36px;
+    height: 36px;
+    margin: 0;
     padding: 0;
     border: none;
-    border-radius: 50%;
+    border-radius: 10px;
     background: transparent;
     color: rgba(255, 255, 255, 0.75);
     cursor: pointer;
@@ -462,7 +545,7 @@ body.inv-dashboard-body {
 }
 
 .inv-business-tab-add .material-symbols-outlined {
-    font-size: 20px;
+    font-size: 22px;
 }
 
 .inv-business-tab-add:hover {
@@ -499,7 +582,7 @@ body.inv-dashboard-body {
     align-items: center;
     gap: 10px;
     flex-shrink: 0;
-    align-self: center;
+    margin-left: auto;
 }
 
 .inv-quick-access {
@@ -510,11 +593,11 @@ body.inv-dashboard-body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
+    width: 34px;
+    height: 34px;
     padding: 0;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     background: var(--inv-primary);
     color: var(--inv-white);
     cursor: pointer;
@@ -522,7 +605,7 @@ body.inv-dashboard-body {
 }
 
 .inv-quick-access-trigger .material-symbols-outlined {
-    font-size: 18px;
+    font-size: 22px;
     font-variation-settings: "wght" 500;
 }
 
@@ -652,8 +735,8 @@ body.inv-dashboard-body {
 }
 
 .inv-profile-avatar {
-    width: 28px;
-    height: 28px;
+    width: 34px;
+    height: 34px;
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.12);
     color: rgba(255, 255, 255, 0.9);
@@ -665,10 +748,10 @@ body.inv-dashboard-body {
     overflow: hidden;
 }
 
-.inv-profile-avatar .material-symbols-outlined { font-size: 16px; }
+.inv-profile-avatar .material-symbols-outlined { font-size: 18px; }
 
 .inv-profile-role {
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 500;
     color: rgba(255, 255, 255, 0.9);
     white-space: nowrap;
@@ -677,18 +760,18 @@ body.inv-dashboard-body {
 .inv-profile-logout-btn {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 4px 10px;
+    gap: 6px;
+    padding: 6px 12px;
     border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 6px;
+    border-radius: 8px;
     background: rgba(255, 255, 255, 0.08);
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 500;
     color: rgba(255, 255, 255, 0.85);
     transition: background 0.2s, color 0.2s, border-color 0.2s;
 }
 
-.inv-profile-logout-btn .material-symbols-outlined { font-size: 16px; }
+.inv-profile-logout-btn .material-symbols-outlined { font-size: 18px; }
 
 .inv-profile-logout-btn:hover {
     background: rgba(255, 255, 255, 0.15);

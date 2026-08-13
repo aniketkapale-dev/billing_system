@@ -73,9 +73,9 @@ class InvoiceSettingService(BaseService):
     def before_update(self, instance, data):
         data.pop("owner_id", None)
         data.pop("business_id", None)
-        self._validate(data, exclude_pk=instance.pk, business_id=instance.business_id)
+        self._validate(data, exclude_pk=instance.pk, business_id=instance.business_id, instance=instance)
 
-    def _validate(self, data, exclude_pk=None, business_id=None):
+    def _validate(self, data, exclude_pk=None, business_id=None, instance=None):
         scoped_business_id = business_id or data.get("business_id")
 
         if "year" in data:
@@ -90,15 +90,33 @@ class InvoiceSettingService(BaseService):
                 raise ValidationException("Year must be between 2000 and 2100.")
             data["year"] = year
 
+        resolved_year = data.get("year") if "year" in data else (instance.year if instance else None)
+        if resolved_year is not None:
+            if "prefix" in data:
+                resolved_prefix = str(data.get("prefix") or "").strip()
+                data["prefix"] = resolved_prefix
+            else:
+                resolved_prefix = (instance.prefix if instance else "") or ""
+
+            if "suffix" in data:
+                resolved_suffix = str(data.get("suffix") or "").strip()
+                data["suffix"] = resolved_suffix
+            else:
+                resolved_suffix = (instance.suffix if instance else "") or ""
+
             qs = self.repository.model.objects.filter(
                 business_id=scoped_business_id,
-                year=year,
+                year=resolved_year,
+                prefix=resolved_prefix,
+                suffix=resolved_suffix,
                 is_deleted=False,
             )
             if exclude_pk:
                 qs = qs.exclude(pk=exclude_pk)
             if qs.exists():
-                raise ValidationException("Invoice settings for this year already exist.")
+                raise ValidationException(
+                    "Invoice settings with this year, prefix, and suffix already exist."
+                )
 
         for field in ("counter", "current_counter"):
             if field in data:

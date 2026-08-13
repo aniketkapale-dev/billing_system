@@ -77,7 +77,6 @@ class DashboardService:
                 business_id=business_id,
                 is_deleted=False,
             )
-            .prefetch_related("items__product")
             .annotate(
                 items_count=Count(
                     "items",
@@ -86,25 +85,14 @@ class DashboardService:
             )
             .order_by("-purchase_date", "-created_at")[: self.RECENT_LIMIT]
         )
-        rows = []
-        for sale in sales:
-            product_names = [
-                item.product.name
-                for item in sale.items.all()
-                if not item.is_deleted and item.product
-            ]
-            summary = ", ".join(product_names[:2])
-            if len(product_names) > 2:
-                summary += f" +{len(product_names) - 2} more"
-            rows.append(
-                {
-                    "id": sale.id,
-                    "date": sale.purchase_date.isoformat() if sale.purchase_date else "",
-                    "customer_name": sale.customer_name,
-                    "reference_no": sale.reference_no or "",
-                    "amount": sale.total_amount,
-                    "items_count": sale.items_count,
-                    "products_summary": summary,
-                }
-            )
-        return rows
+        return [
+            {
+                "id": sale.id,
+                "date": sale.purchase_date.isoformat() if sale.purchase_date else "",
+                "customer_name": sale.customer_name,
+                "reference_no": sale.reference_no or "",
+                "amount": sale.total_amount,
+                "items_count": sale.items_count,
+            }
+            for sale in sales
+        ]

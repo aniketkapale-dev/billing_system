@@ -40,18 +40,7 @@ var InventoryPurchases = (function () {
                     { id: "customer", label: "Customer", locked: true, sortKey: "customer_name", cell: function (p) { return "<td>" + formatCustomerDisplay(p) + "</td>"; } },
                     { id: "products", label: "Products Sold", cell: function (p) { return '<td class="inv-col-name">' + formatProductsSoldCell(p.items || [], p.id) + "</td>"; } },
                     { id: "sale_amount", label: "Sale Amount", sortKey: "total_amount", headerClass: "inv-mgmt-cell--num", cell: function (p) { return '<td class="inv-mgmt-cell--num">' + InventoryApi.formatMoney(p.total_amount) + "</td>"; } },
-                    { id: "total_cost", label: "Total Cost", sortKey: "total_cost", headerClass: "inv-mgmt-cell--num", cell: function (p) { return '<td class="inv-mgmt-cell--num">' + InventoryApi.formatMoney(p.total_cost) + "</td>"; } },
-                    {
-                        id: "profit",
-                        label: "Profit",
-                        sortKey: "total_profit",
-                        headerClass: "inv-mgmt-cell--num",
-                        cell: function (p) {
-                            var profit = Number(p.total_profit || 0);
-                            var profitClass = profit >= 0 ? "inv-profit-positive" : "inv-profit-negative";
-                            return '<td class="inv-mgmt-cell--num ' + profitClass + '"><strong>' + formatProfit(profit) + "</strong></td>";
-                        }
-                    }
+                    { id: "total_cost", label: "Total Cost", sortKey: "total_cost", headerClass: "inv-mgmt-cell--num", cell: function (p) { return '<td class="inv-mgmt-cell--num">' + InventoryApi.formatMoney(p.total_cost) + "</td>"; } }
                 ],
                 onApply: function () {
                     renderPurchaseRows(cachedItems);
@@ -439,21 +428,16 @@ var InventoryPurchases = (function () {
         };
     }
 
-    function setSaleTotalsDisplay(totalCost, saleAmount, profit) {
+    function setSaleTotalsDisplay(totalCost, saleAmount) {
         var costEl = document.getElementById("purchase-total-cost");
         var saleEl = document.getElementById("purchase-sale-amount");
-        var profitEl = document.getElementById("purchase-total-profit");
         if (costEl) costEl.textContent = InventoryApi.formatMoney(totalCost);
         if (saleEl) saleEl.textContent = InventoryApi.formatMoney(saleAmount);
-        if (profitEl) {
-            profitEl.textContent = formatProfit(profit);
-            profitEl.className = "inv-stockin-total-value " + (Number(profit || 0) >= 0 ? "inv-profit-positive" : "inv-profit-negative");
-        }
     }
 
     function updateSaleTotals() {
         var totals = calculateSaleTotals();
-        setSaleTotalsDisplay(totals.totalCost, totals.saleAmount, totals.profit);
+        setSaleTotalsDisplay(totals.totalCost, totals.saleAmount);
     }
 
     function formatQty(value) {
@@ -734,7 +718,7 @@ var InventoryPurchases = (function () {
         (purchase.items || []).forEach(function (line) {
             container.appendChild(createReadonlySaleRow(line));
         });
-        setSaleTotalsDisplay(purchase.total_cost, purchase.total_amount, purchase.total_profit);
+        setSaleTotalsDisplay(purchase.total_cost, purchase.total_amount);
     }
 
     function formatProfit(value) {
@@ -829,21 +813,14 @@ var InventoryPurchases = (function () {
         var itemsWrap = document.getElementById("purchase-view-items-wrap");
         if (!container || !itemsWrap) return;
 
-        var profit = Number(purchase.total_profit || 0);
-        var profitClass = profit >= 0 ? "inv-profit-positive" : "inv-profit-negative";
         var rows = [
             { label: "Sale Date", value: displayValue(purchase.purchase_date) },
             { label: "Customer", value: formatCustomerDisplay(purchase) },
             { label: "Payment Type", value: displayValue(purchase.payment_type_name) },
-            { label: "Billing Address", value: displayValue(purchase.billing_address) },
-            { label: "Shipping Address", value: displayValue(purchase.shipping_address) },
+            { label: "Billing Address", value: displayValue(purchase.billing_address), full: true },
+            { label: "Shipping Address", value: displayValue(purchase.shipping_address), full: true },
             { label: "Sale Amount", value: InventoryApi.formatMoney(purchase.total_amount) },
-            { label: "Total Cost", value: InventoryApi.formatMoney(purchase.total_cost) },
-            {
-                label: "Profit",
-                value: "<strong class=\"" + profitClass + "\">" + formatProfit(profit) + "</strong>",
-                html: true
-            }
+            { label: "Total Cost", value: InventoryApi.formatMoney(purchase.total_cost) }
         ];
 
         if (purchase.reference_no) {
@@ -874,11 +851,9 @@ var InventoryPurchases = (function () {
             '<div class="inv-mgmt-table-wrap">' +
             '<table class="inv-mgmt-table">' +
             "<thead><tr>" +
-            "<th>Product</th><th>SKU</th><th>Unit</th><th>Qty</th><th>Sale Price</th><th>Total Price</th><th>Total Cost</th><th>Profit</th>" +
+            "<th>Product</th><th>SKU</th><th>Unit</th><th>Qty</th><th>Sale Price</th><th>Total Price</th><th>Total Cost</th>" +
             "</tr></thead><tbody>" +
             lines.map(function (line) {
-                var lineProfit = Number(line.profit_amount || 0);
-                var lineProfitClass = lineProfit >= 0 ? "inv-profit-positive" : "inv-profit-negative";
                 return (
                     "<tr>" +
                     "<td>" + displayValue(line.product_name) + "</td>" +
@@ -888,19 +863,10 @@ var InventoryPurchases = (function () {
                     "<td class=\"inv-mgmt-cell--num\">" + InventoryApi.formatMoney(line.unit_price) + "</td>" +
                     "<td class=\"inv-mgmt-cell--num\">" + InventoryApi.formatMoney(line.line_total) + "</td>" +
                     "<td class=\"inv-mgmt-cell--num\">" + InventoryApi.formatMoney(line.cost_amount) + "</td>" +
-                    "<td class=\"inv-mgmt-cell--num " + lineProfitClass + "\"><strong>" + formatProfit(lineProfit) + "</strong></td>" +
                     "</tr>"
                 );
             }).join("") +
-            "</tbody></table></div>" +
-            '<div class="inv-stockin-totals">' +
-            '<div class="inv-stockin-total-row"><div class="inv-stockin-total-label"><span>Total Cost</span></div>' +
-            '<strong class="inv-stockin-total-value">' + InventoryApi.formatMoney(purchase.total_cost) + "</strong></div>" +
-            '<div class="inv-stockin-total-row"><div class="inv-stockin-total-label"><span>Sale Amount</span></div>' +
-            '<strong class="inv-stockin-total-value">' + InventoryApi.formatMoney(purchase.total_amount) + "</strong></div>" +
-            '<div class="inv-stockin-total-row inv-stockin-total-row--grand"><div class="inv-stockin-total-label"><span>Profit</span></div>' +
-            '<strong class="inv-stockin-total-value ' + profitClass + '">' + formatProfit(profit) + "</strong></div>" +
-            "</div>";
+            "</tbody></table></div>";
     }
 
     function openEditPurchase(id) {

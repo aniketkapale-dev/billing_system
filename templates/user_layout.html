@@ -16,18 +16,22 @@
 {% include "partials/inventory_ui.html" %}
 <nav class="inv-sidebar">
     <div class="inv-sidebar-brand">
-        <h1>Billing System</h1>
+        <span class="material-symbols-outlined inv-sidebar-brand-icon" aria-hidden="true">storefront</span>
+        <div class="inv-sidebar-brand-text">
+            <h1>Billing System</h1>
+            <p>Multi Store Dashboard</p>
+        </div>
     </div>
     <ul class="inv-sidebar-nav">
         <li>
             <a class="inv-nav-item{% if active_nav == 'dashboard' %} inv-nav-item--active{% endif %}" href="/dashboard/">
-                <span class="material-symbols-outlined">dashboard</span>
+                <span class="material-symbols-outlined inv-nav-icon">space_dashboard</span>
                 Dashboard
             </a>
         </li>
         <li class="inv-nav-group{% if active_nav == 'products' or active_nav == 'products-units' or active_nav == 'products-categories' or active_nav == 'products-brands' %} inv-nav-group--has-active-child{% endif %}{% if active_nav == 'products' or active_nav == 'products-units' or active_nav == 'products-categories' or active_nav == 'products-brands' %} inv-nav-group--open{% endif %}">
             <button type="button" class="inv-nav-item inv-nav-group-toggle" aria-expanded="{% if active_nav == 'products' or active_nav == 'products-units' or active_nav == 'products-categories' or active_nav == 'products-brands' %}true{% else %}false{% endif %}">
-                <span class="material-symbols-outlined">inventory_2</span>
+                <span class="material-symbols-outlined inv-nav-icon">inventory</span>
                 Manage Products
                 <span class="material-symbols-outlined inv-nav-group-chevron">expand_more</span>
             </button>
@@ -35,7 +39,7 @@
                 <li>
                     <div class="inv-nav-row{% if active_nav == 'products' %} inv-nav-row--active{% endif %}">
                         <a class="inv-nav-item inv-nav-item--sub{% if active_nav == 'products' %} inv-nav-item--active{% endif %}" href="/dashboard/products/">
-                            <span class="material-symbols-outlined">shopping_bag</span>
+                            <span class="material-symbols-outlined inv-nav-icon inv-nav-icon--sub">package_2</span>
                             Items
                         </a>
                         <a class="inv-nav-add-btn" href="/dashboard/products/?action=add" title="Add product" aria-label="Add product">
@@ -46,7 +50,7 @@
                 <li>
                     <div class="inv-nav-row{% if active_nav == 'products-units' %} inv-nav-row--active{% endif %}">
                         <a class="inv-nav-item inv-nav-item--sub{% if active_nav == 'products-units' %} inv-nav-item--active{% endif %}" href="/dashboard/units/">
-                            <span class="material-symbols-outlined">straighten</span>
+                            <span class="material-symbols-outlined inv-nav-icon inv-nav-icon--sub">scale</span>
                             Units
                         </a>
                         <a class="inv-nav-add-btn" href="/dashboard/units/?action=add" title="Add unit" aria-label="Add unit">
@@ -57,7 +61,7 @@
                 <li>
                     <div class="inv-nav-row{% if active_nav == 'products-categories' %} inv-nav-row--active{% endif %}">
                         <a class="inv-nav-item inv-nav-item--sub{% if active_nav == 'products-categories' %} inv-nav-item--active{% endif %}" href="/dashboard/categories/">
-                            <span class="material-symbols-outlined">category</span>
+                            <span class="material-symbols-outlined inv-nav-icon inv-nav-icon--sub">category</span>
                             Categories
                         </a>
                         <a class="inv-nav-add-btn" href="/dashboard/categories/?action=add" title="Add category" aria-label="Add category">
@@ -68,7 +72,7 @@
                 <li>
                     <div class="inv-nav-row{% if active_nav == 'products-brands' %} inv-nav-row--active{% endif %}">
                         <a class="inv-nav-item inv-nav-item--sub{% if active_nav == 'products-brands' %} inv-nav-item--active{% endif %}" href="/dashboard/brands/">
-                            <span class="material-symbols-outlined">sell</span>
+                            <span class="material-symbols-outlined inv-nav-icon inv-nav-icon--sub">workspace_premium</span>
                             Brands
                         </a>
                         <a class="inv-nav-add-btn" href="/dashboard/brands/?action=add" title="Add brand" aria-label="Add brand">
@@ -81,7 +85,7 @@
         <li>
             <div class="inv-nav-row{% if active_nav == 'stock-in' %} inv-nav-row--active{% endif %}">
                 <a class="inv-nav-item{% if active_nav == 'stock-in' %} inv-nav-item--active{% endif %}" href="/dashboard/stock-in/">
-                    <span class="material-symbols-outlined">input</span>
+                    <span class="material-symbols-outlined inv-nav-icon">shopping_cart</span>
                     Purchase
                 </a>
                 <a class="inv-nav-add-btn" href="/dashboard/stock-in/?action=add" title="Add purchase" aria-label="Add purchase">
@@ -91,13 +95,13 @@
         </li>
         <li>
             <a class="inv-nav-item{% if active_nav == 'inventory' %} inv-nav-item--active{% endif %}" href="/dashboard/inventory/">
-                <span class="material-symbols-outlined">warehouse</span>
+                <span class="material-symbols-outlined inv-nav-icon">shelves</span>
                 Stock
             </a>
         </li>
         <li class="inv-nav-group{% if active_nav == 'purchases' or active_nav == 'customers' %} inv-nav-group--has-active-child{% endif %}{% if active_nav == 'purchases' or active_nav == 'customers' %} inv-nav-group--open{% endif %}">
             <button type="button" class="inv-nav-item inv-nav-group-toggle" aria-expanded="{% if active_nav == 'purchases' or active_nav == 'customers' %}true{% else %}false{% endif %}">
-                <span class="material-symbols-outlined">point_of_sale</span>
+                <span class="material-symbols-outlined inv-nav-icon">payments</span>
                 Manage Sales
                 <span class="material-symbols-outlined inv-nav-group-chevron">expand_more</span>
             </button>
@@ -105,8 +109,8 @@
                 <li>
                     <div class="inv-nav-row{% if active_nav == 'purchases' %} inv-nav-row--active{% endif %}">
                         <a class="inv-nav-item inv-nav-item--sub{% if active_nav == 'purchases' %} inv-nav-item--active{% endif %}" href="/dashboard/purchases/">
-                            <span class="material-symbols-outlined">receipt_long</span>
-                            Create Sale
+                            <span class="material-symbols-outlined inv-nav-icon inv-nav-icon--sub">receipt_long</span>
+                            Create Invoice
                         </a>
                         <a class="inv-nav-add-btn" href="/dashboard/purchases/?action=add" title="Add sale" aria-label="Add sale">
                             <span class="material-symbols-outlined">add</span>
@@ -116,7 +120,7 @@
                 <li>
                     <div class="inv-nav-row{% if active_nav == 'customers' %} inv-nav-row--active{% endif %}">
                         <a class="inv-nav-item inv-nav-item--sub{% if active_nav == 'customers' %} inv-nav-item--active{% endif %}" href="/dashboard/customers/">
-                            <span class="material-symbols-outlined">groups</span>
+                            <span class="material-symbols-outlined inv-nav-icon inv-nav-icon--sub">contacts</span>
                             Customers
                         </a>
                         <a class="inv-nav-add-btn" href="/dashboard/customers/?action=add" title="Add customer" aria-label="Add customer">
@@ -129,7 +133,7 @@
         <li>
             <div class="inv-nav-row{% if active_nav == 'business' %} inv-nav-row--active{% endif %}">
                 <a class="inv-nav-item{% if active_nav == 'business' %} inv-nav-item--active{% endif %}" href="/dashboard/business/">
-                    <span class="material-symbols-outlined">store</span>
+                    <span class="material-symbols-outlined inv-nav-icon">business_center</span>
                     Business
                 </a>
                 <button type="button" class="inv-nav-add-btn" data-add-action="business" title="Add business" aria-label="Add business">
@@ -139,7 +143,7 @@
         </li>
         <li class="inv-nav-group{% if active_nav == 'settings-tax' or active_nav == 'settings-invoice' %} inv-nav-group--has-active-child{% endif %}{% if active_nav == 'settings-tax' or active_nav == 'settings-invoice' %} inv-nav-group--open{% endif %}">
             <button type="button" class="inv-nav-item inv-nav-group-toggle" aria-expanded="{% if active_nav == 'settings-tax' or active_nav == 'settings-invoice' %}true{% else %}false{% endif %}">
-                <span class="material-symbols-outlined">settings</span>
+                <span class="material-symbols-outlined inv-nav-icon">tune</span>
                 Settings
                 <span class="material-symbols-outlined inv-nav-group-chevron">expand_more</span>
             </button>
@@ -147,7 +151,7 @@
                 <li>
                     <div class="inv-nav-row{% if active_nav == 'settings-tax' %} inv-nav-row--active{% endif %}">
                         <a class="inv-nav-item inv-nav-item--sub{% if active_nav == 'settings-tax' %} inv-nav-item--active{% endif %}" href="/dashboard/settings/tax/">
-                            <span class="material-symbols-outlined">percent</span>
+                            <span class="material-symbols-outlined inv-nav-icon inv-nav-icon--sub">calculate</span>
                             Tax
                         </a>
                         <a class="inv-nav-add-btn" href="/dashboard/settings/tax/?action=add" title="Add tax" aria-label="Add tax">
@@ -158,7 +162,7 @@
                 <li>
                     <div class="inv-nav-row{% if active_nav == 'settings-invoice' %} inv-nav-row--active{% endif %}">
                         <a class="inv-nav-item inv-nav-item--sub{% if active_nav == 'settings-invoice' %} inv-nav-item--active{% endif %}" href="/dashboard/settings/invoice/">
-                            <span class="material-symbols-outlined">description</span>
+                            <span class="material-symbols-outlined inv-nav-icon inv-nav-icon--sub">receipt</span>
                             Invoice
                         </a>
                         <a class="inv-nav-add-btn" href="/dashboard/settings/invoice/?action=add" title="Add invoice setting" aria-label="Add invoice setting">
@@ -172,17 +176,20 @@
 </nav>
 
 <header class="inv-dashboard-header inv-chrome-header">
-    <div class="inv-chrome-header-row">
-        <div class="inv-business-switcher">
-            <div id="inv-business-tabs" class="inv-business-tabs" role="tablist" aria-label="Business tabs"></div>
-            <button id="inv-business-add-btn" type="button" class="inv-business-tab-add" title="New business tab" aria-label="Add business">
-                <span class="material-symbols-outlined">add</span>
-            </button>
+    <div class="inv-chrome-header-top">
+        <div class="inv-chrome-active-business" id="inv-active-business">
+            <span id="inv-active-business-icon" class="inv-active-business-icon" aria-hidden="true">
+                <span class="material-symbols-outlined">store</span>
+            </span>
+            <div class="inv-active-business-text">
+                <span class="inv-active-business-label">Active Business</span>
+                <span id="inv-active-business-name" class="inv-active-business-name">Select business</span>
+            </div>
         </div>
         <div class="inv-header-right">
             <div class="inv-quick-access" id="inv-quick-access">
                 <button type="button" id="inv-quick-access-btn" class="inv-quick-access-trigger" aria-expanded="false" aria-haspopup="true" title="Quick create" aria-label="Quick create">
-                    <span class="material-symbols-outlined">add</span>
+                    <span class="material-symbols-outlined">bolt</span>
                 </button>
                 <div id="inv-quick-access-panel" class="inv-quick-access-panel inv-hidden" role="menu" aria-label="Quick create">
                     <div class="inv-quick-access-grid">
@@ -243,6 +250,14 @@
                     Logout
                 </button>
             </div>
+        </div>
+    </div>
+    <div class="inv-chrome-header-bottom">
+        <div class="inv-business-switcher">
+            <div id="inv-business-tabs" class="inv-business-tabs" role="tablist" aria-label="Business tabs"></div>
+            <button id="inv-business-add-btn" type="button" class="inv-business-tab-add" title="New business tab" aria-label="Add business">
+                <span class="material-symbols-outlined">add</span>
+            </button>
         </div>
     </div>
 </header>

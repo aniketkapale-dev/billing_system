@@ -50,12 +50,12 @@ class InvoiceSetting(BaseEntity):
         db_table = "invoice_settings"
         verbose_name = "Invoice Setting"
         verbose_name_plural = "Invoice Settings"
-        ordering = ("-year",)
+        ordering = ("-year", "prefix", "suffix")
         constraints = [
             models.UniqueConstraint(
-                fields=["business", "year"],
+                fields=["business", "year", "prefix", "suffix"],
                 condition=models.Q(is_deleted=False),
-                name="uniq_active_business_invoice_setting_year",
+                name="uniq_active_business_invoice_setting_series",
             )
         ]
 
