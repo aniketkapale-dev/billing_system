@@ -95,7 +95,7 @@ var InventoryOwnerProfile = (function () {
         var roleEl = document.getElementById("profile-role");
         var subtitleEl = document.getElementById("owner-profile-panel-subtitle");
 
-        var name = (user && user.full_name) || "Business Owner";
+        var name = (user && user.full_name) || roleLabel(user);
         var role = roleLabel(user);
 
         if (nameEl) nameEl.textContent = name;

@@ -879,23 +879,29 @@ var InventoryPurchases = (function () {
 
         var rows = [
             { label: "Sale Date", value: displayValue(purchase.purchase_date) },
-            { label: "Customer", value: formatCustomerDisplay(purchase) },
-            { label: "Payment Type", value: displayValue(purchase.payment_type_name) },
-            { label: "Billing Address", value: displayValue(purchase.billing_address), full: true },
-            { label: "Shipping Address", value: displayValue(purchase.shipping_address), full: true },
-            { label: "Sale Amount", value: InventoryApi.formatMoney(purchase.total_amount) },
-            { label: "Total Cost", value: InventoryApi.formatMoney(purchase.total_cost) }
+            { label: "Customer", value: formatCustomerDisplay(purchase) }
         ];
 
         if (purchase.reference_no) {
-            rows.splice(2, 0, { label: "Invoice No.", value: displayValue(purchase.reference_no) });
+            rows.push({ label: "Invoice No.", value: displayValue(purchase.reference_no) });
+            rows.push({ label: "Payment Type", value: displayValue(purchase.payment_type_name) });
+        } else {
+            rows.push({ label: "Payment Type", value: displayValue(purchase.payment_type_name) });
         }
+
+        rows.push(
+            { label: "Billing Address", value: displayValue(purchase.billing_address) },
+            { label: "Shipping Address", value: displayValue(purchase.shipping_address) },
+            { label: "Sale Amount", value: InventoryApi.formatMoney(purchase.total_amount), colStart: 1 },
+            { label: "Total Cost", value: InventoryApi.formatMoney(purchase.total_cost) }
+        );
         if (purchase.notes) {
             rows.push({ label: "Notes", value: displayValue(purchase.notes), full: true });
         }
 
         container.innerHTML = rows.map(function (row) {
             var cls = row.full ? " inv-product-view-item--full" : "";
+            if (row.colStart === 1) cls += " inv-product-view-item--col-1";
             return (
                 '<div class="inv-product-view-item' + cls + '">' +
                 '<span class="inv-product-view-label">' + row.label + "</span>" +

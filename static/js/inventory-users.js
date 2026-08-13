@@ -64,7 +64,7 @@ var InventoryUsers = (function () {
         if (!tbody) return;
 
         if (!items || !items.length) {
-            tbody.innerHTML = '<tr><td colspan="8" class="inv-users-empty">No users found.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" class="inv-mgmt-empty">No users found.</td></tr>';
             return;
         }
 
@@ -75,7 +75,9 @@ var InventoryUsers = (function () {
             var statusText = isActive ? "Active" : "Inactive";
             var actionIcon = isActive ? "block" : "check_circle";
             var actionTooltip = isActive ? "Deactivate user" : "Activate user";
-            var actionClass = isActive ? "inv-user-action-btn--deactivate" : "inv-user-action-btn--activate";
+            var toggleClass = isActive
+                ? "inv-user-toggle-btn--deactivate"
+                : "inv-user-toggle-btn--activate";
 
             return (
                 "<tr data-user-id=\"" + user.id + "\">" +
@@ -86,20 +88,19 @@ var InventoryUsers = (function () {
                 "<td>" + escapeHtml(formatDate(user.approved_at)) + "</td>" +
                 "<td>" + escapeHtml(roles) + "</td>" +
                 "<td><span class=\"inv-status-badge " + statusClass + "\">" + statusText + "</span></td>" +
-                "<td class=\"inv-users-actions\">" +
-                "<button type=\"button\" class=\"inv-user-action-btn inv-user-action-btn--icon inv-user-action-btn--view inv-tooltip\" " +
-                "data-id=\"" + user.id + "\" data-name=\"" + escapeHtml(user.full_name) + "\" " +
-                "data-tooltip=\"View user\" aria-label=\"View user\">" +
-                "<span class=\"material-symbols-outlined\">visibility</span></button>" +
-                "<button type=\"button\" class=\"inv-user-action-btn inv-user-action-btn--icon inv-tooltip " + actionClass + "\" " +
-                "data-id=\"" + user.id + "\" data-active=\"" + isActive + "\" " +
-                "data-tooltip=\"" + actionTooltip + "\" aria-label=\"" + actionTooltip + "\">" +
-                "<span class=\"material-symbols-outlined\">" + actionIcon + "</span></button>" +
-                "<button type=\"button\" class=\"inv-user-action-btn inv-user-action-btn--icon inv-user-action-btn--delete inv-tooltip\" " +
-                "data-id=\"" + user.id + "\" data-name=\"" + escapeHtml(user.full_name) + "\" " +
-                "data-tooltip=\"Delete user\" aria-label=\"Delete user\">" +
-                "<span class=\"material-symbols-outlined\">delete</span></button>" +
-                "</td>" +
+                '<td class="inv-mgmt-cell--action"><div class="inv-row-actions">' +
+                '<button type="button" class="inv-row-action-btn inv-row-action-btn--view inv-user-view" data-id="' + user.id + '" ' +
+                'title="View" aria-label="View user">' +
+                '<span class="material-symbols-outlined">visibility</span></button>' +
+                '<button type="button" class="inv-row-action-btn inv-user-toggle-btn ' + toggleClass + '" ' +
+                'data-id="' + user.id + '" data-active="' + isActive + '" ' +
+                'title="' + actionTooltip + '" aria-label="' + actionTooltip + '">' +
+                '<span class="material-symbols-outlined">' + actionIcon + "</span></button>" +
+                '<button type="button" class="inv-row-action-btn inv-row-action-btn--delete inv-user-delete" ' +
+                'data-id="' + user.id + '" data-name="' + escapeHtml(user.full_name) + '" ' +
+                'title="Delete" aria-label="Delete user">' +
+                '<span class="material-symbols-outlined">delete</span></button>' +
+                "</div></td>" +
                 "</tr>"
             );
         }).join("");
@@ -167,12 +168,12 @@ var InventoryUsers = (function () {
 
     function renderDetailField(label, value, options) {
         options = options || {};
-        var cls = options.full ? " inv-user-detail-item--full" : "";
+        var cls = options.full ? " inv-product-view-item--full" : "";
         var content = options.html ? value : displayValue(value);
         return (
-            '<div class="inv-user-detail-item' + cls + '">' +
-            '<span class="inv-user-detail-label">' + label + "</span>" +
-            '<div class="inv-user-detail-value">' + content + "</div>" +
+            '<div class="inv-product-view-item' + cls + '">' +
+            '<span class="inv-product-view-label">' + label + "</span>" +
+            '<div class="inv-product-view-value">' + content + "</div>" +
             "</div>"
         );
     }
@@ -216,15 +217,15 @@ var InventoryUsers = (function () {
         var businesses = user.businesses || [];
         if (!businesses.length) {
             businessesWrap.innerHTML =
-                '<h4 class="inv-user-detail-section-title">Businesses</h4>' +
-                '<p class="inv-user-detail-empty">No businesses created yet.</p>';
+                '<h4 class="inv-stockin-view-items-title">Businesses</h4>' +
+                '<p class="inv-mgmt-empty" style="padding:16px 0;">No businesses created yet.</p>';
             return;
         }
 
         businessesWrap.innerHTML =
-            '<h4 class="inv-user-detail-section-title">Businesses (' + businesses.length + ")</h4>" +
-            '<div class="inv-users-table-wrap">' +
-            '<table class="inv-users-table inv-users-table--nested">' +
+            '<h4 class="inv-stockin-view-items-title">Businesses (' + businesses.length + ")</h4>" +
+            '<div class="inv-mgmt-table-wrap">' +
+            '<table class="inv-mgmt-table">' +
             "<thead><tr>" +
             "<th>Business Name</th><th>GST</th><th>Phone</th><th>Email</th><th>Address</th><th>Status</th><th>Created</th>" +
             "</tr></thead><tbody>" +
@@ -308,13 +309,13 @@ var InventoryUsers = (function () {
 
         if (tbody) {
             tbody.addEventListener("click", function (e) {
-                var viewBtn = e.target.closest(".inv-user-action-btn--view");
+                var viewBtn = e.target.closest(".inv-user-view");
                 if (viewBtn && !viewBtn.disabled) {
                     openUserDetail(viewBtn.getAttribute("data-id"));
                     return;
                 }
 
-                var deleteBtn = e.target.closest(".inv-user-action-btn--delete");
+                var deleteBtn = e.target.closest(".inv-user-delete");
                 if (deleteBtn && !deleteBtn.disabled) {
                     var deleteId = deleteBtn.getAttribute("data-id");
                     var userName = deleteBtn.getAttribute("data-name") || "this user";
@@ -331,7 +332,7 @@ var InventoryUsers = (function () {
                 }
 
                 var toggleBtn = e.target.closest(
-                    ".inv-user-action-btn--activate, .inv-user-action-btn--deactivate"
+                    ".inv-user-toggle-btn--activate, .inv-user-toggle-btn--deactivate"
                 );
                 if (!toggleBtn || toggleBtn.disabled) return;
 

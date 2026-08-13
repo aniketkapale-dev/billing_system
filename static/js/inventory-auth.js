@@ -269,15 +269,26 @@ var InventoryAuth = (function () {
             return;
         }
 
+        var nameEl = document.getElementById("profile-name");
         var roleEl = document.getElementById("profile-role");
-        if (!roleEl) return;
+        var avatarEl = document.getElementById("profile-avatar");
+        if (!nameEl && !roleEl && !avatarEl) return;
 
-        if (user && user.roles && user.roles.length) {
-            roleEl.textContent = user.roles[0];
-            return;
+        if (nameEl) {
+            nameEl.textContent = (user && user.full_name) ? user.full_name : "Super Admin";
         }
 
-        roleEl.textContent = isSuperAdmin(user) ? "Super Admin" : "Business Owner";
+        if (roleEl) {
+            if (user && user.roles && user.roles.length) {
+                roleEl.textContent = user.roles[0];
+            } else {
+                roleEl.textContent = isSuperAdmin(user) ? "Super Admin" : "Business Owner";
+            }
+        }
+
+        if (avatarEl && user && user.profile_image) {
+            avatarEl.innerHTML = '<img src="' + user.profile_image + '" alt="" class="inv-profile-avatar-img">';
+        }
     }
 
     function wireLogout() {

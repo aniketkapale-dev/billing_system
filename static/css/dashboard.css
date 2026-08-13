@@ -406,8 +406,12 @@ body.inv-dashboard-body {
     z-index: 40;
 }
 
-.inv-dashboard-header--superadmin {
-    justify-content: flex-end;
+body.inv-dashboard-body--superadmin {
+    --inv-header-height: var(--inv-header-top-height);
+}
+
+.inv-chrome-header--superadmin {
+    height: var(--inv-header-top-height);
 }
 
 .inv-business-switcher {

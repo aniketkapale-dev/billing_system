@@ -1019,6 +1019,10 @@ colgroup .inv-col-check-col {
     grid-column: 1 / -1;
 }
 
+.inv-product-view-item--col-1 {
+    grid-column-start: 1;
+}
+
 .inv-product-view-label,
 .inv-user-detail-label {
     display: block;
