@@ -57,6 +57,7 @@ class PurchaseService(BaseService):
 
     def _apply_invoice_setting(self, data, business_id):
         from apps.settings.models import InvoiceSetting
+        from apps.settings.services import InvoiceSettingService
 
         setting_id = data.pop("invoice_setting_id", None)
         if not setting_id:
@@ -71,6 +72,7 @@ class PurchaseService(BaseService):
         except InvoiceSetting.DoesNotExist:
             raise NotFoundException("Invoice setting not found.")
 
+        setting = InvoiceSettingService().resolve_for_sale(setting)
         data["reference_no"] = setting.format_invoice_number()
         setting.current_counter += 1
         setting.save(update_fields=["current_counter", "updated_at"])

@@ -139,3 +139,62 @@ class InvoiceSettingService(BaseService):
                     label = "Start counter" if field == "counter" else "Current counter"
                     raise ValidationException(f"{label} cannot be negative.")
                 data[field] = numeric
+
+    @staticmethod
+    def _shift_end_counter_date(end_counter):
+        if not end_counter:
+            return None
+        try:
+            return end_counter.replace(year=end_counter.year + 1)
+        except ValueError:
+            return end_counter.replace(year=end_counter.year + 1, day=28)
+
+    def resolve_for_sale(self, setting):
+        from django.db import IntegrityError
+        from django.utils import timezone
+
+        from apps.settings.models import InvoiceSetting
+
+        today = timezone.localdate()
+        if setting.is_usable_on(today):
+            return setting
+
+        next_year = setting.year + 1
+        if next_year > 2100:
+            raise ValidationException("Invoice series cannot roll over beyond year 2100.")
+
+        prefix = (setting.prefix or "").strip()
+        suffix = (setting.suffix or "").strip()
+        next_end_counter = self._shift_end_counter_date(setting.end_counter)
+
+        lookup = {
+            "business_id": setting.business_id,
+            "year": next_year,
+            "prefix": prefix,
+            "suffix": suffix,
+            "is_deleted": False,
+        }
+
+        successor = InvoiceSetting.objects.select_for_update().filter(**lookup).first()
+        if successor:
+            successor.current_counter = successor.counter
+            successor.save(update_fields=["current_counter", "updated_at"])
+            return successor
+
+        try:
+            return InvoiceSetting.objects.create(
+                business_id=setting.business_id,
+                year=next_year,
+                prefix=prefix,
+                suffix=suffix,
+                counter=setting.counter,
+                current_counter=setting.counter,
+                end_counter=next_end_counter,
+            )
+        except IntegrityError:
+            successor = InvoiceSetting.objects.select_for_update().filter(**lookup).first()
+            if not successor:
+                raise
+            successor.current_counter = successor.counter
+            successor.save(update_fields=["current_counter", "updated_at"])
+            return successor

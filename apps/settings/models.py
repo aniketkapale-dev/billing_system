@@ -71,5 +71,13 @@ class InvoiceSetting(BaseEntity):
             parts.append(suffix)
         return "/".join(parts)
 
+    def is_usable_on(self, day=None):
+        from django.utils import timezone
+
+        day = day or timezone.localdate()
+        if not self.end_counter:
+            return True
+        return self.end_counter >= day
+
     def __str__(self):
         return f"{self.format_invoice_number()} ({self.year})"

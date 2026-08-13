@@ -170,9 +170,17 @@ var InventoryPurchases = (function () {
         }
     }
 
+    function isInvoiceSettingSelectable(item) {
+        if (!item.end_counter) return true;
+        var today = new Date().toISOString().slice(0, 10);
+        return item.end_counter >= today;
+    }
+
     function loadInvoiceSettings(selectedId) {
         return InventoryApi.request(INVOICE_SETTINGS_API, "?page_size=100&ordering=-year").then(function (body) {
-            invoiceSettings = body && body.isSuccess ? (body.data.items || []) : [];
+            var items = body && body.isSuccess ? (body.data.items || []) : [];
+            var activeItems = items.filter(isInvoiceSettingSelectable);
+            invoiceSettings = activeItems.length ? activeItems : items;
             renderInvoiceSettingSelect(selectedId);
             return invoiceSettings;
         });
