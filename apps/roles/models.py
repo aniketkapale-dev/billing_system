@@ -1,5 +1,6 @@
 from django.db import models
 
+from apps.business_users.constants import ALL_BUSINESS_TAB_CODES
 from core.base_entity import BaseEntity
 
 
@@ -14,6 +15,7 @@ class Role(BaseEntity):
     )
     role_name = models.CharField(max_length=100)
     description = models.TextField(blank=True, default="")
+    allowed_tabs = models.JSONField(default=list, blank=True)
 
     class Meta:
         db_table = "roles"
@@ -34,3 +36,8 @@ class Role(BaseEntity):
 
     def __str__(self):
         return self.role_name
+
+    def normalized_allowed_tabs(self):
+        tabs = self.allowed_tabs or []
+        valid = set(ALL_BUSINESS_TAB_CODES)
+        return [code for code in tabs if code in valid]

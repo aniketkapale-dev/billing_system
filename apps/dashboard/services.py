@@ -4,14 +4,21 @@ from apps.inventory.models import InventoryStock
 from apps.invoicing.models import PurchaseInvoice
 from apps.products.models import Product
 from apps.purchases.models import Purchase
-from core.business_scope import get_owned_business
+from core.business_access import get_active_business
 
 
 class DashboardService:
     RECENT_LIMIT = 5
 
     def get_stats(self, request):
-        business = get_owned_business(request)
+        from core.business_access import resolve_business_access, user_has_tab
+
+        business = get_active_business(request)
+        _access = resolve_business_access(request)[1]
+        if not user_has_tab(_access, "dashboard"):
+            from rest_framework.exceptions import PermissionDenied
+
+            raise PermissionDenied("You do not have access to the dashboard.")
         business_id = business.id
 
         totals = {

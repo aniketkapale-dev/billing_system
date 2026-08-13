@@ -18,7 +18,8 @@ class PurchaseViewSet(BusinessScopedViewSetMixin, BaseViewSet):
     write_serializer_class = PurchaseWriteSerializer
     search_fields = ("customer_name", "reference_no", "notes")
     filter_fields = ("customer_name", "reference_no")
-    required_roles = ["Business Owner"]
+    required_roles = ["Business Owner", "Business Staff"]
+    required_tab = "purchases"
     ordering_default = ("-purchase_date", "-created_at")
 
     ordering_default = ("-purchase_date", "-created_at")

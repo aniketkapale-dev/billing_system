@@ -20,8 +20,12 @@ var InventoryBusinessProfile = (function () {
     function togglePanels(hasBusiness) {
         var empty = document.getElementById("business-profile-empty");
         var panel = document.getElementById("business-profile-panel");
+        var usersPanel = document.getElementById("business-users-panel");
         if (empty) empty.classList.toggle("inv-hidden", hasBusiness);
         if (panel) panel.classList.toggle("inv-hidden", !hasBusiness);
+        if (usersPanel && (!window.InventoryNavAccess || !InventoryNavAccess.isOwner())) {
+            usersPanel.classList.add("inv-hidden");
+        }
     }
 
     function setLogoPreview(url) {

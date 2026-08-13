@@ -20,7 +20,8 @@ class CustomerViewSet(BusinessScopedViewSetMixin, BaseViewSet):
         "email": "email",
         "address": "address",
     }
-    required_roles = ["Business Owner"]
+    required_roles = ["Business Owner", "Business Staff"]
+    required_tab = "customers"
 
     def get_permissions(self):
         return [IsAuthenticatedUser(), HasRole()]

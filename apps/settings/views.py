@@ -20,7 +20,8 @@ class TaxViewSet(BusinessScopedViewSetMixin, BaseViewSet):
     search_fields = ("key",)
     ordering_default = ("key",)
     ordering_fields = {"key": "key", "value": "value"}
-    required_roles = ["Business Owner"]
+    required_roles = ["Business Owner", "Business Staff"]
+    required_tab = "settings-tax"
 
     def get_permissions(self):
         return [IsAuthenticatedUser(), HasRole()]
@@ -52,7 +53,8 @@ class InvoiceSettingViewSet(BusinessScopedViewSetMixin, BaseViewSet):
         "current_counter": "current_counter",
         "end_counter": "end_counter",
     }
-    required_roles = ["Business Owner"]
+    required_roles = ["Business Owner", "Business Staff"]
+    required_tab = "settings-invoice"
 
     def get_permissions(self):
         return [IsAuthenticatedUser(), HasRole()]

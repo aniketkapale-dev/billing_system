@@ -1464,6 +1464,67 @@ colgroup .inv-col-check-col {
     }
 }
 
+.inv-business-page #business-main-content,
+.inv-business-page #business-user-form-panel {
+    width: 100%;
+}
+
+.inv-business-section-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px 16px;
+    margin-bottom: 12px;
+}
+
+.inv-business-section-head--users {
+    margin-top: 28px;
+}
+
+.inv-business-section-title {
+    margin: 0 0 4px;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--inv-primary);
+}
+
+.inv-business-profile-card,
+.inv-business-users-card {
+    overflow: visible;
+}
+
+.inv-business-users-card {
+    padding: 0;
+}
+
+.inv-business-users-table-wrap {
+    max-height: none;
+    overflow: visible;
+}
+
+.inv-business-users-table-wrap .inv-mgmt-table-wrap {
+    border-radius: 14px;
+}
+
+.inv-business-user-tabs-field {
+    margin-top: 20px;
+}
+
+.inv-mgmt-form-grid--business-profile {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 768px) {
+    .inv-mgmt-form-grid--business-profile {
+        grid-template-columns: 1fr;
+    }
+
+    .inv-business-section-head--users {
+        margin-top: 20px;
+    }
+}
+
 /* Business profile page */
 .inv-business-profile {
     display: grid;
@@ -1518,8 +1579,8 @@ colgroup .inv-col-check-col {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 16px;
-    margin-top: 20px;
-    padding-top: 20px;
+    margin-top: 24px;
+    padding: 20px 0 0;
     border-top: 1px solid #EEF0F4;
 }
 
@@ -1542,9 +1603,17 @@ colgroup .inv-col-check-col {
 .inv-business-profile-actions {
     display: flex;
     justify-content: flex-end;
-    margin-top: 20px;
+    margin-top: 24px;
     padding-top: 20px;
     border-top: 1px solid #EEF0F4;
+}
+
+.inv-business-empty {
+    padding: 32px 24px;
+    text-align: center;
+    background: var(--inv-table-card-bg);
+    border-radius: 14px;
+    box-shadow: var(--inv-shadow);
 }
 
 @media (max-width: 768px) {
@@ -2190,5 +2259,30 @@ colgroup .inv-col-check-col {
     .inv-settings-nav-item {
         flex: 1 1 auto;
         justify-content: center;
+    }
+}
+
+.inv-tab-check-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px 16px;
+}
+
+.inv-tab-check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--inv-text);
+}
+
+.inv-text-muted {
+    color: var(--inv-muted, #64748b);
+    font-size: 14px;
+}
+
+@media (max-width: 768px) {
+    .inv-tab-check-grid {
+        grid-template-columns: 1fr;
     }
 }

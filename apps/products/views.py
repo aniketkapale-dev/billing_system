@@ -22,7 +22,8 @@ class ProductViewSet(BusinessScopedViewSetMixin, BaseViewSet):
         "brand": "brand__name",
         "unit": "unit__short_name",
     }
-    required_roles = ["Business Owner"]
+    required_roles = ["Business Owner", "Business Staff"]
+    required_tab = "products"
 
     def get_permissions(self):
         return [IsAuthenticatedUser(), HasRole()]

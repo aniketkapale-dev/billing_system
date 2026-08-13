@@ -10,7 +10,8 @@ class InventoryStockViewSet(BusinessScopedViewSetMixin, BaseViewSet):
     service_class = InventoryStockService
     serializer_class = InventoryStockSerializer
     search_fields = ("product__name", "product__sku")
-    required_roles = ["Business Owner"]
+    required_roles = ["Business Owner", "Business Staff"]
+    required_tab = "inventory"
     ordering_default = ("product__name",)
     ordering_fields = {
         "product__name": "product__name",

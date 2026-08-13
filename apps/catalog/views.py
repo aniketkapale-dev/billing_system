@@ -31,7 +31,8 @@ class UnitViewSet(BusinessScopedViewSetMixin, BaseViewSet):
     search_fields = ("name", "short_name")
     ordering_default = ("name",)
     ordering_fields = {"name": "name", "short_name": "short_name"}
-    required_roles = ["Business Owner"]
+    required_roles = ["Business Owner", "Business Staff"]
+    required_tab = "products-units"
 
     def get_permissions(self):
         return [IsAuthenticatedUser(), HasRole()]
@@ -56,7 +57,8 @@ class CategoryViewSet(BusinessScopedViewSetMixin, BaseViewSet):
     search_fields = ("name", "description")
     ordering_default = ("name",)
     ordering_fields = {"name": "name", "description": "description"}
-    required_roles = ["Business Owner"]
+    required_roles = ["Business Owner", "Business Staff"]
+    required_tab = "products-categories"
 
     def get_permissions(self):
         return [IsAuthenticatedUser(), HasRole()]
@@ -81,7 +83,8 @@ class BrandViewSet(BusinessScopedViewSetMixin, BaseViewSet):
     search_fields = ("name",)
     ordering_default = ("name",)
     ordering_fields = {"name": "name"}
-    required_roles = ["Business Owner"]
+    required_roles = ["Business Owner", "Business Staff"]
+    required_tab = "products-brands"
 
     def get_permissions(self):
         return [IsAuthenticatedUser(), HasRole()]
@@ -104,7 +107,8 @@ class ManufacturerViewSet(BusinessScopedViewSetMixin, BaseViewSet):
     serializer_class = ManufacturerSerializer
     write_serializer_class = ManufacturerWriteSerializer
     search_fields = ("name",)
-    required_roles = ["Business Owner"]
+    required_roles = ["Business Owner", "Business Staff"]
+    required_tab = "products"
 
     def get_permissions(self):
         return [IsAuthenticatedUser(), HasRole()]
@@ -127,7 +131,8 @@ class PaymentTypeViewSet(BusinessScopedViewSetMixin, BaseViewSet):
     serializer_class = PaymentTypeSerializer
     write_serializer_class = PaymentTypeWriteSerializer
     search_fields = ("name",)
-    required_roles = ["Business Owner"]
+    required_roles = ["Business Owner", "Business Staff"]
+    required_tab = "purchases"
 
     def get_permissions(self):
         return [IsAuthenticatedUser(), HasRole()]

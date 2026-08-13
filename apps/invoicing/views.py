@@ -23,7 +23,8 @@ class PurchaseInvoiceViewSet(BusinessScopedViewSetMixin, BaseViewSet):
     write_serializer_class = PurchaseInvoiceWriteSerializer
     search_fields = ("invoice_number", "remarks")
     filter_fields = ("invoice_number",)
-    required_roles = ["Business Owner"]
+    required_roles = ["Business Owner", "Business Staff"]
+    required_tab = "stock-in"
     ordering_default = ("-invoice_date", "-created_at")
     ordering_fields = {
         "invoice_date": "invoice_date",
@@ -107,7 +108,8 @@ class InventoryBatchViewSet(BusinessScopedViewSetMixin, BaseViewSet):
     serializer_class = InventoryBatchSerializer
     search_fields = ("product__name", "product__sku", "batch_number")
     filter_fields = ("product", "batch_number")
-    required_roles = ["Business Owner"]
+    required_roles = ["Business Owner", "Business Staff"]
+    required_tab = "inventory"
     ordering_default = ("created_at",)
     ordering_fields = {
         "created_at": "created_at",

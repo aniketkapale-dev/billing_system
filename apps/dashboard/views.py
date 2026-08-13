@@ -6,7 +6,7 @@ from core.permissions import HasRole, IsAuthenticatedUser
 
 
 class DashboardStatsView(APIView):
-    required_roles = ["Business Owner"]
+    required_roles = ["Business Owner", "Business Staff"]
     permission_classes = [IsAuthenticatedUser, HasRole]
 
     def get(self, request):

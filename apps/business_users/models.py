@@ -1,5 +1,6 @@
 from django.db import models
 
+from apps.business_users.constants import ALL_BUSINESS_TAB_CODES
 from core.base_entity import BaseEntity
 
 
@@ -18,10 +19,13 @@ class BusinessUser(BaseEntity):
     )
     role = models.ForeignKey(
         "roles.Role",
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
         related_name="business_user_roles",
         db_column="role_id",
+        null=True,
+        blank=True,
     )
+    allowed_tabs = models.JSONField(default=list, blank=True)
 
     class Meta:
         db_table = "business_users"
@@ -37,3 +41,10 @@ class BusinessUser(BaseEntity):
 
     def __str__(self):
         return f"{self.user_id} @ {self.business_id}"
+
+    def normalized_allowed_tabs(self):
+        if self.role_id and self.role:
+            return self.role.normalized_allowed_tabs()
+        tabs = self.allowed_tabs or []
+        valid = set(ALL_BUSINESS_TAB_CODES)
+        return [code for code in tabs if code in valid]

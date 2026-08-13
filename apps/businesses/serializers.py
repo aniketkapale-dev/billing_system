@@ -7,6 +7,7 @@ from core.base_serializer import BaseModelSerializer
 class BusinessSerializer(BaseModelSerializer):
     owner_name = serializers.CharField(source="owner.full_name", read_only=True)
     logo_url = serializers.SerializerMethodField()
+    is_owner = serializers.SerializerMethodField()
 
     class Meta:
         model = Business
@@ -14,6 +15,7 @@ class BusinessSerializer(BaseModelSerializer):
             "id",
             "owner",
             "owner_name",
+            "is_owner",
             "business_name",
             "gst_number",
             "phone",
@@ -36,6 +38,13 @@ class BusinessSerializer(BaseModelSerializer):
         if request:
             return request.build_absolute_uri(url)
         return url
+
+    def get_is_owner(self, obj):
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if not user:
+            return False
+        return obj.owner_id == user.id
 
 
 class BusinessWriteSerializer(serializers.ModelSerializer):
