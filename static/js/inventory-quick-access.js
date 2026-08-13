@@ -19,6 +19,9 @@ var InventoryQuickAccess = (function () {
 
     function openPanel() {
         if (!panel || !trigger) return;
+        if (typeof InventoryOwnerProfile !== "undefined" && InventoryOwnerProfile.close) {
+            InventoryOwnerProfile.close();
+        }
         open = true;
         panel.classList.remove("inv-hidden");
         trigger.setAttribute("aria-expanded", "true");

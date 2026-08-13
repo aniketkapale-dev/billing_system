@@ -264,6 +264,11 @@ var InventoryAuth = (function () {
     }
 
     function paintProfile(user) {
+        if (typeof InventoryOwnerProfile !== "undefined" && InventoryOwnerProfile.setUser) {
+            InventoryOwnerProfile.setUser(user);
+            return;
+        }
+
         var roleEl = document.getElementById("profile-role");
         if (!roleEl) return;
 
@@ -278,6 +283,8 @@ var InventoryAuth = (function () {
     function wireLogout() {
         if (logoutWired) return;
         logoutWired = true;
+
+        if (typeof InventoryOwnerProfile !== "undefined") return;
 
         var logoutBtn = document.getElementById("inventory-logout-btn");
         if (!logoutBtn) return;

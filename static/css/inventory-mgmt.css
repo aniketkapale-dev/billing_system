@@ -134,6 +134,8 @@
     min-height: 0;
     overflow: auto;
     -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
 }
 
 .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-page-panel:not(.inv-hidden) > .inv-mgmt-card:not(.inv-mgmt-panel-card):has(.inv-mgmt-table-wrap) .inv-mgmt-table thead th {
@@ -1178,6 +1180,10 @@ colgroup .inv-col-check-col {
 }
 
 .inv-mgmt-form-grid--sale-top {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.inv-mgmt-form-grid--invoice-setting {
     grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
@@ -1419,6 +1425,7 @@ colgroup .inv-col-check-col {
     .inv-mgmt-form-grid,
     .inv-mgmt-form-grid--product,
     .inv-mgmt-form-grid--sale-top,
+    .inv-mgmt-form-grid--invoice-setting,
     .inv-mgmt-item-row.inv-mgmt-item-row--sale {
         grid-template-columns: 1fr;
         min-width: 0;

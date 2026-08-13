@@ -4,6 +4,7 @@ var InventorySettingsTax = (function () {
     var API = "/api/settings/taxes";
     var LIST_PANEL = "settings-tax-list-panel";
     var FORM_PANEL = "settings-tax-form-panel";
+    var PAGINATION_ID = "settings-tax-pagination";
     var currentPage = 1;
     var editingId = null;
 
@@ -14,7 +15,7 @@ var InventorySettingsTax = (function () {
     function buildQuery(page) {
         var params = new URLSearchParams();
         params.set("page", String(page || 1));
-        params.set("page_size", "10");
+        params.set("page_size", String(InventoryPagination.getPageSize(PAGINATION_ID)));
         params.set("ordering", "key");
         return "?" + params.toString();
     }
@@ -57,10 +58,14 @@ var InventorySettingsTax = (function () {
             .then(function (body) {
                 if (body && body.isSuccess && body.data) {
                     renderRows(body.data.items || []);
-                    InventoryPagination.render("settings-tax-pagination", body.data.pagination, loadTaxes);
+                    InventoryPagination.render(PAGINATION_ID, body.data.pagination, loadTaxes, {
+                        onPageSizeChange: function () {
+                            loadTaxes(1);
+                        }
+                    });
                 } else {
                     renderRows([]);
-                    InventoryPagination.render("settings-tax-pagination", null, function () {});
+                    InventoryPagination.render(PAGINATION_ID, null, function () {});
                     InventoryToast.error(body.message || "Failed to load taxes.");
                 }
             })
@@ -192,13 +197,14 @@ var InventorySettingsTax = (function () {
 
     function init() {
         if (init._wired) return;
+
+        var tableBody = document.getElementById("settings-tax-table-body");
+        if (!tableBody) return;
+
         init._wired = true;
 
         var addBtn = document.getElementById("settings-tax-add-btn");
         var saveBtn = document.getElementById("settings-tax-save-btn");
-        var tableBody = document.getElementById("settings-tax-table-body");
-
-        if (!tableBody) return;
 
         if (window.InventoryPagePanel) {
             InventoryPagePanel.init();

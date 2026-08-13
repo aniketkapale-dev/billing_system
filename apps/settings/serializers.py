@@ -60,11 +60,20 @@ class InvoiceSettingSerializer(BaseModelSerializer):
 
 
 class InvoiceSettingWriteSerializer(serializers.ModelSerializer):
+    counter = serializers.IntegerField(required=False, min_value=0, default=1)
+
     class Meta:
         model = InvoiceSetting
-        fields = ("year", "prefix", "suffix", "end_counter", "is_active")
+        fields = ("year", "prefix", "suffix", "counter", "end_counter", "is_active")
 
     def validate_year(self, value):
         if value < 2000 or value > 2100:
             raise serializers.ValidationError("Year must be between 2000 and 2100.")
+        return value
+
+    def validate_counter(self, value):
+        if value is None:
+            return 0
+        if value < 0:
+            raise serializers.ValidationError("Start counter cannot be negative.")
         return value

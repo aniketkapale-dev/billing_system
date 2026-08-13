@@ -67,6 +67,7 @@ class PurchaseItemWriteSerializer(serializers.Serializer):
 
 class PurchaseWriteSerializer(serializers.Serializer):
     customer_id = serializers.IntegerField()
+    invoice_setting_id = serializers.IntegerField()
     supplier_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
     reference_no = serializers.CharField(max_length=50, required=False, allow_blank=True)
     purchase_date = serializers.DateField(required=False)

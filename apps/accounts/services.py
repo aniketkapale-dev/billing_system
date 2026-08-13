@@ -136,6 +136,42 @@ class AuthService:
         user.save(update_fields=["password", "updated_at"])
         return True
 
+    @transaction.atomic
+    def update_profile(self, user, full_name=None, email=None, mobile_number=None):
+        updates = []
+
+        if full_name is not None:
+            cleaned = full_name.strip()
+            if not cleaned:
+                raise ValidationException("Full name is required.")
+            user.full_name = cleaned
+            updates.append("full_name")
+
+        if email is not None:
+            cleaned = (email or "").strip()
+            if cleaned:
+                cleaned = validate_email_format(cleaned).lower()
+                if User.objects.filter(email__iexact=cleaned).exclude(pk=user.pk).exists():
+                    raise ValidationException("An account with this email already exists.")
+                user.email = cleaned
+            else:
+                user.email = None
+            updates.append("email")
+
+        if mobile_number is not None:
+            mobile_number = validate_mobile_number(mobile_number)
+            if User.objects.filter(mobile_number=mobile_number).exclude(pk=user.pk).exists():
+                raise ValidationException("An account with this mobile number already exists.")
+            user.mobile_number = mobile_number
+            updates.append("mobile_number")
+
+        if not updates:
+            raise ValidationException("No profile fields to update.")
+
+        updates.append("updated_at")
+        user.save(update_fields=updates)
+        return user
+
     # -- helpers -----------------------------------------------------------
     @staticmethod
     def _validate_password(password):

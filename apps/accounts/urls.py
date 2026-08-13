@@ -10,5 +10,5 @@ urlpatterns = [
     path("forgot-password/", AuthViewSet.as_view({"post": "forgot_password"}), name="forgot-password"),
     path("reset-password/", AuthViewSet.as_view({"post": "reset_password"}), name="reset-password"),
     path("change-password/", AuthViewSet.as_view({"post": "change_password"}), name="change-password"),
-    path("me/", AuthViewSet.as_view({"get": "me"}), name="me"),
+    path("me/", AuthViewSet.as_view({"get": "me", "patch": "update_me"}), name="me"),
 ]

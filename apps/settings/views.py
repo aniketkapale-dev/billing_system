@@ -42,7 +42,7 @@ class InvoiceSettingViewSet(BusinessScopedViewSetMixin, BaseViewSet):
     service_class = InvoiceSettingService
     serializer_class = InvoiceSettingSerializer
     write_serializer_class = InvoiceSettingWriteSerializer
-    search_fields = ("prefix", "suffix", "year")
+    search_fields = ("prefix", "suffix")
     ordering_default = ("-year",)
     ordering_fields = {
         "year": "year",
@@ -56,6 +56,23 @@ class InvoiceSettingViewSet(BusinessScopedViewSetMixin, BaseViewSet):
 
     def get_permissions(self):
         return [IsAuthenticatedUser(), HasRole()]
+
+    def _apply_query(self, queryset):
+        from django.db.models import Q
+
+        search = (self.request.query_params.get("search") or "").strip()
+        if search:
+            q = Q(prefix__icontains=search) | Q(suffix__icontains=search)
+            if search.isdigit():
+                q |= Q(year=int(search))
+            queryset = queryset.filter(q)
+
+        saved_fields = self.search_fields
+        self.search_fields = ()
+        try:
+            return super()._apply_query(queryset)
+        finally:
+            self.search_fields = saved_fields
 
     def create(self, request):
         serializer = self.get_write_serializer(data=request.data, context={"request": request})

@@ -423,10 +423,17 @@ body.inv-modal-open { overflow: hidden; }
     width: min(640px, calc(100vw - 32px));
     max-height: calc(100vh - 32px);
     overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
     background: #FFFFFF;
     border-radius: 14px;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
     border: 1px solid var(--inv-outline-variant);
+}
+
+.inv-modal-dialog::-webkit-scrollbar {
+    display: none;
 }
 
 .inv-modal-header {

@@ -13,6 +13,7 @@ from apps.accounts.serializers import (
     RefreshSerializer,
     RegisterSerializer,
     ResetPasswordSerializer,
+    UpdateProfileSerializer,
 )
 from apps.accounts.services import AuthService
 from core.base_response import ApiResponse
@@ -86,3 +87,11 @@ class AuthViewSet(ViewSet):
     def me(self, request):
         profile = ProfileSerializer(request.user, context={"request": request}).data
         return ApiResponse.success(data=profile, message="Current user")
+
+    @action(detail=False, methods=["patch"], url_path="me")
+    def update_me(self, request):
+        serializer = UpdateProfileSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        user = self.service.update_profile(request.user, **serializer.validated_data)
+        profile = ProfileSerializer(user, context={"request": request}).data
+        return ApiResponse.success(data=profile, message="Profile updated successfully")

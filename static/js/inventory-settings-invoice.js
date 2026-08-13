@@ -4,6 +4,7 @@ var InventorySettingsInvoice = (function () {
     var API = "/api/settings/invoice-settings";
     var LIST_PANEL = "settings-invoice-list-panel";
     var FORM_PANEL = "settings-invoice-form-panel";
+    var PAGINATION_ID = "settings-invoice-pagination";
     var currentPage = 1;
     var editingId = null;
 
@@ -14,7 +15,7 @@ var InventorySettingsInvoice = (function () {
     function buildQuery(page) {
         var params = new URLSearchParams();
         params.set("page", String(page || 1));
-        params.set("page_size", "10");
+        params.set("page_size", String(InventoryPagination.getPageSize(PAGINATION_ID)));
         params.set("ordering", "-year");
         return "?" + params.toString();
     }
@@ -60,10 +61,14 @@ var InventorySettingsInvoice = (function () {
             .then(function (body) {
                 if (body && body.isSuccess && body.data) {
                     renderRows(body.data.items || []);
-                    InventoryPagination.render("settings-invoice-pagination", body.data.pagination, loadSettings);
+                    InventoryPagination.render(PAGINATION_ID, body.data.pagination, loadSettings, {
+                        onPageSizeChange: function () {
+                            loadSettings(1);
+                        }
+                    });
                 } else {
                     renderRows([]);
-                    InventoryPagination.render("settings-invoice-pagination", null, function () {});
+                    InventoryPagination.render(PAGINATION_ID, null, function () {});
                     InventoryToast.error(body.message || "Failed to load invoice settings.");
                 }
             })
@@ -85,6 +90,7 @@ var InventorySettingsInvoice = (function () {
             document.getElementById("settings-invoice-year").value = String(new Date().getFullYear());
             document.getElementById("settings-invoice-prefix").value = "";
             document.getElementById("settings-invoice-suffix").value = "";
+            document.getElementById("settings-invoice-start-counter").value = "1";
             document.getElementById("settings-invoice-end-counter").value = "";
             title.textContent = "Add Invoice Setting";
         } else {
@@ -105,6 +111,7 @@ var InventorySettingsInvoice = (function () {
             year: document.getElementById("settings-invoice-year").value.trim(),
             prefix: document.getElementById("settings-invoice-prefix").value.trim(),
             suffix: document.getElementById("settings-invoice-suffix").value.trim(),
+            counter: document.getElementById("settings-invoice-start-counter").value.trim(),
             end_counter: document.getElementById("settings-invoice-end-counter").value.trim() || null
         };
     }
@@ -114,6 +121,11 @@ var InventorySettingsInvoice = (function () {
         var year = Number(payload.year);
         if (!Number.isInteger(year) || year < 2000 || year > 2100) {
             return "Year must be between 2000 and 2100.";
+        }
+        if (payload.counter === "") return "Start counter is required.";
+        var startCounter = Number(payload.counter);
+        if (!Number.isInteger(startCounter) || startCounter < 0) {
+            return "Start counter must be a whole number of 0 or more.";
         }
         return null;
     }
@@ -127,6 +139,7 @@ var InventorySettingsInvoice = (function () {
         }
 
         payload.year = Number(payload.year);
+        payload.counter = Number(payload.counter);
 
         var btn = document.getElementById("settings-invoice-save-btn");
         InventoryLoader.button(btn, true);
@@ -161,6 +174,7 @@ var InventorySettingsInvoice = (function () {
                     document.getElementById("settings-invoice-year").value = body.data.year || "";
                     document.getElementById("settings-invoice-prefix").value = body.data.prefix || "";
                     document.getElementById("settings-invoice-suffix").value = body.data.suffix || "";
+                    document.getElementById("settings-invoice-start-counter").value = body.data.counter != null ? body.data.counter : "1";
                     document.getElementById("settings-invoice-end-counter").value = body.data.end_counter || "";
                     openForm(true);
                 } else {
@@ -193,7 +207,7 @@ var InventorySettingsInvoice = (function () {
                     }
                 })
                 .catch(function () {
-                    InventoryToast.error("Network error while deleting invoice setting.");
+                    InventoryToast.error("Network error while deleting invoice settings.");
                 })
                 .finally(function () {
                     InventoryLoader.hide();
@@ -203,13 +217,14 @@ var InventorySettingsInvoice = (function () {
 
     function init() {
         if (init._wired) return;
+
+        var tableBody = document.getElementById("settings-invoice-table-body");
+        if (!tableBody) return;
+
         init._wired = true;
 
         var addBtn = document.getElementById("settings-invoice-add-btn");
         var saveBtn = document.getElementById("settings-invoice-save-btn");
-        var tableBody = document.getElementById("settings-invoice-table-body");
-
-        if (!tableBody) return;
 
         if (window.InventoryPagePanel) {
             InventoryPagePanel.init();

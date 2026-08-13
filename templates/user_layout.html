@@ -238,17 +238,69 @@
                     </div>
                 </div>
             </div>
-            <div class="inv-profile">
-                <div class="inv-profile-user">
+            <div class="inv-profile" id="inv-owner-profile">
+                <button type="button" id="inv-owner-profile-trigger" class="inv-profile-trigger" aria-expanded="false" aria-haspopup="true" title="Account settings">
                     <div id="profile-avatar" class="inv-profile-avatar">
                         <span class="material-symbols-outlined">person</span>
                     </div>
-                    <span id="profile-role" class="inv-profile-role">Business Owner</span>
-                </div>
-                <button id="inventory-logout-btn" type="button" class="inv-profile-logout-btn">
-                    <span class="material-symbols-outlined">logout</span>
-                    Logout
+                    <span class="inv-profile-meta">
+                        <span id="profile-name" class="inv-profile-name">Business Owner</span>
+                        <span id="profile-role" class="inv-profile-role">Business Owner</span>
+                    </span>
+                    <span class="material-symbols-outlined inv-profile-chevron">expand_more</span>
                 </button>
+                <div id="inv-owner-profile-panel" class="inv-owner-profile-panel inv-hidden" role="dialog" aria-label="Account settings">
+                    <div class="inv-owner-profile-panel-header">
+                        <div class="inv-owner-profile-panel-heading">
+                            <h3 class="inv-owner-profile-panel-title">My Account</h3>
+                            <p id="owner-profile-panel-subtitle" class="inv-owner-profile-panel-subtitle">Manage your profile</p>
+                        </div>
+                        <button id="inventory-logout-btn" type="button" class="inv-owner-profile-logout-btn">
+                            <span class="material-symbols-outlined">logout</span>
+                            Logout
+                        </button>
+                    </div>
+                    <form id="owner-profile-form" class="inv-owner-profile-section" novalidate>
+                        <h4 class="inv-owner-profile-section-title">Profile Details</h4>
+                        <div class="inv-owner-profile-fields">
+                            <div class="inv-mgmt-field">
+                                <label for="owner-profile-full-name">Full Name</label>
+                                <input id="owner-profile-full-name" class="inv-mgmt-input" type="text" autocomplete="name" required/>
+                            </div>
+                            <div class="inv-mgmt-field">
+                                <label for="owner-profile-email">Email</label>
+                                <input id="owner-profile-email" class="inv-mgmt-input" type="email" autocomplete="email" placeholder="Optional"/>
+                            </div>
+                            <div class="inv-mgmt-field">
+                                <label for="owner-profile-mobile">Mobile Number</label>
+                                <input id="owner-profile-mobile" class="inv-mgmt-input" type="text" inputmode="numeric" maxlength="10" autocomplete="tel" required/>
+                            </div>
+                        </div>
+                        <div class="inv-owner-profile-section-actions">
+                            <button type="submit" id="owner-profile-save-btn" class="inv-mgmt-btn inv-mgmt-btn--primary">Save Details</button>
+                        </div>
+                    </form>
+                    <form id="owner-password-form" class="inv-owner-profile-section" novalidate>
+                        <h4 class="inv-owner-profile-section-title">Change Password</h4>
+                        <div class="inv-owner-profile-fields">
+                            <div class="inv-mgmt-field">
+                                <label for="owner-profile-current-password">Current Password</label>
+                                <input id="owner-profile-current-password" class="inv-mgmt-input" type="password" autocomplete="current-password"/>
+                            </div>
+                            <div class="inv-mgmt-field">
+                                <label for="owner-profile-new-password">New Password</label>
+                                <input id="owner-profile-new-password" class="inv-mgmt-input" type="password" autocomplete="new-password" minlength="8"/>
+                            </div>
+                            <div class="inv-mgmt-field">
+                                <label for="owner-profile-confirm-password">Confirm New Password</label>
+                                <input id="owner-profile-confirm-password" class="inv-mgmt-input" type="password" autocomplete="new-password" minlength="8"/>
+                            </div>
+                        </div>
+                        <div class="inv-owner-profile-section-actions">
+                            <button type="submit" id="owner-password-save-btn" class="inv-mgmt-btn">Update Password</button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
@@ -331,6 +383,7 @@
 <script src="{% static 'js/inventory-column-customize.js' %}"></script>
 <script src="{% static 'js/inventory-sidebar.js' %}"></script>
 <script src="{% static 'js/inventory-quick-access.js' %}"></script>
+<script src="{% static 'js/inventory-owner-profile.js' %}"></script>
 <script src="{% static 'js/inventory-auth.js' %}"></script>
 <script>
 InventoryAuth.guardUser();

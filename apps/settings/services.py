@@ -68,6 +68,12 @@ class InvoiceSettingService(BaseService):
         business_id = data.get("business_id")
         if not business_id:
             raise ValidationException("Business is required.")
+
+        counter = data.get("counter")
+        if counter is None or counter == "":
+            counter = 1
+        data["counter"] = int(counter)
+        data["current_counter"] = data["counter"]
         self._validate(data)
 
     def before_update(self, instance, data):
@@ -122,11 +128,14 @@ class InvoiceSettingService(BaseService):
             if field in data:
                 value = data[field]
                 if value is None or value == "":
-                    raise ValidationException(f"{field.replace('_', ' ').title()} is required.")
+                    label = "Start counter" if field == "counter" else "Current counter"
+                    raise ValidationException(f"{label} is required.")
                 try:
                     numeric = int(value)
                 except (TypeError, ValueError) as exc:
-                    raise ValidationException(f"{field.replace('_', ' ').title()} must be a whole number.") from exc
+                    label = "Start counter" if field == "counter" else "Current counter"
+                    raise ValidationException(f"{label} must be a whole number.") from exc
                 if numeric < 0:
-                    raise ValidationException(f"{field.replace('_', ' ').title()} cannot be negative.")
+                    label = "Start counter" if field == "counter" else "Current counter"
+                    raise ValidationException(f"{label} cannot be negative.")
                 data[field] = numeric

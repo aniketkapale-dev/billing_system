@@ -6,6 +6,7 @@ var InventoryPurchases = (function () {
     var CATALOG_API = "/api/catalog";
     var CUSTOMERS_API = "/api/customers";
     var TAXES_API = "/api/settings/taxes";
+    var INVOICE_SETTINGS_API = "/api/settings/invoice-settings";
     var PAGE_SIZE = (window.InventoryConstants && InventoryConstants.PAGE_SIZE) || 10;
     var currentPage = 1;
     var currentOrdering = "-purchase_date";
@@ -14,6 +15,7 @@ var InventoryPurchases = (function () {
     var taxes = [];
     var paymentTypes = [];
     var customers = [];
+    var invoiceSettings = [];
     var editingPurchaseId = null;
     var PURCHASES_LIST_PANEL = "purchases-list-panel";
     var PURCHASES_FORM_PANEL = "purchases-form-panel";
@@ -129,6 +131,58 @@ var InventoryPurchases = (function () {
     function customerLabel(customer) {
         var mobile = customer.mobile ? String(customer.mobile) : "—";
         return InventoryApi.escapeHtml(customer.name) + "(" + InventoryApi.escapeHtml(mobile) + ")";
+    }
+
+    function formatInvoiceNumber(prefix, counter, suffix) {
+        var parts = [];
+        var prefixText = String(prefix || "").trim();
+        var suffixText = String(suffix || "").trim();
+        if (prefixText) parts.push(prefixText);
+        parts.push(String(counter != null ? counter : 0));
+        if (suffixText) parts.push(suffixText);
+        return parts.join("/");
+    }
+
+    function invoiceSettingLabel(item) {
+        var number = formatInvoiceNumber(item.prefix, item.current_counter, item.suffix);
+        if (!number) number = "—";
+        return number + " (" + item.year + ")";
+    }
+
+    function renderInvoiceSettingSelect(selectedId) {
+        var select = document.getElementById("purchase-invoice-setting");
+        if (!select) return;
+
+        var html;
+        if (!invoiceSettings.length) {
+            html = '<option value="">No invoice settings — add one in Settings first</option>';
+        } else {
+            html = '<option value="">Select invoice</option>';
+            invoiceSettings.forEach(function (item) {
+                var selected = String(item.id) === String(selectedId) ? " selected" : "";
+                html += '<option value="' + item.id + '"' + selected + ">" +
+                    InventoryApi.escapeHtml(invoiceSettingLabel(item)) + "</option>";
+            });
+        }
+        select.innerHTML = html;
+        if (selectedId) {
+            select.value = String(selectedId);
+        }
+    }
+
+    function loadInvoiceSettings(selectedId) {
+        return InventoryApi.request(INVOICE_SETTINGS_API, "?page_size=100&ordering=-year").then(function (body) {
+            invoiceSettings = body && body.isSuccess ? (body.data.items || []) : [];
+            renderInvoiceSettingSelect(selectedId);
+            return invoiceSettings;
+        });
+    }
+
+    function toggleInvoiceSettingField(show) {
+        var field = document.getElementById("purchase-invoice-setting-field");
+        if (field) {
+            field.classList.toggle("inv-hidden", !show);
+        }
     }
 
     function renderCustomerSelect(selectedId) {
@@ -697,12 +751,14 @@ var InventoryPurchases = (function () {
             if (addItemBtn) addItemBtn.classList.add("inv-hidden");
             if (itemsPanel) itemsPanel.classList.add("inv-sale-items--readonly");
             if (itemsTitle) itemsTitle.textContent = "Products Sold";
+            toggleInvoiceSettingField(false);
         } else {
             if (titleEl) titleEl.textContent = "Add Sale";
             if (saveBtn) saveBtn.textContent = "Create Sale";
             if (addItemBtn) addItemBtn.classList.remove("inv-hidden");
             if (itemsPanel) itemsPanel.classList.remove("inv-sale-items--readonly");
             if (itemsTitle) itemsTitle.textContent = "Products to Sell";
+            toggleInvoiceSettingField(true);
         }
     }
 
@@ -824,7 +880,7 @@ var InventoryPurchases = (function () {
         ];
 
         if (purchase.reference_no) {
-            rows.splice(2, 0, { label: "Reference No.", value: displayValue(purchase.reference_no) });
+            rows.splice(2, 0, { label: "Invoice No.", value: displayValue(purchase.reference_no) });
         }
         if (purchase.notes) {
             rows.push({ label: "Notes", value: displayValue(purchase.notes), full: true });
@@ -1046,6 +1102,7 @@ var InventoryPurchases = (function () {
     function resetForm(isSilent) {
         editingPurchaseId = null;
         setFormMode("add");
+        loadInvoiceSettings("");
         loadCustomers("");
         document.getElementById("purchase-date").value = new Date().toISOString().slice(0, 10);
         document.getElementById("purchase-billing-address").value = "";
@@ -1057,20 +1114,35 @@ var InventoryPurchases = (function () {
         updateSaleTotals();
     }
 
-    function getSaleHeaderPayload() {
+    function getSaleHeaderPayload(includeInvoiceSetting) {
         var paymentTypeEl = document.getElementById("purchase-payment-type");
         var paymentTypeId = paymentTypeEl ? paymentTypeEl.value : "";
         var customerId = document.getElementById("purchase-customer").value;
-        return {
+        var payload = {
             customer_id: customerId ? Number(customerId) : null,
             purchase_date: document.getElementById("purchase-date").value || undefined,
             billing_address: document.getElementById("purchase-billing-address").value.trim(),
             shipping_address: document.getElementById("purchase-shipping-address").value.trim(),
             payment_type_id: paymentTypeId ? Number(paymentTypeId) : null
         };
+        if (includeInvoiceSetting) {
+            var invoiceSettingEl = document.getElementById("purchase-invoice-setting");
+            var invoiceSettingId = invoiceSettingEl ? invoiceSettingEl.value : "";
+            payload.invoice_setting_id = invoiceSettingId ? Number(invoiceSettingId) : null;
+        }
+        return payload;
     }
 
     function savePurchase() {
+        var invoiceSettingEl = document.getElementById("purchase-invoice-setting");
+        if (!editingPurchaseId && invoiceSettingEl && !invoiceSettingEl.closest(".inv-hidden")) {
+            if (!invoiceSettingEl.value) {
+                InventoryToast.error("Please select an invoice.");
+                invoiceSettingEl.focus();
+                return;
+            }
+        }
+
         var customerId = document.getElementById("purchase-customer").value;
         if (!customerId) {
             InventoryToast.error("Please select a customer.");
@@ -1083,7 +1155,7 @@ var InventoryPurchases = (function () {
             InventoryLoader.button(btn, true, "Updating...");
             request("/" + editingPurchaseId + "/", {
                 method: "PATCH",
-                body: getSaleHeaderPayload()
+                body: getSaleHeaderPayload(false)
             })
                 .then(function (body) {
                     if (body && body.isSuccess) {
@@ -1125,7 +1197,7 @@ var InventoryPurchases = (function () {
 
         request("", {
             method: "POST",
-            body: Object.assign(getSaleHeaderPayload(), { items: items })
+            body: Object.assign(getSaleHeaderPayload(true), { items: items })
         })
             .then(function (body) {
                 if (body && body.isSuccess) {
@@ -1163,6 +1235,7 @@ var InventoryPurchases = (function () {
                 loadPaymentTypes();
                 loadCustomers();
                 loadTaxes();
+                loadInvoiceSettings();
                 loadPurchases(1);
             });
         }
@@ -1182,18 +1255,26 @@ var InventoryPurchases = (function () {
                 return;
             }
             loadProducts().then(function () {
-                return Promise.all([loadTaxes(), loadPaymentTypes(), loadCustomers()]);
+                return Promise.all([loadTaxes(), loadPaymentTypes(), loadCustomers(), loadInvoiceSettings()]);
             }).then(function () {
                 resetForm(true);
                 if (!hasAvailableProducts(null)) {
                     InventoryToast.warning("No products with remaining stock available.");
                 }
+                if (!invoiceSettings.length) {
+                    InventoryToast.warning("No invoice settings found. Add one in Settings first.");
+                }
                 if (!customers.length) {
                     InventoryToast.warning("No customers found. Add a customer first.");
                 }
                 InventoryPagePanel.showPanel(PURCHASES_LIST_PANEL, PURCHASES_FORM_PANEL);
-                var customerSelect = document.getElementById("purchase-customer");
-                if (customerSelect) customerSelect.focus();
+                var invoiceSelect = document.getElementById("purchase-invoice-setting");
+                if (invoiceSelect && !invoiceSelect.closest(".inv-hidden")) {
+                    invoiceSelect.focus();
+                } else {
+                    var customerSelect = document.getElementById("purchase-customer");
+                    if (customerSelect) customerSelect.focus();
+                }
             });
         });
 

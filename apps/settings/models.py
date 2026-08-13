@@ -42,8 +42,8 @@ class InvoiceSetting(BaseEntity):
     year = models.PositiveIntegerField()
     prefix = models.CharField(max_length=50, blank=True, default="")
     suffix = models.CharField(max_length=50, blank=True, default="")
-    counter = models.PositiveIntegerField(default=0)
-    current_counter = models.PositiveIntegerField(default=0)
+    counter = models.PositiveIntegerField(default=1)
+    current_counter = models.PositiveIntegerField(default=1)
     end_counter = models.DateField(null=True, blank=True)
 
     class Meta:
@@ -59,5 +59,17 @@ class InvoiceSetting(BaseEntity):
             )
         ]
 
+    def format_invoice_number(self, counter=None):
+        counter = self.current_counter if counter is None else counter
+        prefix = (self.prefix or "").strip()
+        suffix = (self.suffix or "").strip()
+        parts = []
+        if prefix:
+            parts.append(prefix)
+        parts.append(str(counter))
+        if suffix:
+            parts.append(suffix)
+        return "/".join(parts)
+
     def __str__(self):
-        return f"{self.prefix}{self.current_counter}{self.suffix} ({self.year})"
+        return f"{self.format_invoice_number()} ({self.year})"

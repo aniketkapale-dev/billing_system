@@ -721,9 +721,54 @@ body.inv-dashboard-body {
 }
 
 .inv-profile {
-    display: flex;
+    position: relative;
+}
+
+.inv-profile-trigger {
+    display: inline-flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
+    padding: 4px 8px 4px 4px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.inv-profile-trigger:hover,
+.inv-profile-trigger--open {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+.inv-profile-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
+    max-width: 160px;
+}
+
+.inv-profile-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.95);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.inv-profile-chevron {
+    font-size: 20px;
+    color: rgba(255, 255, 255, 0.75);
+    transition: transform 0.15s;
+}
+
+.inv-profile-trigger--open .inv-profile-chevron {
+    transform: rotate(180deg);
 }
 
 .inv-profile-user {
@@ -750,11 +795,137 @@ body.inv-dashboard-body {
 
 .inv-profile-avatar .material-symbols-outlined { font-size: 18px; }
 
+.inv-profile-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
 .inv-profile-role {
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 500;
-    color: rgba(255, 255, 255, 0.9);
+    color: rgba(255, 255, 255, 0.72);
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.inv-owner-profile-panel {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    z-index: 210;
+    width: min(360px, calc(100vw - 32px));
+    max-height: min(80vh, 640px);
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding: 18px 18px 16px;
+    border-radius: 12px;
+    background: var(--inv-white);
+    border: 1px solid var(--inv-outline-variant);
+    box-shadow: 0 12px 40px rgba(28, 36, 52, 0.18);
+}
+
+.inv-owner-profile-panel::-webkit-scrollbar {
+    display: none;
+}
+
+.inv-owner-profile-panel-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #EEF0F4;
+}
+
+.inv-owner-profile-panel-heading {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.inv-owner-profile-panel-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--inv-on-bg);
+}
+
+.inv-owner-profile-panel-subtitle {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: var(--inv-secondary);
+}
+
+.inv-owner-profile-section {
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #EEF0F4;
+}
+
+.inv-owner-profile-section:last-of-type {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.inv-owner-profile-section-title {
+    margin: 0 0 12px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--inv-secondary);
+}
+
+.inv-owner-profile-fields {
+    display: grid;
+    gap: 10px;
+}
+
+.inv-owner-profile-fields .inv-mgmt-field label {
+    font-size: 12px;
+}
+
+.inv-owner-profile-fields .inv-mgmt-input {
+    font-size: 14px;
+    padding: 8px 10px;
+}
+
+.inv-owner-profile-section-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 12px;
+}
+
+.inv-owner-profile-logout-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex-shrink: 0;
+    padding: 8px 12px;
+    border: 1px solid rgba(220, 38, 38, 0.25);
+    border-radius: 8px;
+    background: #FEF2F2;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--inv-error);
+    white-space: nowrap;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.inv-owner-profile-logout-btn .material-symbols-outlined {
+    font-size: 18px;
+}
+
+.inv-owner-profile-logout-btn:hover {
+    background: #FEE2E2;
+    border-color: rgba(220, 38, 38, 0.4);
 }
 
 .inv-profile-logout-btn {

@@ -55,6 +55,27 @@ class PurchaseService(BaseService):
         data["customer_name"] = customer.name
         return data
 
+    def _apply_invoice_setting(self, data, business_id):
+        from apps.settings.models import InvoiceSetting
+
+        setting_id = data.pop("invoice_setting_id", None)
+        if not setting_id:
+            raise ValidationException("Invoice setting is required.")
+
+        try:
+            setting = InvoiceSetting.objects.select_for_update().get(
+                pk=setting_id,
+                business_id=business_id,
+                is_deleted=False,
+            )
+        except InvoiceSetting.DoesNotExist:
+            raise NotFoundException("Invoice setting not found.")
+
+        data["reference_no"] = setting.format_invoice_number()
+        setting.current_counter += 1
+        setting.save(update_fields=["current_counter", "updated_at"])
+        return data
+
     @transaction.atomic
     def create_with_items(self, data):
         user = get_current_user()
@@ -70,6 +91,7 @@ class PurchaseService(BaseService):
             raise ValidationException("At least one purchase item is required.")
 
         self._apply_customer(data, business_id)
+        self._apply_invoice_setting(data, business_id)
 
         if "payment_type_id" in data:
             data["payment_type_id"] = self._resolve_payment_type_id(
