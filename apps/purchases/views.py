@@ -21,10 +21,9 @@ class PurchaseViewSet(BusinessScopedViewSetMixin, BaseViewSet):
     required_roles = ["Business Owner", "Business Staff"]
     required_tab = "purchases"
     ordering_default = ("-purchase_date", "-created_at")
-
-    ordering_default = ("-purchase_date", "-created_at")
     ordering_fields = {
         "purchase_date": "purchase_date",
+        "reference_no": "reference_no",
         "customer_name": "customer_name",
         "total_amount": "total_amount",
         "total_cost": "total_cost",

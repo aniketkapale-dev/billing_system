@@ -381,7 +381,7 @@ var InventoryColumnCustomize = (function () {
                 }
             });
             if (ctrl.includeAction) {
-                html += '<th class="inv-col-action">' + ctrl.actionHeader + "</th>";
+                html += '<th class="inv-col-action inv-mgmt-cell--action">' + ctrl.actionHeader + "</th>";
             }
             row.innerHTML = html;
             syncColgroup(ctrl);

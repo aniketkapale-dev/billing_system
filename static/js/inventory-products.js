@@ -333,29 +333,21 @@ var InventoryProducts = (function () {
         return InventoryApi.escapeHtml(String(value));
     }
 
-    function actionSlot() {
-        return '<span class="inv-row-action-btn inv-row-action-btn--slot" aria-hidden="true"></span>';
-    }
-
     function actionButtons(item) {
         var hasSales = productHasSales(item);
-        var editBtn = hasSales
-            ? actionSlot()
-            : '<button type="button" class="inv-row-action-btn inv-row-action-btn--edit inv-product-edit" data-id="' + item.id + '" title="Edit" aria-label="Edit product">' +
-              '<span class="material-symbols-outlined">edit</span></button>';
-        var deleteBtn = hasSales
-            ? actionSlot()
-            : '<button type="button" class="inv-row-action-btn inv-row-action-btn--delete inv-product-delete" data-id="' + item.id + '" title="Delete" aria-label="Delete product">' +
-              '<span class="material-symbols-outlined">delete</span></button>';
-
-        return (
-            '<div class="inv-row-actions">' +
+        var html =
             '<button type="button" class="inv-row-action-btn inv-row-action-btn--view inv-product-view" data-id="' + item.id + '" title="View" aria-label="View product">' +
-            '<span class="material-symbols-outlined">visibility</span></button>' +
-            editBtn +
-            deleteBtn +
-            "</div>"
-        );
+            '<span class="material-symbols-outlined">visibility</span></button>';
+
+        if (!hasSales) {
+            html +=
+                '<button type="button" class="inv-row-action-btn inv-row-action-btn--edit inv-product-edit" data-id="' + item.id + '" title="Edit" aria-label="Edit product">' +
+                '<span class="material-symbols-outlined">edit</span></button>' +
+                '<button type="button" class="inv-row-action-btn inv-row-action-btn--delete inv-product-delete" data-id="' + item.id + '" title="Delete" aria-label="Delete product">' +
+                '<span class="material-symbols-outlined">delete</span></button>';
+        }
+
+        return '<div class="inv-row-actions">' + html + "</div>";
     }
 
     function fillSelect(selectId, items, placeholder, labelFn) {

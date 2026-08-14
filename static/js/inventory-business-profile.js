@@ -5,16 +5,40 @@ var InventoryBusinessProfile = (function () {
     var currentBusiness = null;
     var logoFile = null;
     var clearLogo = false;
+    var previewBlobUrl = null;
 
     function request(path, opts) {
         return InventoryApi.request(API, path, opts);
     }
 
-    function formatDate(value) {
-        if (!value) return "—";
-        var date = new Date(value);
-        if (isNaN(date.getTime())) return "—";
-        return date.toLocaleString();
+    function formatDateParts(value) {
+        if (!value) {
+            return { date: "—", time: "—" };
+        }
+        var parsed = new Date(value);
+        if (isNaN(parsed.getTime())) {
+            return { date: "—", time: "—" };
+        }
+        return {
+            date: parsed.toLocaleDateString(undefined, {
+                day: "numeric",
+                month: "long",
+                year: "numeric"
+            }),
+            time: parsed.toLocaleTimeString(undefined, {
+                hour: "numeric",
+                minute: "2-digit",
+                second: "2-digit"
+            })
+        };
+    }
+
+    function setMetaDate(prefix, value) {
+        var parts = formatDateParts(value);
+        var dateEl = document.getElementById(prefix + "-date");
+        var timeEl = document.getElementById(prefix + "-time");
+        if (dateEl) dateEl.textContent = parts.date;
+        if (timeEl) timeEl.textContent = parts.time;
     }
 
     function togglePanels(hasBusiness) {
@@ -28,6 +52,13 @@ var InventoryBusinessProfile = (function () {
         }
     }
 
+    function revokePreviewBlob() {
+        if (previewBlobUrl) {
+            URL.revokeObjectURL(previewBlobUrl);
+            previewBlobUrl = null;
+        }
+    }
+
     function setLogoPreview(url) {
         var preview = document.getElementById("business-profile-logo-preview");
         var clearBtn = document.getElementById("business-profile-logo-clear");
@@ -36,17 +67,23 @@ var InventoryBusinessProfile = (function () {
         if (url) {
             preview.innerHTML = '<img src="' + InventoryApi.escapeHtml(url) + '" alt="Business logo"/>';
             if (clearBtn) clearBtn.classList.remove("inv-hidden");
-        } else {
-            preview.innerHTML = '<span class="material-symbols-outlined">storefront</span>';
-            if (clearBtn) clearBtn.classList.add("inv-hidden");
+            return;
         }
+
+        preview.innerHTML = '<span class="material-symbols-outlined">storefront</span>';
+        if (clearBtn) clearBtn.classList.add("inv-hidden");
+    }
+
+    function clearLogoInput() {
+        logoFile = null;
+        var input = document.getElementById("business-profile-logo");
+        if (input) input.value = "";
     }
 
     function resetLogoState() {
-        logoFile = null;
         clearLogo = false;
-        var input = document.getElementById("business-profile-logo");
-        if (input) input.value = "";
+        clearLogoInput();
+        revokePreviewBlob();
     }
 
     function populateForm(business) {
@@ -57,8 +94,8 @@ var InventoryBusinessProfile = (function () {
         document.getElementById("business-profile-email").value = business.email || "";
         document.getElementById("business-profile-address").value = business.address || "";
         document.getElementById("business-profile-owner").textContent = business.owner_name || "—";
-        document.getElementById("business-profile-created").textContent = formatDate(business.created_at);
-        document.getElementById("business-profile-updated").textContent = formatDate(business.updated_at);
+        setMetaDate("business-profile-created", business.created_at);
+        setMetaDate("business-profile-updated", business.updated_at);
 
         resetLogoState();
         setLogoPreview(business.logo_url || null);
@@ -177,17 +214,19 @@ var InventoryBusinessProfile = (function () {
             logoInput.addEventListener("change", function () {
                 var file = logoInput.files && logoInput.files[0] ? logoInput.files[0] : null;
                 if (!file) return;
-                logoFile = file;
                 clearLogo = false;
-                setLogoPreview(URL.createObjectURL(file));
+                revokePreviewBlob();
+                logoFile = file;
+                previewBlobUrl = URL.createObjectURL(file);
+                setLogoPreview(previewBlobUrl);
             });
         }
 
         if (clearBtn) {
             clearBtn.addEventListener("click", function () {
-                logoFile = null;
                 clearLogo = true;
-                resetLogoState();
+                clearLogoInput();
+                revokePreviewBlob();
                 setLogoPreview(null);
             });
         }

@@ -529,6 +529,18 @@
     width: 118px;
     min-width: 118px;
     white-space: nowrap;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.inv-mgmt-table th.inv-col-action,
+.inv-mgmt-table th.inv-mgmt-cell--action {
+    text-align: center;
+}
+
+.inv-mgmt-table td.inv-col-action .inv-row-actions,
+.inv-mgmt-table td.inv-mgmt-cell--action .inv-row-actions {
+    justify-content: center;
 }
 
 colgroup .inv-col-check-col {
@@ -732,7 +744,7 @@ colgroup .inv-col-check-col {
 
 .inv-mgmt-table .inv-row-actions {
     display: inline-flex;
-    justify-content: flex-start;
+    justify-content: center;
     align-items: center;
     gap: 8px;
     width: 100%;
@@ -1080,7 +1092,7 @@ colgroup .inv-col-check-col {
 
 .inv-mgmt-table td.inv-mgmt-cell--action,
 .inv-mgmt-table th.inv-mgmt-cell--action {
-    text-align: left;
+    text-align: center;
     white-space: nowrap;
 }
 
@@ -1515,6 +1527,76 @@ colgroup .inv-col-check-col {
     overflow: visible;
 }
 
+.inv-business-profile-card {
+    padding: 0;
+}
+
+.inv-business-info-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 24px 24px 0;
+}
+
+.inv-business-info-header-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: var(--inv-primary-container);
+    color: var(--inv-primary);
+}
+
+.inv-business-info-header-icon .material-symbols-outlined {
+    font-size: 24px;
+}
+
+.inv-business-info-title {
+    margin: 0 0 6px;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--inv-primary);
+}
+
+.inv-business-info-subtitle {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--inv-secondary);
+}
+
+.inv-input-icon-wrap {
+    position: relative;
+}
+
+.inv-input-icon-wrap .inv-mgmt-input,
+.inv-input-icon-wrap .inv-mgmt-textarea {
+    width: 100%;
+}
+
+.inv-mgmt-input--trailing-icon,
+.inv-input-icon-wrap .inv-mgmt-textarea.inv-mgmt-input--trailing-icon {
+    padding-right: 42px;
+}
+
+.inv-input-trailing-icon {
+    position: absolute;
+    top: 50%;
+    right: 14px;
+    transform: translateY(-50%);
+    font-size: 20px;
+    color: #9CA3AF;
+    pointer-events: none;
+}
+
+.inv-input-icon-wrap--textarea .inv-input-trailing-icon {
+    top: 16px;
+    transform: none;
+}
+
 .inv-business-users-card {
     padding: 0;
 }
@@ -1549,9 +1631,20 @@ colgroup .inv-col-check-col {
 /* Business profile page */
 .inv-business-profile {
     display: grid;
-    grid-template-columns: 200px minmax(0, 1fr);
+    grid-template-columns: 220px minmax(0, 1fr);
     gap: 28px;
     padding: 24px;
+}
+
+.inv-business-profile-logo-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 20px 16px;
+    border: 1px solid var(--inv-outline-variant);
+    border-radius: 14px;
+    background: #FAFBFC;
 }
 
 .inv-business-profile-logo {
@@ -1565,11 +1658,11 @@ colgroup .inv-col-check-col {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 140px;
-    height: 140px;
-    border-radius: 16px;
+    width: 120px;
+    height: 120px;
+    border-radius: 14px;
     border: 1px solid var(--inv-outline-variant);
-    background: #FAFBFC;
+    background: var(--inv-white);
     overflow: hidden;
 }
 
@@ -1580,7 +1673,13 @@ colgroup .inv-col-check-col {
 }
 
 .inv-business-profile-logo-preview .material-symbols-outlined {
-    font-size: 48px;
+    font-size: 44px;
+    color: var(--inv-primary);
+}
+
+.inv-business-profile-logo-label {
+    font-size: 13px;
+    font-weight: 600;
     color: var(--inv-secondary);
 }
 
@@ -1590,6 +1689,18 @@ colgroup .inv-col-check-col {
     align-items: stretch;
     gap: 8px;
     width: 100%;
+}
+
+.inv-business-logo-upload-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+}
+
+.inv-business-logo-upload-btn .material-symbols-outlined {
+    font-size: 18px;
 }
 
 .inv-business-profile-form {
@@ -1605,20 +1716,62 @@ colgroup .inv-col-check-col {
     border-top: 1px solid #EEF0F4;
 }
 
+.inv-business-profile-meta-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    min-width: 0;
+}
+
+.inv-business-profile-meta-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: var(--inv-primary-container);
+    color: var(--inv-primary);
+}
+
+.inv-business-profile-meta-icon .material-symbols-outlined {
+    font-size: 20px;
+}
+
+.inv-business-profile-meta-content {
+    min-width: 0;
+}
+
 .inv-business-profile-meta-label {
     display: block;
     margin-bottom: 4px;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.04em;
     color: var(--inv-secondary);
 }
 
 .inv-business-profile-meta-value {
+    display: block;
     font-size: 14px;
+    font-weight: 600;
     color: var(--inv-primary);
     word-break: break-word;
+}
+
+.inv-business-profile-meta-sub {
+    display: block;
+    margin-top: 2px;
+    font-size: 13px;
+    color: var(--inv-secondary);
+    word-break: break-word;
+}
+
+.inv-business-profile-meta-sub--accent {
+    color: var(--inv-primary);
+    font-weight: 500;
 }
 
 .inv-business-profile-actions {
@@ -1627,6 +1780,14 @@ colgroup .inv-col-check-col {
     margin-top: 24px;
     padding-top: 20px;
     border-top: 1px solid #EEF0F4;
+}
+
+.inv-business-profile-actions .inv-mgmt-btn--primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 148px;
+    justify-content: center;
 }
 
 .inv-business-empty {
@@ -1638,8 +1799,26 @@ colgroup .inv-col-check-col {
 }
 
 @media (max-width: 768px) {
+    .inv-business-info-header {
+        padding: 20px 20px 0;
+    }
+
+    .inv-business-profile {
+        grid-template-columns: 1fr;
+        padding: 20px;
+    }
+
+    .inv-business-profile-logo-card {
+        max-width: 280px;
+        margin: 0 auto;
+    }
+
     .inv-business-profile-meta {
         grid-template-columns: 1fr;
+    }
+
+    .inv-business-section-head--users {
+        margin-top: 20px;
     }
 }
 
