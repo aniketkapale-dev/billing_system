@@ -28,8 +28,8 @@ var InventoryStockIn = (function () {
                 tableKey: "stock-in",
                 theadSelector: ".inv-mgmt-table--stockin thead tr",
                 toolbarSelector: "#stockin-list-panel .inv-mgmt-toolbar",
-                includeBulkCheck: true,
-                bulkHeaderHtml: '<th class="inv-col-check"><input type="checkbox" class="inv-bulk-select-all" aria-label="Select all"/></th>',
+                includeBulkCheck: false,
+                bulkHeaderHtml: '<th class="inv-col-check d-none"><input type="checkbox" class="inv-bulk-select-all" aria-label="Select all"/></th>',
                 sortDefault: "-invoice_date",
                 onSortChange: function (ordering) {
                     currentOrdering = ordering;
@@ -496,6 +496,8 @@ var InventoryStockIn = (function () {
             '<span class="material-symbols-outlined">visibility</span></button>' +
             '<button type="button" class="inv-row-action-btn inv-row-action-btn--edit inv-stockin-edit" data-id="' + item.id + '" title="Edit" aria-label="Edit purchase">' +
             '<span class="material-symbols-outlined">edit</span></button>' +
+            '<button type="button" class="inv-row-action-btn inv-row-action-btn--delete inv-stockin-delete" data-id="' + item.id + '" title="Delete" aria-label="Delete purchase">' +
+            '<span class="material-symbols-outlined">delete</span></button>' +
             "</div>"
         );
     }
@@ -635,24 +637,19 @@ var InventoryStockIn = (function () {
 
         if (!items || !items.length) {
             tbody.innerHTML = '<tr><td colspan="' + colspan + '" class="inv-mgmt-empty">No purchase invoices yet.</td></tr>';
-            getBulkSelect().afterRender();
             return;
         }
 
         cachedItems = items;
-        var bulk = getBulkSelect();
 
         tbody.innerHTML = items.map(function (item) {
             return (
                 "<tr>" +
-                bulk.rowCellHtml(item.id, item) +
                 cols.renderRowCells(item) +
-                '<td class="inv-col-action">' + actionButtons(item) + "</td>" +
+                '<td class="inv-col-action inv-mgmt-cell--action">' + actionButtons(item) + "</td>" +
                 "</tr>"
             );
         }).join("");
-
-        bulk.afterRender();
     }
 
     function fetchInvoice(id) {
@@ -1165,6 +1162,11 @@ var InventoryStockIn = (function () {
                 var editBtn = e.target.closest(".inv-stockin-edit");
                 if (editBtn) {
                     openEditInvoice(editBtn.getAttribute("data-id"));
+                    return;
+                }
+                var deleteBtn = e.target.closest(".inv-stockin-delete");
+                if (deleteBtn) {
+                    deleteInvoice(deleteBtn.getAttribute("data-id"), deleteBtn);
                 }
             });
         }

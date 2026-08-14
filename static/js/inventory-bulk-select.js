@@ -147,6 +147,7 @@ var InventoryBulkSelect = (function () {
         }
 
         function rowCellHtml(id, item) {
+            if (options.hidden) return "";
             var selectable = isRowSelectable(item);
             var disabled = selectable ? "" : " disabled";
             var checked = selectedIds.has(String(id)) ? " checked" : "";
@@ -158,6 +159,7 @@ var InventoryBulkSelect = (function () {
         }
 
         function injectHeaderCheckbox() {
+            if (options.hidden) return;
             var table = document.querySelector(tableSelector);
             if (!table) return;
 

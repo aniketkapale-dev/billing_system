@@ -28,8 +28,8 @@ var InventoryProducts = (function () {
                 tableKey: "products",
                 theadSelector: ".inv-mgmt-table--products thead tr",
                 toolbarSelector: "#products-list-panel .inv-mgmt-toolbar",
-                includeBulkCheck: true,
-                bulkHeaderHtml: '<th class="inv-col-check"><input type="checkbox" class="inv-bulk-select-all" aria-label="Select all"/></th>',
+                includeBulkCheck: false,
+                bulkHeaderHtml: '<th class="inv-col-check d-none"><input type="checkbox" class="inv-bulk-select-all" aria-label="Select all"/></th>',
                 sortDefault: "name",
                 onSortChange: function (ordering) {
                     currentOrdering = ordering;
@@ -343,12 +343,17 @@ var InventoryProducts = (function () {
             ? actionSlot()
             : '<button type="button" class="inv-row-action-btn inv-row-action-btn--edit inv-product-edit" data-id="' + item.id + '" title="Edit" aria-label="Edit product">' +
               '<span class="material-symbols-outlined">edit</span></button>';
+        var deleteBtn = hasSales
+            ? actionSlot()
+            : '<button type="button" class="inv-row-action-btn inv-row-action-btn--delete inv-product-delete" data-id="' + item.id + '" title="Delete" aria-label="Delete product">' +
+              '<span class="material-symbols-outlined">delete</span></button>';
 
         return (
             '<div class="inv-row-actions">' +
             '<button type="button" class="inv-row-action-btn inv-row-action-btn--view inv-product-view" data-id="' + item.id + '" title="View" aria-label="View product">' +
             '<span class="material-symbols-outlined">visibility</span></button>' +
             editBtn +
+            deleteBtn +
             "</div>"
         );
     }
@@ -731,24 +736,19 @@ var InventoryProducts = (function () {
 
         if (!items || !items.length) {
             tbody.innerHTML = '<tr><td colspan="' + colspan + '" class="inv-mgmt-empty">No products found.</td></tr>';
-            getBulkSelect().afterRender();
             return;
         }
 
         cachedItems = items;
-        var bulk = getBulkSelect();
 
         tbody.innerHTML = items.map(function (item) {
             return (
                 "<tr>" +
-                bulk.rowCellHtml(item.id, item) +
                 cols.renderRowCells(item) +
-                '<td class="inv-col-action">' + actionButtons(item) + "</td>" +
+                '<td class="inv-col-action inv-mgmt-cell--action">' + actionButtons(item) + "</td>" +
                 "</tr>"
             );
         }).join("");
-
-        bulk.afterRender();
     }
 
     function buildQuery(search, page) {
@@ -1083,6 +1083,14 @@ var InventoryProducts = (function () {
     }
 
     function deleteProduct(id, btn) {
+        var item = cachedItems.find(function (row) {
+            return String(row.id) === String(id);
+        });
+        if (item && productHasSales(item)) {
+            InventoryToast.error("Products with sales cannot be deleted.");
+            return;
+        }
+
         InventoryConfirm.delete({
             title: "Delete product?",
             message: "This product will be removed from your catalog."
@@ -1246,6 +1254,11 @@ var InventoryProducts = (function () {
                 var editBtn = e.target.closest(".inv-product-edit");
                 if (editBtn) {
                     openEditModal(editBtn.getAttribute("data-id"));
+                    return;
+                }
+                var deleteBtn = e.target.closest(".inv-product-delete");
+                if (deleteBtn) {
+                    deleteProduct(deleteBtn.getAttribute("data-id"), deleteBtn);
                 }
             });
         }

@@ -114,8 +114,8 @@ var InventoryCatalog = (function () {
                 tableKey: "catalog-" + resource,
                 theadSelector: "#catalog-page .inv-mgmt-table thead tr",
                 toolbarSelector: "#catalog-page .inv-mgmt-toolbar",
-                includeBulkCheck: true,
-                bulkHeaderHtml: '<th class="inv-col-check"><input type="checkbox" class="inv-bulk-select-all" aria-label="Select all"/></th>',
+                includeBulkCheck: false,
+                bulkHeaderHtml: '<th class="inv-col-check d-none"><input type="checkbox" class="inv-bulk-select-all" aria-label="Select all"/></th>',
                 sortDefault: "name",
                 onSortChange: function (ordering) {
                     currentOrdering = ordering;
@@ -273,14 +273,12 @@ var InventoryCatalog = (function () {
     function renderRows(items) {
         var tbody = document.getElementById(resource + "-table-body");
         if (!tbody || !config) return;
-        var colCount = (getColumnCtrl() ? getColumnCtrl().getColspan() : config.columns.length + 2);
-        var bulk = getBulkSelect();
+        var colCount = (getColumnCtrl() ? getColumnCtrl().getColspan() : config.columns.length + 1);
         var cols = getColumnCtrl();
 
         if (!items || !items.length) {
             tbody.innerHTML = '<tr><td colspan="' + colCount + '" class="inv-mgmt-empty">No ' +
                 config.plural.toLowerCase() + " found.</td></tr>";
-            bulk.afterRender();
             return;
         }
 
@@ -289,16 +287,15 @@ var InventoryCatalog = (function () {
         tbody.innerHTML = items.map(function (item) {
             return (
                 "<tr>" +
-                bulk.rowCellHtml(item.id, item) +
                 cols.renderRowCells(item) +
-                '<td><div class="inv-row-actions">' +
+                '<td class="inv-col-action inv-mgmt-cell--action"><div class="inv-row-actions">' +
                 '<button type="button" class="inv-row-action-btn inv-row-action-btn--edit catalog-edit" data-id="' + item.id + '" title="Edit" aria-label="Edit">' +
                 '<span class="material-symbols-outlined">edit</span></button>' +
+                '<button type="button" class="inv-row-action-btn inv-row-action-btn--delete catalog-delete" data-id="' + item.id + '" title="Delete" aria-label="Delete">' +
+                '<span class="material-symbols-outlined">delete</span></button>' +
                 "</div></td></tr>"
             );
         }).join("");
-
-        bulk.afterRender();
     }
 
     function loadList(page) {
@@ -482,6 +479,11 @@ var InventoryCatalog = (function () {
                 var editBtn = e.target.closest(".catalog-edit");
                 if (editBtn) {
                     openEditPanel(editBtn.getAttribute("data-id"));
+                    return;
+                }
+                var deleteBtn = e.target.closest(".catalog-delete");
+                if (deleteBtn) {
+                    deleteItem(deleteBtn.getAttribute("data-id"), deleteBtn);
                 }
             });
         }

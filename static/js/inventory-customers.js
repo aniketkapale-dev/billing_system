@@ -20,8 +20,8 @@ var InventoryCustomers = (function () {
                 tableKey: "customers",
                 theadSelector: ".inv-mgmt-table--customers thead tr",
                 toolbarSelector: "#customers-list-panel .inv-mgmt-toolbar",
-                includeBulkCheck: true,
-                bulkHeaderHtml: '<th class="inv-col-check"><input type="checkbox" class="inv-bulk-select-all" aria-label="Select all"/></th>',
+                includeBulkCheck: false,
+                bulkHeaderHtml: '<th class="inv-col-check d-none"><input type="checkbox" class="inv-bulk-select-all" aria-label="Select all"/></th>',
                 sortDefault: "name",
                 onSortChange: function (ordering) {
                     currentOrdering = ordering;
@@ -190,28 +190,25 @@ var InventoryCustomers = (function () {
 
         if (!items || !items.length) {
             tbody.innerHTML = '<tr><td colspan="' + colspan + '" class="inv-mgmt-empty">No customers found.</td></tr>';
-            getBulkSelect().afterRender();
             return;
         }
 
         cachedItems = items;
-        var bulk = getBulkSelect();
 
         tbody.innerHTML = items.map(function (item) {
             return (
                 "<tr>" +
-                bulk.rowCellHtml(item.id, item) +
                 cols.renderRowCells(item) +
-                '<td><div class="inv-row-actions">' +
+                '<td class="inv-col-action inv-mgmt-cell--action"><div class="inv-row-actions">' +
                 '<button type="button" class="inv-row-action-btn inv-row-action-btn--view customer-view" data-id="' + item.id + '" title="View" aria-label="View customer">' +
                 '<span class="material-symbols-outlined">visibility</span></button>' +
                 '<button type="button" class="inv-row-action-btn inv-row-action-btn--edit customer-edit" data-id="' + item.id + '" title="Edit" aria-label="Edit customer">' +
                 '<span class="material-symbols-outlined">edit</span></button>' +
+                '<button type="button" class="inv-row-action-btn inv-row-action-btn--delete customer-delete" data-id="' + item.id + '" title="Delete" aria-label="Delete customer">' +
+                '<span class="material-symbols-outlined">delete</span></button>' +
                 "</div></td></tr>"
             );
         }).join("");
-
-        bulk.afterRender();
     }
 
     function loadCustomers(page) {
@@ -519,6 +516,11 @@ var InventoryCustomers = (function () {
                 var editBtn = e.target.closest(".customer-edit");
                 if (editBtn) {
                     openEditPanel(editBtn.getAttribute("data-id"));
+                    return;
+                }
+                var deleteBtn = e.target.closest(".customer-delete");
+                if (deleteBtn) {
+                    deleteCustomer(deleteBtn.getAttribute("data-id"), deleteBtn);
                 }
             });
         }

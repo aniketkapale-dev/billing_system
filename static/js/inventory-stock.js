@@ -231,7 +231,7 @@ var InventoryStock = (function () {
             return (
                 "<tr>" +
                 cols.renderRowCells(item) +
-                '<td class="inv-col-action">' + actionButtons(item) + "</td>" +
+                '<td class="inv-col-action inv-mgmt-cell--action">' + actionButtons(item) + "</td>" +
                 "</tr>"
             );
         }).join("");

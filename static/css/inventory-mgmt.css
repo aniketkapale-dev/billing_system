@@ -514,6 +514,23 @@
     text-overflow: clip;
 }
 
+.inv-col-check.d-none,
+.inv-mgmt-table .inv-col-check {
+    display: none !important;
+}
+
+.inv-mgmt-table colgroup .inv-col-check-col {
+    display: none;
+    width: 0 !important;
+}
+
+.inv-mgmt-table .inv-col-action,
+.inv-mgmt-table td.inv-mgmt-cell--action {
+    width: 118px;
+    min-width: 118px;
+    white-space: nowrap;
+}
+
 colgroup .inv-col-check-col {
     width: 42px;
 }

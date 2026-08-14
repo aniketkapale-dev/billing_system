@@ -75,6 +75,8 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 
 .inv-hidden { display: none !important; }
 
+.d-none { display: none !important; }
+
 /* Scrollable areas without visible scrollbars */
 .inv-no-scrollbar {
     scrollbar-width: none;

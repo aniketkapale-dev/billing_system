@@ -30,8 +30,8 @@ var InventoryPurchases = (function () {
                 tableKey: "purchases",
                 theadSelector: ".inv-mgmt-table--purchases thead tr",
                 toolbarSelector: "#purchases-list-panel .inv-mgmt-toolbar",
-                includeBulkCheck: true,
-                bulkHeaderHtml: '<th class="inv-col-check"><input type="checkbox" class="inv-bulk-select-all" aria-label="Select all"/></th>',
+                includeBulkCheck: false,
+                bulkHeaderHtml: '<th class="inv-col-check d-none"><input type="checkbox" class="inv-bulk-select-all" aria-label="Select all"/></th>',
                 sortDefault: "-purchase_date",
                 onSortChange: function (ordering) {
                     currentOrdering = ordering;
@@ -842,24 +842,19 @@ var InventoryPurchases = (function () {
 
         if (!items || !items.length) {
             tbody.innerHTML = '<tr><td colspan="' + colspan + '" class="inv-mgmt-empty">No sales yet. Record a purchase first, then create a sale.</td></tr>';
-            getBulkSelect().afterRender();
             return;
         }
 
         cachedItems = items;
-        var bulk = getBulkSelect();
 
         tbody.innerHTML = items.map(function (purchase) {
             return (
                 "<tr>" +
-                bulk.rowCellHtml(purchase.id, purchase) +
                 cols.renderRowCells(purchase) +
-                '<td class="inv-col-action">' + actionButtons(purchase) + "</td>" +
+                '<td class="inv-col-action inv-mgmt-cell--action">' + actionButtons(purchase) + "</td>" +
                 "</tr>"
             );
         }).join("");
-
-        bulk.afterRender();
     }
 
     function fetchPurchase(id) {
