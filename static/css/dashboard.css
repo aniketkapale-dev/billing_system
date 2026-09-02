@@ -1,4 +1,4 @@
-/* Dashboard layout — Zoho Books–inspired theme */
+/* Dashboard layout — Kinetic Precision theme */
 
 body.inv-dashboard-body {
     background: var(--inv-bg);
@@ -112,11 +112,11 @@ body.inv-dashboard-body {
     color: var(--inv-primary);
 }
 
-/* Expanded parent group — blue label + light tint (Zoho "Sales" row) */
+/* Expanded parent group — lime tint */
 .inv-nav-group--open > .inv-nav-group-toggle {
-    background: #F0F7FF;
-    color: var(--inv-primary);
-    border-radius: 8px;
+    background: var(--inv-accent-container);
+    color: var(--inv-primary-dark);
+    border-radius: var(--inv-radius);
 }
 
 .inv-nav-group--open > .inv-nav-group-toggle .inv-nav-icon,
@@ -138,21 +138,22 @@ body.inv-dashboard-body {
     color: var(--inv-primary);
 }
 
-/* Top-level selected item — solid blue pill */
+/* Top-level selected item — lime accent pill */
 .inv-nav-item--active {
-    background: var(--inv-primary);
-    color: var(--inv-white);
+    background: var(--inv-accent);
+    color: var(--inv-accent-on);
     font-weight: 700;
     box-shadow: none;
+    border-radius: var(--inv-radius);
 }
 
 .inv-nav-item--active .inv-nav-icon,
 .inv-nav-row--active .inv-nav-icon {
-    color: var(--inv-white);
+    color: var(--inv-accent-on);
 }
 
 .inv-nav-item--active .material-symbols-outlined:not(.inv-nav-icon):not(.inv-nav-group-chevron) {
-    color: var(--inv-white);
+    color: var(--inv-accent-on);
 }
 
 .inv-nav-group-toggle {
@@ -191,8 +192,8 @@ body.inv-dashboard-body {
 
 /* Hover opens submenu (expanded sidebar / flyout sidebar) */
 .inv-nav-group:hover > .inv-nav-group-toggle {
-    background: #F0F7FF;
-    color: var(--inv-primary);
+    background: var(--inv-accent-container);
+    color: var(--inv-primary-dark);
 }
 
 .inv-nav-group:hover > .inv-nav-group-toggle .inv-nav-icon,
@@ -248,23 +249,23 @@ body.inv-dashboard-body {
     color: var(--inv-primary);
 }
 
-/* Selected sub-item — solid blue pill + white + button */
+/* Selected sub-item — lime pill + dark text */
 .inv-nav-row--active {
-    background: var(--inv-primary);
-    border-radius: 8px;
+    background: var(--inv-accent);
+    border-radius: var(--inv-radius);
 }
 
 .inv-nav-row--active > .inv-nav-item {
     background: transparent;
-    color: var(--inv-white);
+    color: var(--inv-accent-on);
     font-weight: 700;
     border-left: none;
-    border-radius: 8px 0 0 8px;
+    border-radius: var(--inv-radius) 0 0 var(--inv-radius);
 }
 
 .inv-nav-row--active > .inv-nav-item.inv-nav-item--active {
     background: transparent;
-    color: var(--inv-white);
+    color: var(--inv-accent-on);
 }
 
 .inv-nav-add-btn {
@@ -288,20 +289,20 @@ body.inv-dashboard-body {
 
 .inv-nav-row:hover .inv-nav-add-btn {
     opacity: 1;
-    background: rgba(0, 103, 255, 0.1);
-    color: var(--inv-primary);
+    background: var(--inv-accent-container);
+    color: var(--inv-primary-dark);
 }
 
 .inv-nav-row--active .inv-nav-add-btn {
     opacity: 1;
-    background: var(--inv-white);
-    color: var(--inv-primary);
+    background: var(--inv-charcoal);
+    color: var(--inv-accent);
     box-shadow: none;
 }
 
 .inv-nav-row--active .inv-nav-add-btn:hover {
-    background: var(--inv-white);
-    color: var(--inv-primary-hover);
+    background: var(--inv-charcoal-hover);
+    color: var(--inv-accent);
     transform: scale(1.08);
 }
 
@@ -550,13 +551,14 @@ body.inv-dashboard-body--superadmin .inv-sidebar {
 .inv-business-tab--active {
     z-index: 1;
     background: var(--inv-chrome-page-bg);
-    color: #1C2434;
-    font-weight: 600;
+    color: var(--inv-charcoal);
+    font-weight: 700;
+    border-radius: var(--inv-radius-pill);
 }
 
 .inv-business-tab--active .inv-business-tab-icon--default {
-    background: var(--inv-primary-container);
-    color: var(--inv-primary);
+    background: var(--inv-accent);
+    color: var(--inv-accent-on);
 }
 
 .inv-business-tab-curve {
@@ -633,21 +635,21 @@ body.inv-dashboard-body--superadmin .inv-sidebar {
     height: 34px;
     padding: 0;
     border: none;
-    border-radius: 8px;
-    background: var(--inv-primary);
-    color: var(--inv-white);
+    border-radius: var(--inv-radius);
+    background: var(--inv-accent);
+    color: var(--inv-accent-on);
     cursor: pointer;
     transition: background 0.15s;
 }
 
 .inv-quick-access-trigger .material-symbols-outlined {
     font-size: 22px;
-    font-variation-settings: "wght" 500;
+    font-variation-settings: "wght" 600;
 }
 
 .inv-quick-access-trigger:hover,
 .inv-quick-access-trigger--open {
-    background: var(--inv-primary-hover);
+    background: var(--inv-accent-hover);
 }
 
 .inv-quick-access-panel {
@@ -657,10 +659,10 @@ body.inv-dashboard-body--superadmin .inv-sidebar {
     z-index: 200;
     min-width: min(720px, calc(100vw - 48px));
     padding: 20px 24px 24px;
-    border-radius: 10px;
+    border-radius: var(--inv-radius-lg);
     background: var(--inv-white);
-    border: 1px solid var(--inv-outline-variant);
-    box-shadow: 0 12px 40px rgba(28, 36, 52, 0.18);
+    border: var(--inv-border-width) solid var(--inv-outline-variant);
+    box-shadow: none;
 }
 
 .inv-quick-access-grid {
@@ -712,7 +714,7 @@ body.inv-dashboard-body--superadmin .inv-sidebar {
 }
 
 .inv-quick-access-list a:hover {
-    background: #F0F7FF;
+    background: var(--inv-accent-container);
     color: var(--inv-primary);
 }
 
@@ -999,8 +1001,8 @@ body.inv-dashboard-body--superadmin .inv-sidebar {
     margin: 0;
     font-family: var(--inv-font-display);
     font-size: 22px;
-    font-weight: 600;
-    color: var(--inv-on-bg);
+    font-weight: 700;
+    color: var(--inv-charcoal);
     letter-spacing: -0.01em;
 }
 
@@ -1121,7 +1123,7 @@ body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-si
 }
 
 body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) .inv-nav-group.inv-nav-group--has-active-child:not(:hover) > .inv-nav-group-toggle {
-    background: #F0F7FF;
+    background: var(--inv-accent-container);
     color: var(--inv-primary);
 }
 

@@ -34,13 +34,13 @@
 .inv-toast--success { border-left: 4px solid var(--inv-success-text); }
 .inv-toast--error { border-left: 4px solid var(--inv-error); }
 .inv-toast--warning { border-left: 4px solid #f59e0b; }
-.inv-toast--info { border-left: 4px solid var(--inv-primary); }
+.inv-toast--info { border-left: 4px solid var(--inv-accent); }
 
 .inv-toast-icon { font-size: 20px; flex-shrink: 0; }
 .inv-toast--success .inv-toast-icon { color: var(--inv-success-text); }
 .inv-toast--error .inv-toast-icon { color: var(--inv-error); }
 .inv-toast--warning .inv-toast-icon { color: #f59e0b; }
-.inv-toast--info .inv-toast-icon { color: var(--inv-primary); }
+.inv-toast--info .inv-toast-icon { color: var(--inv-primary-dark); }
 
 .inv-toast-text { flex: 1; }
 
@@ -127,7 +127,7 @@
 
 .inv-pagination-size-select:focus {
     outline: none;
-    box-shadow: 0 0 0 2px rgba(0, 103, 255, 0.25);
+    box-shadow: 0 0 0 2px var(--inv-accent-container);
 }
 
 .inv-pagination-right {
@@ -245,10 +245,10 @@ body.inv-confirm-open { overflow: hidden; }
     z-index: 10001;
     width: min(420px, calc(100vw - 32px));
     padding: 28px 24px 24px;
-    border-radius: var(--inv-radius-xl);
-    border: 1px solid var(--inv-outline-variant);
+    border-radius: var(--inv-radius-lg);
+    border: var(--inv-border-width) solid var(--inv-outline-variant);
     background: var(--inv-surface);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    box-shadow: none;
     text-align: center;
     transform: translate(-50%, -50%);
     animation: inv-confirm-slide-in 0.2s ease;
@@ -340,12 +340,12 @@ body.inv-confirm-open { overflow: hidden; }
 }
 
 .inv-confirm-btn--primary {
-    background: var(--inv-primary);
+    background: var(--inv-btn-primary-bg);
     color: var(--inv-white);
 }
 
 .inv-confirm-btn--primary:hover {
-    background: #2a3344;
+    background: var(--inv-btn-primary-hover);
 }
 
 /* Tooltip */
@@ -427,9 +427,9 @@ body.inv-modal-open { overflow: hidden; }
     scrollbar-width: none;
     -ms-overflow-style: none;
     background: #FFFFFF;
-    border-radius: 14px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-    border: 1px solid var(--inv-outline-variant);
+    border-radius: var(--inv-radius-lg);
+    box-shadow: none;
+    border: var(--inv-border-width) solid var(--inv-outline-variant);
 }
 
 .inv-modal-dialog::-webkit-scrollbar {
