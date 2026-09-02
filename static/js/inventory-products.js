@@ -38,7 +38,6 @@ var InventoryProducts = (function () {
                 columns: [
                     { id: "name", label: "Name", locked: true, sortKey: "name", headerClass: "inv-col-name", cell: function (item) { return '<td class="inv-col-name">' + cellText(item.name) + "</td>"; } },
                     { id: "sku", label: "SKU", sortKey: "sku", headerClass: "inv-col-sku", cell: function (item) { return '<td class="inv-col-sku">' + cellText(item.sku) + "</td>"; } },
-                    { id: "barcode", label: "Barcode", sortKey: "barcode", headerClass: "inv-col-barcode", cell: function (item) { return '<td class="inv-col-barcode">' + cellText(item.barcode) + "</td>"; } },
                     { id: "category", label: "Category", sortKey: "category", headerClass: "inv-col-category", cell: function (item) { return '<td class="inv-col-category">' + cellText(item.category_name) + "</td>"; } },
                     { id: "brand", label: "Brand", sortKey: "brand", headerClass: "inv-col-brand", cell: function (item) { return '<td class="inv-col-brand">' + cellText(item.brand_name) + "</td>"; } },
                     { id: "actual_price", label: "Actual Price", sortKey: "actual_price", headerClass: "inv-col-actual inv-mgmt-cell--num", cell: function (item) { return '<td class="inv-col-actual inv-mgmt-cell--num">' + cellMoney(item.actual_price) + "</td>"; } },

@@ -256,6 +256,23 @@ var InventoryColumnCustomize = (function () {
         }
     }
 
+    function escapeAttr(str) {
+        return String(str)
+            .replace(/&/g, "&amp;")
+            .replace(/"/g, "&quot;")
+            .replace(/</g, "&lt;");
+    }
+
+    function stripTags(html) {
+        return String(html || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+    }
+
+    function addCellLabel(cellHtml, label) {
+        if (!cellHtml || cellHtml.indexOf("<td") === -1) return cellHtml;
+        if (/data-label=/i.test(cellHtml)) return cellHtml;
+        return cellHtml.replace(/<td(\s|>)/i, '<td data-label="' + escapeAttr(stripTags(label)) + '"$1');
+    }
+
     function renderSortHeader(ctrl, col) {
         var thClass = col.headerClass ? col.headerClass + " inv-col-sortable" : "inv-col-sortable";
         var sortKey = col.sortKey;
@@ -389,7 +406,7 @@ var InventoryColumnCustomize = (function () {
 
         ctrl.renderRowCells = function (item) {
             return ctrl.getVisibleColumns().map(function (col) {
-                return col.cell(item);
+                return addCellLabel(col.cell(item), col.label);
             }).join("");
         };
 

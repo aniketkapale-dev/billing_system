@@ -39,6 +39,8 @@
     --inv-radius-xl: 0.5rem;
     --inv-shadow: 0 1px 3px rgb(28 45 52 / 53%);
     --inv-sidebar-width: 16rem;
+    --inv-sidebar-collapsed-width: 4.25rem;
+    --inv-sidebar-current-width: var(--inv-sidebar-width);
     --inv-chrome-page-bg: #FFFFFF;
     --inv-header-top-height: 4rem;
     --inv-header-bottom-height: 3.5rem;

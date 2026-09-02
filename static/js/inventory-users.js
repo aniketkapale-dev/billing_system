@@ -211,19 +211,20 @@ var InventoryUsers = (function () {
             ),
             renderDetailField("Registered", formatDate(user.created_at)),
             renderDetailField("Approved", formatDate(user.approved_at)),
-            renderDetailField("Profile Photo", profileHtml, { html: true, full: true })
+            renderDetailField("Profile Photo", profileHtml, { html: true })
         ].join("");
 
         var businesses = user.businesses || [];
         if (!businesses.length) {
             businessesWrap.innerHTML =
-                '<h4 class="inv-stockin-view-items-title">Businesses</h4>' +
-                '<p class="inv-mgmt-empty" style="padding:16px 0;">No businesses created yet.</p>';
+                '<h4 class="inv-mgmt-view-section-title">Businesses</h4>' +
+                '<p class="inv-mgmt-empty" style="padding:8px 0;">No businesses created yet.</p>';
             return;
         }
 
         businessesWrap.innerHTML =
-            '<h4 class="inv-stockin-view-items-title">Businesses (' + businesses.length + ")</h4>" +
+            '<div class="inv-mgmt-view-section">' +
+            '<h4 class="inv-mgmt-view-section-title">Businesses (' + businesses.length + ")</h4>" +
             '<div class="inv-mgmt-table-wrap">' +
             '<table class="inv-mgmt-table">' +
             "<thead><tr>" +
@@ -246,7 +247,7 @@ var InventoryUsers = (function () {
                     "</tr>"
                 );
             }).join("") +
-            "</tbody></table></div>";
+            "</tbody></table></div></div>";
     }
 
     function openUserDetail(userId) {

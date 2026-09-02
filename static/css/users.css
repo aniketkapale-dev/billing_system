@@ -51,9 +51,9 @@
 }
 
 .inv-user-detail-businesses {
-    margin-top: 24px;
-    padding-top: 24px;
-    border-top: 1px solid var(--inv-outline-variant);
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
 }
 
 .inv-mgmt-table--users th:nth-child(1),

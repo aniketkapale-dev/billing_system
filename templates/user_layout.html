@@ -12,7 +12,7 @@
     <link href="{% static 'css/dashboard.css' %}" rel="stylesheet"/>
     <link href="{% static 'css/inventory-mgmt.css' %}" rel="stylesheet"/>
 </head>
-<body class="inv-auth-pending inv-dashboard-body">
+<body class="inv-auth-pending inv-dashboard-body inv-sidebar-collapsed">
 {% include "partials/inventory_ui.html" %}
 <nav class="inv-sidebar">
     <div class="inv-sidebar-brand">
@@ -177,6 +177,7 @@
 
 <header class="inv-dashboard-header inv-chrome-header">
     <div class="inv-chrome-header-top">
+        {% include "partials/inv_sidebar_toggle.html" %}
         <div class="inv-chrome-active-business" id="inv-active-business">
             <span id="inv-active-business-icon" class="inv-active-business-icon" aria-hidden="true">
                 <span class="material-symbols-outlined">store</span>
@@ -382,6 +383,7 @@
 <script src="{% static 'js/inventory-bulk-select.js' %}"></script>
 <script src="{% static 'js/inventory-document-export.js' %}"></script>
 <script src="{% static 'js/inventory-column-customize.js' %}"></script>
+<script src="{% static 'js/inventory-table-cards.js' %}"></script>
 <script src="{% static 'js/inventory-sidebar.js' %}"></script>
 <script src="{% static 'js/inventory-quick-access.js' %}"></script>
 <script src="{% static 'js/inventory-owner-profile.js' %}"></script>

@@ -9,6 +9,12 @@ var InventoryBusinessUsers = (function () {
     var members = [];
     var editingId = null;
 
+    function isBusinessOwner() {
+        if (!window.InventoryNavAccess) return true;
+        var access = InventoryNavAccess.getAccess ? InventoryNavAccess.getAccess() : null;
+        return !access || !!access.is_owner;
+    }
+
     function request(path, opts) {
         return InventoryApi.request(API, path, opts);
     }
@@ -31,9 +37,28 @@ var InventoryBusinessUsers = (function () {
         if (form) form.classList.remove("inv-hidden");
     }
 
-    function toggleOwnerPanel(show) {
+    function syncUi(opts) {
+        opts = opts || {};
+        var profilePanel = document.getElementById("business-profile-panel");
+        var hasBusiness = opts.hasBusiness;
+        if (hasBusiness === undefined) {
+            hasBusiness = !!(profilePanel && !profilePanel.classList.contains("inv-hidden"));
+        }
+        var visible = !!hasBusiness && isBusinessOwner();
         var panel = document.getElementById("business-users-panel");
-        if (panel) panel.classList.toggle("inv-hidden", !show);
+        var addUserBtn = document.getElementById("business-user-add-btn");
+
+        if (panel) panel.classList.toggle("inv-hidden", !visible);
+        if (addUserBtn) addUserBtn.classList.toggle("inv-hidden", !visible);
+
+        if (visible) {
+            loadRoles();
+            loadMembers();
+        }
+    }
+
+    function toggleOwnerPanel(show) {
+        syncUi({ hasBusiness: show !== false });
     }
 
     function renderRoleTabOptions(containerId, selectedTabs) {
@@ -132,7 +157,7 @@ var InventoryBusinessUsers = (function () {
     }
 
     function loadMembers() {
-        if (!InventoryNavAccess.isOwner()) {
+        if (!isBusinessOwner()) {
             members = [];
             renderRows(members);
             return Promise.resolve();
@@ -320,21 +345,17 @@ var InventoryBusinessUsers = (function () {
             });
         }
 
-        window.addEventListener("inventory:nav-access-changed", function (e) {
-            var access = e.detail;
-            toggleOwnerPanel(access && access.is_owner);
-            if (access && access.is_owner) {
-                loadRoles();
-                loadMembers();
-            }
+        window.addEventListener("inventory:nav-access-changed", function () {
+            syncUi();
         });
 
         window.addEventListener("inventory:business-changed", function () {
             showMainView();
-            if (InventoryNavAccess.isOwner()) {
-                loadRoles();
-                loadMembers();
-            }
+            syncUi();
+        });
+
+        window.addEventListener("inventory:business-profile-loaded", function () {
+            syncUi({ hasBusiness: true });
         });
 
         if (window.InventoryAuth && typeof InventoryAuth.wireMobileInput === "function") {
@@ -347,13 +368,9 @@ var InventoryBusinessUsers = (function () {
         init._wired = true;
         wireEvents();
         loadTabOptions().then(function () {
-            toggleOwnerPanel(InventoryNavAccess.isOwner());
-            if (InventoryNavAccess.isOwner()) {
-                loadRoles();
-                loadMembers();
-            }
+            syncUi();
         });
     }
 
-    return { init: init };
+    return { init: init, syncUi: syncUi, loadMembers: loadMembers };
 })();

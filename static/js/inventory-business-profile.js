@@ -44,11 +44,12 @@ var InventoryBusinessProfile = (function () {
     function togglePanels(hasBusiness) {
         var empty = document.getElementById("business-profile-empty");
         var panel = document.getElementById("business-profile-panel");
-        var usersPanel = document.getElementById("business-users-panel");
+
         if (empty) empty.classList.toggle("inv-hidden", hasBusiness);
         if (panel) panel.classList.toggle("inv-hidden", !hasBusiness);
-        if (usersPanel && (!window.InventoryNavAccess || !InventoryNavAccess.isOwner())) {
-            usersPanel.classList.add("inv-hidden");
+
+        if (window.InventoryBusinessUsers && typeof InventoryBusinessUsers.syncUi === "function") {
+            InventoryBusinessUsers.syncUi({ hasBusiness: hasBusiness });
         }
     }
 
@@ -100,6 +101,7 @@ var InventoryBusinessProfile = (function () {
         resetLogoState();
         setLogoPreview(business.logo_url || null);
         togglePanels(true);
+        window.dispatchEvent(new CustomEvent("inventory:business-profile-loaded"));
     }
 
     function loadActiveBusiness() {
@@ -244,6 +246,9 @@ var InventoryBusinessProfile = (function () {
 
         InventoryBusiness.whenReady(loadActiveBusiness);
         window.addEventListener("inventory:business-changed", loadActiveBusiness);
+        window.addEventListener("inventory:nav-access-changed", function () {
+            togglePanels(!!currentBusiness);
+        });
     }
 
     return { init: init, loadActiveBusiness: loadActiveBusiness };
