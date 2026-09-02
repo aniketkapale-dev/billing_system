@@ -1,0 +1,11 @@
+<article class="inv-trust-quote-row">
+    {% if business.logo %}
+    <img class="inv-trust-quote-thumb" src="{{ business.logo.url }}" alt="" loading="lazy"/>
+    {% else %}
+    <span class="inv-trust-quote-thumb inv-trust-quote-thumb--initial" aria-hidden="true">{{ business.business_name|first|upper }}</span>
+    {% endif %}
+    <div class="inv-trust-quote-body">
+        <p class="inv-trust-quote-headline">{{ headline }}</p>
+        <span class="inv-trust-quote-meta">{{ business.business_name }}</span>
+    </div>
+</article>

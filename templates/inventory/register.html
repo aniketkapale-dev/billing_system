@@ -12,6 +12,7 @@
 {% include "partials/inventory_ui.html" %}
 
 <main class="inv-auth-main">
+    {% include "partials/auth_bg.html" %}
     <div class="inv-back-wrap">{% include "partials/back_to_home.html" %}</div>
 
     <section class="inv-auth-shell inv-auth-shell--register" aria-label="Billing System registration">
@@ -23,14 +24,7 @@
                 <span>Billing System</span>
             </a>
 
-            <div class="inv-auth-copy">
-                <span class="inv-auth-kicker">
-                    <span class="material-symbols-outlined material-symbols-outlined--filled">rocket_launch</span>
-                    Start organized
-                </span>
-                <h1>Create a workspace for clear billing.</h1>
-                <p>Register your business and keep invoices, stock, and customer activity ready for everyday operations.</p>
-            </div>
+            {% include "partials/auth_sticker_carousel.html" %}
 
             <div class="inv-auth-benefits" aria-label="Registration benefits">
                 <div>
@@ -111,19 +105,10 @@
     </section>
 </main>
 
-<footer class="inv-page-footer">
-    <div class="inv-page-footer-inner">
-        <div class="inv-label-md">&copy; 2026 Billing System</div>
-        <nav>
-            <a href="#">Privacy Policy</a>
-            <a href="#">Terms of Service</a>
-        </nav>
-    </div>
-</footer>
-
 {% load static %}
 <script src="{% static 'js/inventory-toast.js' %}"></script>
 <script src="{% static 'js/inventory-loader.js' %}"></script>
+<script src="{% static 'js/inventory-auth-showcase.js' %}"></script>
 <script src="{% static 'js/inventory-auth.js' %}"></script>
 <script>InventoryAuth.initRegister();</script>
 </body>

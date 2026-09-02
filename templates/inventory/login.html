@@ -12,6 +12,7 @@
 {% include "partials/inventory_ui.html" %}
 
 <main class="inv-auth-main">
+    {% include "partials/auth_bg.html" %}
     <div class="inv-back-wrap">{% include "partials/back_to_home.html" %}</div>
 
     <section class="inv-auth-shell" aria-label="Billing System login">
@@ -23,18 +24,7 @@
                 <span>Billing System</span>
             </a>
 
-            <div class="inv-auth-copy">
-                <span class="inv-auth-kicker">
-                    <span class="material-symbols-outlined material-symbols-outlined--filled">verified</span>
-                    Secure workspace
-                </span>
-                <h1>Welcome back to smarter billing.</h1>
-                <p>Sign in to manage invoices, inventory, customers, and daily business activity from one calm dashboard.</p>
-            </div>
-
-            <!-- <div class="inv-auth-preview" aria-hidden="true"> -->
-               
-            </div>
+            {% include "partials/auth_sticker_carousel.html" %}
         </aside>
 
         <section class="inv-auth-panel">
@@ -80,19 +70,10 @@
     </section>
 </main>
 
-<footer class="inv-page-footer">
-    <div class="inv-page-footer-inner">
-        <div class="inv-label-md">&copy; 2026 Billing System</div>
-        <nav>
-            <a href="#">Privacy Policy</a>
-            <a href="#">Terms of Service</a>
-        </nav>
-    </div>
-</footer>
-
 {% load static %}
 <script src="{% static 'js/inventory-toast.js' %}"></script>
 <script src="{% static 'js/inventory-loader.js' %}"></script>
+<script src="{% static 'js/inventory-auth-showcase.js' %}"></script>
 <script src="{% static 'js/inventory-auth.js' %}"></script>
 <script>InventoryAuth.initLogin();</script>
 </body>
