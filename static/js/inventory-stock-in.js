@@ -185,7 +185,7 @@ var InventoryStockIn = (function () {
     }
 
     function rowTaxOptions(selectedId) {
-        var options = '<option value="">Select GST (optional)</option>';
+        var options = '<option value="">Select Tax (optional)</option>';
         options += taxes.map(function (tax) {
             var selected = String(tax.id) === String(selectedId) ? " selected" : "";
             return '<option value="' + tax.id + '"' + selected + '>' +
@@ -329,16 +329,16 @@ var InventoryStockIn = (function () {
         var key = document.getElementById("stockin-gst-new-key").value.trim();
         var valueRaw = document.getElementById("stockin-gst-new-value").value.trim();
         if (!key) {
-            InventoryToast.error("GST key is required (e.g. gst12%).");
+            InventoryToast.error("Tax key is required (e.g. gst12%).");
             return;
         }
         if (valueRaw === "") {
-            InventoryToast.error("GST value is required (e.g. 12).");
+            InventoryToast.error("Tax value is required (e.g. 12).");
             return;
         }
         var value = parseFloat(valueRaw);
         if (Number.isNaN(value) || value < 0 || value > 100) {
-            InventoryToast.error("GST value must be between 0 and 100.");
+            InventoryToast.error("Tax value must be between 0 and 100.");
             return;
         }
 
@@ -351,11 +351,11 @@ var InventoryStockIn = (function () {
         })
             .then(function (body) {
                 if (body && body.isSuccess && body.data) {
-                    InventoryToast.success("GST added.");
+                    InventoryToast.success("Tax added.");
                     toggleGstPanel(false);
                     return loadTaxes(body.data.id);
                 }
-                var err = body.message || "Unable to add GST.";
+                var err = body.message || "Unable to add tax.";
                 if (body.errors && body.errors.length) err = body.errors.join(" • ");
                 InventoryToast.error(err);
             })
@@ -457,10 +457,10 @@ var InventoryStockIn = (function () {
             '<span class="material-symbols-outlined">add</span></button></div></div>' +
             '<div class="inv-mgmt-field"><label>Quantity</label><input class="inv-mgmt-input inv-item-qty" type="number" min="0.01" step="0.01" value="' + (data.quantity || 1) + '" required/></div>' +
             '<div class="inv-mgmt-field"><label>Actual Price</label><input class="inv-mgmt-input inv-item-actual" type="number" min="0" step="0.01" placeholder="0.00" value="' + (data.actual_price != null ? data.actual_price : "") + '"/></div>' +
-            '<div class="inv-mgmt-field"><label>GST</label>' +
+            '<div class="inv-mgmt-field"><label>Tax</label>' +
             '<div class="inv-field-inline">' +
             '<select class="inv-mgmt-select inv-item-tax">' + rowTaxOptions(data.tax_id || "") + "</select>" +
-            '<button type="button" class="inv-inline-add-btn inv-item-tax-add" title="Add GST" aria-label="Add GST">' +
+            '<button type="button" class="inv-inline-add-btn inv-item-tax-add" title="Add Tax" aria-label="Add Tax">' +
             '<span class="material-symbols-outlined">add</span></button></div></div>' +
             '<div class="inv-mgmt-field"><label>Buy Price</label><input class="inv-mgmt-input inv-item-buy" type="text" readonly value="0.00"/></div>' +
             '<div class="inv-mgmt-field"><label>Total Price</label><input class="inv-mgmt-input inv-item-total" type="text" readonly value="0.00"/></div>' +
@@ -672,7 +672,7 @@ var InventoryStockIn = (function () {
             { label: "Purchase Date", value: displayValue(formatDate(invoice.invoice_date)) },
             { label: "Total Quantity", value: displayValue(formatQty(invoice.total_quantity)) },
             { label: "Subtotal", value: InventoryApi.formatMoney(invoice.subtotal) },
-            { label: "GST Price", value: InventoryApi.formatMoney(invoice.tax) },
+            { label: "Tax Price", value: InventoryApi.formatMoney(invoice.tax) },
             { label: "Grand Total", value: InventoryApi.formatMoney(invoice.grand_total) },
             { label: "Remarks", value: displayValue(invoice.remarks), full: true }
         ];

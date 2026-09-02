@@ -271,11 +271,11 @@ class ProductService(BaseService):
 
         tax = data.get("tax")
         if tax is not None and tax.business_id != business_id:
-            raise ValidationException("Selected GST does not belong to this business.")
+            raise ValidationException("Selected tax does not belong to this business.")
         if "tax" in data and data["tax"] is not None:
             tax_obj = data["tax"]
             if tax_obj.is_deleted or not tax_obj.is_active:
-                raise ValidationException("Selected GST is not available.")
+                raise ValidationException("Selected tax is not available.")
 
     def _validate(self, data, exclude_pk=None, business_id=None):
         if "name" in data:

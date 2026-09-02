@@ -41,7 +41,7 @@ var InventoryProducts = (function () {
                     { id: "category", label: "Category", sortKey: "category", headerClass: "inv-col-category", cell: function (item) { return '<td class="inv-col-category">' + cellText(item.category_name) + "</td>"; } },
                     { id: "brand", label: "Brand", sortKey: "brand", headerClass: "inv-col-brand", cell: function (item) { return '<td class="inv-col-brand">' + cellText(item.brand_name) + "</td>"; } },
                     { id: "actual_price", label: "Actual Price", sortKey: "actual_price", headerClass: "inv-col-actual inv-mgmt-cell--num", cell: function (item) { return '<td class="inv-col-actual inv-mgmt-cell--num">' + cellMoney(item.actual_price) + "</td>"; } },
-                    { id: "gst", label: "GST", sortKey: "tax", headerClass: "inv-col-gst", cell: function (item) { return '<td class="inv-col-gst">' + formatTaxCell(item) + "</td>"; } },
+                    { id: "gst", label: "Tax", sortKey: "tax", headerClass: "inv-col-gst", cell: function (item) { return '<td class="inv-col-gst">' + formatTaxCell(item) + "</td>"; } },
                     { id: "buy_price", label: "Buy Price", sortKey: "purchase_price", headerClass: "inv-col-buy inv-mgmt-cell--num", cell: function (item) { return '<td class="inv-col-buy inv-mgmt-cell--num">' + cellMoney(item.purchase_price) + "</td>"; } },
                     { id: "qty", label: "Qty", headerClass: "inv-col-qty inv-mgmt-cell--num", cell: function (item) { return '<td class="inv-col-qty inv-mgmt-cell--num">' + cellQty(item.quantity) + "</td>"; } },
                     {
@@ -93,7 +93,7 @@ var InventoryProducts = (function () {
         if (!items.length) return;
         InventoryDocumentExport.downloadTablePdf(
             "Products",
-            ["Name", "SKU", "Category", "Brand", "Actual Price", "GST", "Buy Price", "Qty", "Unit"],
+            ["Name", "SKU", "Category", "Brand", "Actual Price", "Tax", "Buy Price", "Qty", "Unit"],
             items.map(function (item) {
                 return [
                     item.name || "",
@@ -116,7 +116,7 @@ var InventoryProducts = (function () {
         if (!items.length) return;
         var html = InventoryDocumentExport.buildTableHtml(
             "Products",
-            ["Name", "SKU", "Category", "Brand", "Actual Price", "GST", "Buy Price", "Qty", "Unit"],
+            ["Name", "SKU", "Category", "Brand", "Actual Price", "Tax", "Buy Price", "Qty", "Unit"],
             items.map(function (item) {
                 return [
                     item.name || "",
@@ -636,7 +636,7 @@ var InventoryProducts = (function () {
         var current = selectedId !== undefined && selectedId !== null
             ? String(selectedId)
             : select.value;
-        fillSelect("product-tax", taxes, "Select GST (optional)", taxLabel);
+        fillSelect("product-tax", taxes, "Select Tax (optional)", taxLabel);
         if (current) select.value = current;
         updateBuyPriceDisplay();
     }
@@ -666,16 +666,16 @@ var InventoryProducts = (function () {
         var key = document.getElementById("product-tax-new-key").value.trim();
         var valueRaw = document.getElementById("product-tax-new-value").value.trim();
         if (!key) {
-            InventoryToast.error("GST key is required (e.g. gst12%).");
+            InventoryToast.error("Tax key is required (e.g. gst12%).");
             return;
         }
         if (valueRaw === "") {
-            InventoryToast.error("GST value is required (e.g. 12).");
+            InventoryToast.error("Tax value is required (e.g. 12).");
             return;
         }
         var value = parseFloat(valueRaw);
         if (Number.isNaN(value) || value < 0 || value > 100) {
-            InventoryToast.error("GST value must be between 0 and 100.");
+            InventoryToast.error("Tax value must be between 0 and 100.");
             return;
         }
 
@@ -688,11 +688,11 @@ var InventoryProducts = (function () {
         })
             .then(function (body) {
                 if (body && body.isSuccess && body.data) {
-                    InventoryToast.success("GST added.");
+                    InventoryToast.success("Tax added.");
                     toggleTaxPanel(false);
                     return loadTaxes(body.data.id);
                 }
-                var err = body.message || "Unable to add GST.";
+                var err = body.message || "Unable to add tax.";
                 if (body.errors && body.errors.length) err = body.errors.join(" • ");
                 InventoryToast.error(err);
             })
@@ -872,7 +872,7 @@ var InventoryProducts = (function () {
             { label: "Brand", value: displayValue(product.brand_name) },
             { label: "Manufacturer", value: displayValue(product.manufacturer_name) },
             { label: "Actual Price", value: cellMoney(product.actual_price) },
-            { label: "GST", value: product.tax_key ? displayValue(product.tax_key + " (" + product.tax_value + "%)") : "—" },
+            { label: "Tax", value: product.tax_key ? displayValue(product.tax_key + " (" + product.tax_value + "%)") : "—" },
             { label: "Buy Price", value: cellMoney(product.purchase_price) },
             { label: "Sell Price", value: cellMoney(product.sale_price) },
             { label: "Unit", value: displayValue(product.unit_short_name || product.unit_name) },

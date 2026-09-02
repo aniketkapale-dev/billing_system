@@ -365,7 +365,7 @@ var InventoryPurchases = (function () {
     }
 
     function rowTaxOptions(selectedId) {
-        var options = '<option value="">No GST</option>';
+        var options = '<option value="">No Tax</option>';
         options += taxes.map(function (tax) {
             var selected = String(tax.id) === String(selectedId) ? " selected" : "";
             return '<option value="' + tax.id + '"' + selected + '>' +
@@ -670,9 +670,9 @@ var InventoryPurchases = (function () {
             '<div class="inv-mgmt-field"><label>Available Product</label><select class="inv-mgmt-select inv-item-product" required>' + productOptions(data.product_id, row) + "</select></div>" +
             '<div class="inv-mgmt-field"><label>Quantity</label><input class="inv-mgmt-input inv-item-qty" type="number" min="0.01" step="0.01" value="' + (data.quantity || 1) + '" required/></div>' +
             '<div class="inv-mgmt-field"><label>Actual Price</label><input class="inv-mgmt-input inv-item-actual" type="text" readonly value="0.00"/></div>' +
-            '<div class="inv-mgmt-field"><label>GST Price</label><input class="inv-mgmt-input inv-item-buy-gst" type="text" readonly value="0.00"/></div>' +
+            '<div class="inv-mgmt-field"><label>Tax Price</label><input class="inv-mgmt-input inv-item-buy-gst" type="text" readonly value="0.00"/></div>' +
             '<div class="inv-mgmt-field"><label>Buy Price</label><input class="inv-mgmt-input inv-item-buy" type="text" readonly value="0.00"/></div>' +
-            '<div class="inv-mgmt-field"><label>GST for Sale</label><select class="inv-mgmt-select inv-item-sale-gst">' + rowTaxOptions(data.sale_tax_id || "") + "</select></div>" +
+            '<div class="inv-mgmt-field"><label>Tax for Sale</label><select class="inv-mgmt-select inv-item-sale-gst">' + rowTaxOptions(data.sale_tax_id || "") + "</select></div>" +
             '<div class="inv-mgmt-field"><label>Sale Price</label><input class="inv-mgmt-input inv-item-sale-actual" type="number" min="0" step="0.01" placeholder="0.00" value="' + (data.sale_actual_price != null && data.sale_actual_price !== "" ? data.sale_actual_price : "") + '" required/></div>' +
             '<div class="inv-mgmt-field"><label>Final Sale Price</label><input class="inv-mgmt-input inv-item-final-price" type="text" readonly value="0.00"/></div>' +
             '<div class="inv-mgmt-field"><label>Total Price</label><input class="inv-mgmt-input inv-item-total" type="text" readonly value="0.00"/></div>' +
@@ -735,9 +735,9 @@ var InventoryPurchases = (function () {
             '<div class="inv-mgmt-field"><label>Product</label><input class="inv-mgmt-input" type="text" readonly value="' + label + '"/></div>' +
             '<div class="inv-mgmt-field"><label>Quantity</label><input class="inv-mgmt-input" type="text" readonly value="' + InventoryApi.escapeHtml(formatQty(line.quantity)) + '"/></div>' +
             '<div class="inv-mgmt-field"><label>Actual Price</label><input class="inv-mgmt-input" type="text" readonly value="—"/></div>' +
-            '<div class="inv-mgmt-field"><label>GST Price</label><input class="inv-mgmt-input" type="text" readonly value="—"/></div>' +
+            '<div class="inv-mgmt-field"><label>Tax Price</label><input class="inv-mgmt-input" type="text" readonly value="—"/></div>' +
             '<div class="inv-mgmt-field"><label>Buy Price</label><input class="inv-mgmt-input inv-item-buy" type="text" readonly value="' + InventoryApi.formatMoney(unitCost) + '"/></div>' +
-            '<div class="inv-mgmt-field"><label>GST for Sale</label><input class="inv-mgmt-input" type="text" readonly value="—"/></div>' +
+            '<div class="inv-mgmt-field"><label>Tax for Sale</label><input class="inv-mgmt-input" type="text" readonly value="—"/></div>' +
             '<div class="inv-mgmt-field"><label>Sale Price</label><input class="inv-mgmt-input" type="text" readonly value="' + InventoryApi.formatMoney(unitSale) + '"/></div>' +
             '<div class="inv-mgmt-field"><label>Final Sale Price</label><input class="inv-mgmt-input" type="text" readonly value="' + InventoryApi.formatMoney(unitSale) + '"/></div>' +
             '<div class="inv-mgmt-field"><label>Total Price</label><input class="inv-mgmt-input" type="text" readonly value="' + InventoryApi.formatMoney(line.line_total) + '"/></div>' +
