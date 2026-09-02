@@ -3,7 +3,9 @@
 .inv-mgmt-page {
     max-width: 100%;
     --inv-mgmt-page-title-height: 3rem;
-    --inv-mgmt-toolbar-stack-gap: 0.5rem;
+    --inv-mgmt-chrome-gap: 1rem;
+    --inv-mgmt-toolbar-stack-gap: 1.25rem;
+    --inv-mgmt-toolbar-list-gap: 1rem;
     --inv-mgmt-page-tabs-height: 0px;
     --inv-mgmt-toolbar-bar-height: 0px;
     --inv-mgmt-page-header-spacer: 4.25rem;
@@ -36,14 +38,14 @@
 /* Page title — fixed below chrome header */
 .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-page-panel:not(.inv-hidden) > .inv-mgmt-header {
     position: fixed;
-    top: var(--inv-header-height);
+    top: calc(var(--inv-header-height) + var(--inv-mgmt-chrome-gap));
     left: var(--inv-sidebar-current-width, var(--inv-sidebar-width));
     right: 0;
     z-index: 26;
-    margin: 0;
+    margin: 4px 0;
     height: var(--inv-mgmt-page-title-height);
     min-height: var(--inv-mgmt-page-title-height);
-    padding: 0 28px;
+    padding: 3px 28px;
     background: var(--inv-chrome-page-bg);
     border-bottom: none;
     box-sizing: border-box;
@@ -51,7 +53,7 @@
 }
 
 .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-page-panel:not(.inv-hidden):has(> .inv-mgmt-header) {
-    padding-top: var(--inv-mgmt-page-title-height);
+    padding-top: calc(var(--inv-mgmt-page-title-height) + var(--inv-mgmt-chrome-gap));
 }
 
 .inv-mgmt-page > .inv-mgmt-header,
@@ -121,7 +123,7 @@
 /* Optional tabs row — fixed below page title */
 .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-page-panel:not(.inv-hidden) > .inv-mgmt-tabs {
     position: fixed;
-    top: calc(var(--inv-header-height) + var(--inv-mgmt-page-title-height));
+    top: calc(var(--inv-header-height) + var(--inv-mgmt-chrome-gap) + var(--inv-mgmt-page-title-height));
     left: var(--inv-sidebar-current-width, var(--inv-sidebar-width));
     right: 0;
     z-index: 25;
@@ -135,34 +137,22 @@
 
 .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-page-panel:not(.inv-hidden):has(> .inv-mgmt-tabs) {
     --inv-mgmt-page-tabs-height: 2.5rem;
-    padding-top: calc(var(--inv-mgmt-page-title-height) + var(--inv-mgmt-page-tabs-height));
+    padding-top: calc(var(--inv-mgmt-chrome-gap) + var(--inv-mgmt-page-title-height) + var(--inv-mgmt-page-tabs-height));
 }
 
-/* Search / filter bar — fixed separate strip; card list scrolls below */
-.inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-page-panel:not(.inv-hidden) > .inv-mgmt-card:not(.inv-mgmt-panel-card) > .inv-mgmt-toolbar,
-.inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-page-panel:not(.inv-hidden) > .inv-mgmt-card:not(.inv-mgmt-panel-card) > .inv-mgmt-toolbar--filters {
-    position: fixed;
-    top: calc(var(--inv-header-height) + var(--inv-mgmt-page-title-height) + var(--inv-mgmt-page-tabs-height, 0px) + var(--inv-mgmt-toolbar-stack-gap));
-    left: calc(var(--inv-sidebar-current-width, var(--inv-sidebar-width)) + 28px);
-    right: 28px;
-    z-index: 24;
-    margin: 0 !important;
+/* Search / filter bar — in-flow above scrollable list (not fixed) */
+.inv-mgmt-page:not(.inv-dashboard-page):not(.inv-business-page) .inv-mgmt-page-panel:not(.inv-hidden) > .inv-mgmt-card:not(.inv-mgmt-panel-card):has(.inv-mgmt-table-wrap) > .inv-mgmt-toolbar,
+.inv-mgmt-page:not(.inv-dashboard-page):not(.inv-business-page) .inv-mgmt-page-panel:not(.inv-hidden) > .inv-mgmt-card:not(.inv-mgmt-panel-card):has(.inv-mgmt-table-wrap) > .inv-mgmt-toolbar--filters {
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+    margin: 0;
     padding: 10px 16px;
     border: 1px solid var(--inv-table-border);
     border-radius: 10px;
     background: var(--inv-table-toolbar-bg);
     box-shadow: 0 2px 8px rgba(28, 45, 52, 0.06);
     box-sizing: border-box;
-}
-
-.inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-page-panel:not(.inv-hidden) > .inv-mgmt-card:not(.inv-mgmt-panel-card):has(> .inv-mgmt-toolbar) {
-    --inv-mgmt-toolbar-bar-height: 4rem;
-    padding-top: calc(var(--inv-mgmt-toolbar-bar-height) + var(--inv-mgmt-toolbar-stack-gap));
-}
-
-.inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-page-panel:not(.inv-hidden) > .inv-mgmt-card:not(.inv-mgmt-panel-card):has(> .inv-mgmt-toolbar--filters) {
-    --inv-mgmt-toolbar-bar-height: 4.5rem;
-    padding-top: calc(var(--inv-mgmt-toolbar-bar-height) + var(--inv-mgmt-toolbar-stack-gap));
 }
 
 /* List pages — scroll card rows inside panel (not business page) */
@@ -179,12 +169,31 @@
     flex-direction: column;
     flex: 1 1 0;
     min-height: 0;
-    overflow-x: hidden;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
+    overflow: hidden;
+    gap: var(--inv-mgmt-toolbar-list-gap);
+    margin-top: var(--inv-mgmt-toolbar-stack-gap);
     border: none;
     background: transparent;
     box-shadow: none;
+}
+
+/* Only the list/table region scrolls — toolbar and pagination stay in place above/below */
+.inv-mgmt-page:not(.inv-dashboard-page):not(.inv-business-page) .inv-mgmt-page-panel:not(.inv-hidden) > .inv-mgmt-card:not(.inv-mgmt-panel-card):has(.inv-mgmt-table-wrap) > .inv-bulk-toolbar:not(.inv-hidden) {
+    flex-shrink: 0;
+}
+
+.inv-mgmt-page:not(.inv-dashboard-page):not(.inv-business-page) .inv-mgmt-page-panel:not(.inv-hidden) > .inv-mgmt-card:not(.inv-mgmt-panel-card):has(.inv-mgmt-table-wrap) > .inv-mgmt-table-wrap {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.inv-mgmt-page:not(.inv-dashboard-page):not(.inv-business-page) .inv-mgmt-page-panel:not(.inv-hidden) > .inv-mgmt-card:not(.inv-mgmt-panel-card):has(.inv-mgmt-table-wrap) > .inv-pagination {
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
 }
 
 .inv-mgmt-page:not(.inv-dashboard-page):not(.inv-business-page) .inv-mgmt-page-panel:not(.inv-hidden) > .inv-mgmt-card:not(.inv-mgmt-panel-card):has(.inv-mgmt-table-wrap) .inv-settings-panel-body--table {
@@ -192,23 +201,20 @@
     flex-direction: column;
     flex: 1 1 0;
     min-height: 0;
-    overflow-y: auto;
+    overflow: hidden;
 }
 
-.inv-mgmt-page:not(.inv-dashboard-page):not(.inv-business-page) .inv-mgmt-page-panel:not(.inv-hidden) > .inv-mgmt-card:not(.inv-mgmt-panel-card):has(.inv-mgmt-table-wrap) .inv-mgmt-table-wrap {
-    overflow: visible;
-    flex: 0 0 auto;
+.inv-mgmt-page:not(.inv-dashboard-page):not(.inv-business-page) .inv-mgmt-page-panel:not(.inv-hidden) > .inv-mgmt-card:not(.inv-mgmt-panel-card):has(.inv-mgmt-table-wrap) .inv-settings-panel-body--table > .inv-mgmt-table-wrap {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 @media (max-width: 640px) {
     .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-page-panel:not(.inv-hidden) > .inv-mgmt-tabs {
         padding: 0 16px 10px;
-    }
-
-    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-page-panel:not(.inv-hidden) > .inv-mgmt-card:not(.inv-mgmt-panel-card) > .inv-mgmt-toolbar,
-    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-page-panel:not(.inv-hidden) > .inv-mgmt-card:not(.inv-mgmt-panel-card) > .inv-mgmt-toolbar--filters {
-        left: 16px;
-        right: 16px;
     }
 }
 
@@ -229,6 +235,11 @@
     margin-bottom: 24px;
 }
 
+/* Form / view panels — space below business tab bar (inv-business-switcher) */
+.inv-mgmt-page:not(.inv-dashboard-page):not(.inv-business-page) .inv-mgmt-page-panel:not(.inv-hidden) > .inv-mgmt-panel-header {
+    padding-top: 20px;
+}
+
 .inv-mgmt-panel-header .inv-dashboard-greeting {
     margin: 0;
 }
@@ -236,11 +247,15 @@
 .inv-page-back-btn {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 10px;
+    padding: 10px 22px;
+    min-height: 42px;
+    white-space: nowrap;
 }
 
 .inv-page-back-btn .material-symbols-outlined {
     font-size: 20px;
+    flex-shrink: 0;
 }
 
 .inv-mgmt-panel-card {
@@ -979,7 +994,7 @@ colgroup .inv-col-check-col {
 
 .inv-mgmt-page:not(.inv-dashboard-page):not(.inv-business-page) .inv-mgmt-page-panel:not(.inv-hidden) > .inv-mgmt-card:not(.inv-mgmt-panel-card):has(.inv-mgmt-table-wrap) .inv-mgmt-table-wrap:has(> .inv-mgmt-table--products) {
     overflow-x: auto;
-    overflow-y: visible;
+    overflow-y: auto;
 }
 
 .inv-mgmt-table-wrap > .inv-mgmt-table--products {
