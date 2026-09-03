@@ -153,13 +153,13 @@
 
 {% block page_scripts %}
 {% if settings_section == 'tax' %}
-<script src="{% static 'js/inventory-settings-tax.js' %}"></script>
+<script src="{% static 'js/inventory/settings-tax.js' %}"></script>
 <script>
 InventoryPagePanel.init();
 InventorySettingsTax.init();
 </script>
 {% elif settings_section == 'invoice' %}
-<script src="{% static 'js/inventory-settings-invoice.js' %}"></script>
+<script src="{% static 'js/inventory/settings-invoice.js' %}"></script>
 <script>
 InventoryPagePanel.init();
 InventorySettingsInvoice.init();

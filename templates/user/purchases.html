@@ -157,13 +157,13 @@
 
 {% block page_scripts %}
 <link href="{% static 'css/inventory-mgmt.css' %}" rel="stylesheet"/>
-<script src="{% static 'js/inventory-api.js' %}"></script>
-<script src="{% static 'js/inventory-modal.js' %}"></script>
-<script src="{% static 'js/inventory-page-panel.js' %}"></script>
-<script src="{% static 'js/inventory-multi-select.js' %}"></script>
-<script src="{% static 'js/inventory-tax-select.js' %}"></script>
-<script src="{% static 'js/inventory-customers.js' %}"></script>
-<script src="{% static 'js/inventory-purchases.js' %}"></script>
+<script src="{% static 'js/core/api.js' %}"></script>
+<script src="{% static 'js/components/modal.js' %}"></script>
+<script src="{% static 'js/components/page-panel.js' %}"></script>
+<script src="{% static 'js/components/multi-select.js' %}"></script>
+<script src="{% static 'js/components/tax-select.js' %}"></script>
+<script src="{% static 'js/inventory/customers.js' %}"></script>
+<script src="{% static 'js/inventory/purchases.js' %}"></script>
 <script>
 InventoryPagePanel.init();
 InventoryCustomers.init();

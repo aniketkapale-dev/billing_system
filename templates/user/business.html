@@ -218,9 +218,9 @@
 
 {% block page_scripts %}
 <link href="{% static 'css/inventory-mgmt.css' %}" rel="stylesheet"/>
-<script src="{% static 'js/inventory-api.js' %}"></script>
-<script src="{% static 'js/inventory-business-profile.js' %}"></script>
-<script src="{% static 'js/inventory-business-users.js' %}"></script>
+<script src="{% static 'js/core/api.js' %}"></script>
+<script src="{% static 'js/inventory/business-profile.js' %}"></script>
+<script src="{% static 'js/inventory/business-users.js' %}"></script>
 <script>
 InventoryBusinessProfile.init();
 InventoryBusinessUsers.init();
