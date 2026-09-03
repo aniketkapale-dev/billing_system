@@ -1,0 +1,40 @@
+{% extends "superadmin_layout.html" %}
+{% block title %}Superadmin Dashboard - Billing System{% endblock %}
+{% block content %}
+<div class="inv-mgmt-page inv-dashboard-page inv-superadmin-dashboard-page">
+    <div class="inv-mgmt-header">
+        <h2 class="inv-dashboard-greeting">Dashboard</h2>
+    </div>
+
+    <div id="superadmin-dashboard-stat-cards" class="inv-dashboard-stat-grid inv-dashboard-stat-grid--superadmin">
+        <div class="inv-dashboard-stat-card inv-dashboard-stat-card--loading">
+            <div class="inv-dashboard-stat-skeleton"></div>
+        </div>
+        <div class="inv-dashboard-stat-card inv-dashboard-stat-card--loading">
+            <div class="inv-dashboard-stat-skeleton"></div>
+        </div>
+        <div class="inv-dashboard-stat-card inv-dashboard-stat-card--loading">
+            <div class="inv-dashboard-stat-skeleton"></div>
+        </div>
+    </div>
+
+    <div class="inv-mgmt-card inv-dashboard-chart-card inv-superadmin-line-chart-card">
+        <div class="inv-dashboard-recent-header">
+            <h3 class="inv-dashboard-recent-title">User Analytics (Last 6 Months)</h3>
+            <a href="/superadmin/users/" class="inv-dashboard-recent-link">Manage users</a>
+        </div>
+        <div id="superadmin-users-line-chart" class="inv-dashboard-chart inv-superadmin-line-chart">
+            <div class="inv-dashboard-chart-empty">Loading...</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+{% load static %}
+<script src="{% static 'js/core/api.js' %}"></script>
+<script src="{% static 'js/admin/superadmin-dashboard.js' %}"></script>
+<script>
+InventorySuperadminDashboard.init();
+</script>
+{% endblock %}

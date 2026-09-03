@@ -1,0 +1,99 @@
+{% extends "user_layout.html" %}
+{% block title %}Dashboard - Billing System{% endblock %}
+{% block content %}
+<div class="inv-mgmt-page inv-dashboard-page">
+    <div id="dashboard-stat-cards" class="inv-dashboard-stat-grid">
+        <div class="inv-dashboard-stat-card inv-dashboard-stat-card--loading">
+            <div class="inv-dashboard-stat-skeleton"></div>
+        </div>
+        <div class="inv-dashboard-stat-card inv-dashboard-stat-card--loading">
+            <div class="inv-dashboard-stat-skeleton"></div>
+        </div>
+        <div class="inv-dashboard-stat-card inv-dashboard-stat-card--loading">
+            <div class="inv-dashboard-stat-skeleton"></div>
+        </div>
+        <div class="inv-dashboard-stat-card inv-dashboard-stat-card--loading">
+            <div class="inv-dashboard-stat-skeleton"></div>
+        </div>
+    </div>
+
+    <div class="inv-dashboard-analytics-grid">
+        <div class="inv-dashboard-analytics-col inv-dashboard-analytics-col--charts">
+            <div class="inv-mgmt-card inv-dashboard-chart-card">
+                <div class="inv-dashboard-recent-header">
+                    <h3 class="inv-dashboard-recent-title">Recent Sales Overview</h3>
+                    <a href="/dashboard/purchases/" class="inv-dashboard-recent-link">View all</a>
+                </div>
+                <div id="dashboard-sales-chart" class="inv-dashboard-chart">
+                    <div class="inv-dashboard-chart-empty">Loading...</div>
+                </div>
+            </div>
+
+            <div class="inv-mgmt-card inv-dashboard-chart-card">
+                <div class="inv-dashboard-recent-header">
+                    <h3 class="inv-dashboard-recent-title">Recent Purchases Overview</h3>
+                    <a href="/dashboard/stock-in/" class="inv-dashboard-recent-link">View all</a>
+                </div>
+                <div id="dashboard-purchases-chart" class="inv-dashboard-chart">
+                    <div class="inv-dashboard-chart-empty">Loading...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="inv-dashboard-analytics-col inv-dashboard-analytics-col--tables">
+            <div class="inv-mgmt-card inv-dashboard-recent-card inv-dashboard-panel-card inv-dashboard-panel-card--sales">
+                <div class="inv-dashboard-recent-header">
+                    <h3 class="inv-dashboard-recent-title">Recent Sales</h3>
+                    <a href="/dashboard/purchases/" class="inv-dashboard-recent-link">View all</a>
+                </div>
+                <div class="inv-mgmt-table-wrap">
+                    <table class="inv-mgmt-table inv-mgmt-table--dashboard">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Customer</th>
+                                <th>Products</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dashboard-recent-sales">
+                            <tr><td colspan="4" class="inv-mgmt-empty">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="inv-mgmt-card inv-dashboard-recent-card inv-dashboard-panel-card inv-dashboard-panel-card--purchase">
+                <div class="inv-dashboard-recent-header">
+                    <h3 class="inv-dashboard-recent-title">Recent Purchases</h3>
+                    <a href="/dashboard/stock-in/" class="inv-dashboard-recent-link">View all</a>
+                </div>
+                <div class="inv-mgmt-table-wrap">
+                    <table class="inv-mgmt-table inv-mgmt-table--dashboard">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Invoice No.</th>
+                                <th>Items</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dashboard-recent-purchases">
+                            <tr><td colspan="4" class="inv-mgmt-empty">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+{% load static %}
+<link href="{% static 'css/inventory-mgmt.css' %}" rel="stylesheet"/>
+<script src="{% static 'js/inventory/dashboard.js' %}"></script>
+<script>
+InventoryDashboard.init();
+</script>
+{% endblock %}

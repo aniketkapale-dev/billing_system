@@ -40,15 +40,18 @@ LOCAL_APPS = [
     "apps.users",
     "apps.roles",
     "apps.user_roles",
-    "apps.vehicle_categories",
-    "apps.fuel_type",
-    "apps.vehicle_types",
-    "apps.vehicles",
-    "apps.pickup_locations",
-    "apps.enquiry_table",
-    "apps.rented_vehicle_details",
-    "apps.email_templates",
+    "apps.menus",
+    "apps.business_users",
     "apps.dashboard",
+    "apps.businesses",
+    "apps.catalog",
+    "apps.products",
+    "apps.inventory",
+    "apps.customers",
+    "apps.invoicing",
+    "apps.expenses",
+    "apps.purchases",
+    "apps.settings",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -87,17 +90,12 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 
 # ---------------------------------------------------------------------------
-# Database (MySQL)
+# Database (SQLite)
 # ---------------------------------------------------------------------------
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.mysql",
-        "NAME": config("DB_NAME"),
-        "USER": config("DB_USER"),
-        "PASSWORD": config("DB_PASSWORD"),
-        "HOST": config("DB_HOST", default="127.0.0.1"),
-        "PORT": config("DB_PORT", default="3306"),
-        "OPTIONS": {"charset": "utf8mb4"},
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
     }
 }
 
@@ -167,23 +165,16 @@ CORS_ALLOW_ALL_ORIGINS = DEBUG
 CORS_ALLOW_CREDENTIALS = True
 
 # ---------------------------------------------------------------------------
-# Email
-# ---------------------------------------------------------------------------
-EMAIL_BACKEND = config("EMAIL_BACKEND")
-EMAIL_HOST = config("EMAIL_HOST")
-EMAIL_PORT = config("EMAIL_PORT", cast=int)
-EMAIL_USE_SSL = config("EMAIL_USE_SSL", default=False, cast=bool)
-EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
-EMAIL_HOST_USER = config("EMAIL_HOST_USER")
-EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
-DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL")
-
-ADMIN_EMAIL = config("ADMIN_EMAIL")
-
-# ---------------------------------------------------------------------------
 # Auth context: which model holds our users (used by JWT auth backend)
 # ---------------------------------------------------------------------------
 SESSION_COOKIE_NAME = "vrms_session"
 LOGIN_URL = "/login/"
 
 FRONTEND_URL = "http://127.0.0.1:8000"
+
+# System/admin accounts hidden from the superadmin business-owner user list.
+USER_MANAGEMENT_EXCLUDED_EMAILS = config(
+    "USER_MANAGEMENT_EXCLUDED_EMAILS",
+    default="aniket@gmail.com",
+    cast=Csv(),
+)

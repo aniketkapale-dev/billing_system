@@ -6,7 +6,7 @@ import re
 from core.exceptions import ValidationException
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
-MOBILE_RE = re.compile(r"^[0-9]{7,15}$")
+MOBILE_RE = re.compile(r"^[0-9]{10}$")
 
 
 def validate_email_format(value):
@@ -18,7 +18,7 @@ def validate_email_format(value):
 def validate_mobile_number(value):
     cleaned = str(value).replace(" ", "").replace("-", "")
     if not MOBILE_RE.match(cleaned):
-        raise ValidationException("Enter a valid mobile number (7-15 digits).")
+        raise ValidationException("Enter a valid 10-digit mobile number.")
     return cleaned
 
 

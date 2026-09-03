@@ -5,30 +5,80 @@ current-user profile. Views stay thin and delegate here.
 from django.db import transaction
 
 from apps.accounts.jwt_service import JWTService
+from apps.roles.models import Role
+from apps.user_roles.models import UserRole
 from apps.users.models import User
 from core.exceptions import AuthenticationException, NotFoundException, ValidationException
-
-from django.conf import settings
-from apps.email_templates.services.email_service import EmailService
+from core.validators import ensure_unique, validate_email_format, validate_mobile_number
 
 
 class AuthService:
     # -- login -------------------------------------------------------------
     def login(self, email, password):
-        if not email or not password:
-            raise ValidationException("Email and password are required.")
-        try:
-            user = User.objects.get(email__iexact=email.strip())
-        except User.DoesNotExist:
-            raise AuthenticationException("Invalid email or password.")
+        login_id = (email or "").strip()
+        if not login_id or not password:
+            raise ValidationException("Email or mobile number and password are required.")
+
+        user = self._find_user_by_login_id(login_id)
+        if not user:
+            raise AuthenticationException("Invalid email/mobile or password.")
 
         if not user.is_active:
-            raise AuthenticationException("This account is inactive.")
+            raise AuthenticationException(
+                "Your registration is complete and waiting for approval. "
+                "Please wait till your account is approved."
+            )
         if not user.check_password(password):
-            raise AuthenticationException("Invalid email or password.")
+            raise AuthenticationException("Invalid email/mobile or password.")
 
         tokens = JWTService.generate_tokens(user.id)
         return {"tokens": tokens, "user": user}
+
+    @staticmethod
+    def _find_user_by_login_id(login_id):
+        cleaned = login_id.replace(" ", "").replace("-", "")
+        if cleaned.isdigit() and len(cleaned) == 10:
+            return User.objects.filter(mobile_number=cleaned).first()
+        return User.objects.filter(email__iexact=login_id.strip()).first()
+
+    # -- register (business owner, pending admin approval) -----------------
+    @transaction.atomic
+    def register(self, full_name, email, mobile_number, password):
+        email = (email or "").strip()
+        if email:
+            email = validate_email_format(email).lower()
+            if User.objects.filter(email__iexact=email).exists():
+                raise ValidationException("An account with this email already exists.")
+        else:
+            email = None
+
+        mobile_number = validate_mobile_number(mobile_number)
+        self._validate_password(password)
+
+        if User.objects.filter(mobile_number=mobile_number).exists():
+            raise ValidationException("An account with this mobile number already exists.")
+
+        user = User.objects.create(
+            full_name=full_name.strip(),
+            email=email,
+            mobile_number=mobile_number,
+            is_active=False,
+        )
+        user.set_password(password)
+        user.save(update_fields=["password", "updated_at"])
+
+        role, _ = Role.objects.get_or_create(
+            role_name="Business Owner",
+            defaults={"description": "Business owner account"},
+        )
+        UserRole.objects.get_or_create(user=user, role=role)
+
+        return {
+            "message": (
+                "Registration successful. Your account is pending admin approval. "
+                "You can sign in with your mobile number and password once approved."
+            )
+        }
 
     # -- refresh -----------------------------------------------------------
     def refresh(self, refresh_token):
@@ -43,36 +93,10 @@ class AuthService:
         # Hook left here for a future server-side blacklist if required.
         return True
 
-    # -- forgot password ---------------------------------------------------
+    # -- forgot password (no email — SMTP removed) -------------------------
     def forgot_password(self, email):
-        try:
-            user = User.objects.get(email__iexact=(email or "").strip())
-        except User.DoesNotExist:
-            return {
-                "message": "If the account exists, a reset link was sent."
-            }
-
-        token = self._reset_token(user.id)
-
-        reset_url = (
-            f"{settings.FRONTEND_URL}/reset-password/?token={token}"
-        )
-
-        sent = EmailService().send_email(
-            recipient_email=user.email,
-            template_key="forgot_password",
-            first_name=user.full_name,
-            last_name="",
-            reset_url=reset_url,
-        )
-
-        if not sent:
-            raise ValidationException(
-                "Unable to send password reset email."
-            )
-
         return {
-            "message": "Password reset email sent."
+            "message": "If the account exists, a reset link was sent."
         }
 
     @staticmethod
@@ -111,6 +135,42 @@ class AuthService:
         user.set_password(new_password)
         user.save(update_fields=["password", "updated_at"])
         return True
+
+    @transaction.atomic
+    def update_profile(self, user, full_name=None, email=None, mobile_number=None):
+        updates = []
+
+        if full_name is not None:
+            cleaned = full_name.strip()
+            if not cleaned:
+                raise ValidationException("Full name is required.")
+            user.full_name = cleaned
+            updates.append("full_name")
+
+        if email is not None:
+            cleaned = (email or "").strip()
+            if cleaned:
+                cleaned = validate_email_format(cleaned).lower()
+                if User.objects.filter(email__iexact=cleaned).exclude(pk=user.pk).exists():
+                    raise ValidationException("An account with this email already exists.")
+                user.email = cleaned
+            else:
+                user.email = None
+            updates.append("email")
+
+        if mobile_number is not None:
+            mobile_number = validate_mobile_number(mobile_number)
+            if User.objects.filter(mobile_number=mobile_number).exclude(pk=user.pk).exists():
+                raise ValidationException("An account with this mobile number already exists.")
+            user.mobile_number = mobile_number
+            updates.append("mobile_number")
+
+        if not updates:
+            raise ValidationException("No profile fields to update.")
+
+        updates.append("updated_at")
+        user.save(update_fields=updates)
+        return user
 
     # -- helpers -----------------------------------------------------------
     @staticmethod

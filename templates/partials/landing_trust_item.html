@@ -1,0 +1,8 @@
+<div class="inv-trust-item">
+    {% if business.logo %}
+    <img src="{{ business.logo.url }}" alt="" loading="lazy"/>
+    {% else %}
+    <span class="inv-trust-initial" aria-hidden="true">{{ business.business_name|first|upper }}</span>
+    {% endif %}
+    <span class="inv-trust-name">{{ business.business_name }}</span>
+</div>

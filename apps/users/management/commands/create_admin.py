@@ -43,5 +43,12 @@ class Command(BaseCommand):
         )
         UserRole.objects.get_or_create(user=user, role=role)
 
+        business_owner = Role.objects.filter(role_name__iexact="Business Owner").first()
+        if business_owner:
+            for assignment in UserRole.objects.filter(
+                user=user, role=business_owner, is_deleted=False
+            ):
+                assignment.soft_delete()
+
         action = "Created" if created else "Updated"
         self.stdout.write(self.style.SUCCESS(f"{action} admin user: {email}"))

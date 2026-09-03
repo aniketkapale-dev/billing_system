@@ -1,0 +1,139 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+    <meta http-equiv="Pragma" content="no-cache"/>
+    <meta http-equiv="Expires" content="0"/>
+    <title>{% block title %}Billing System - Superadmin{% endblock %}</title>
+    {% include "partials/inventory_theme.html" %}
+    <link href="{% static 'css/dashboard.css' %}" rel="stylesheet"/>
+    <link href="{% static 'css/inventory-mgmt.css' %}" rel="stylesheet"/>
+</head>
+<body class="inv-auth-pending inv-dashboard-body inv-dashboard-body--superadmin inv-sidebar-collapsed">
+{% include "partials/inventory_ui.html" %}
+<nav class="inv-sidebar">
+    <div class="inv-sidebar-brand">
+        <span class="material-symbols-outlined inv-sidebar-brand-icon" aria-hidden="true">admin_panel_settings</span>
+        <div class="inv-sidebar-brand-text">
+            <h1>Billing System</h1>
+            <p>Super Admin</p>
+        </div>
+    </div>
+    <ul class="inv-sidebar-nav">
+        <li>
+            <a class="inv-nav-item{% if active_nav == 'dashboard' %} inv-nav-item--active{% endif %}" href="/superadmin/dashboard/">
+                <span class="material-symbols-outlined inv-nav-icon">space_dashboard</span>
+                Dashboard
+            </a>
+        </li>
+        <li>
+            <a class="inv-nav-item{% if active_nav == 'users' %} inv-nav-item--active{% endif %}" href="/superadmin/users/">
+                <span class="material-symbols-outlined inv-nav-icon">group</span>
+                Users
+            </a>
+        </li>
+    </ul>
+</nav>
+
+<header class="inv-dashboard-header inv-chrome-header inv-chrome-header--superadmin">
+    <div class="inv-chrome-header-top">
+        {% include "partials/inv_sidebar_toggle.html" %}
+        <div class="inv-chrome-active-business">
+            <span class="inv-active-business-icon" aria-hidden="true">
+                <span class="material-symbols-outlined">admin_panel_settings</span>
+            </span>
+            <div class="inv-active-business-text">
+                <span class="inv-active-business-label">Super Admin</span>
+                <span id="inv-superadmin-panel-name" class="inv-active-business-name">Billing System</span>
+            </div>
+        </div>
+        <div class="inv-header-right">
+            <div class="inv-profile" id="inv-owner-profile">
+                <button type="button" id="inv-owner-profile-trigger" class="inv-profile-trigger" aria-expanded="false" aria-haspopup="true" title="Account settings">
+                    <div id="profile-avatar" class="inv-profile-avatar">
+                        <span class="material-symbols-outlined">person</span>
+                    </div>
+                    <span class="inv-profile-meta">
+                        <span id="profile-name" class="inv-profile-name">Super Admin</span>
+                        <span id="profile-role" class="inv-profile-role">Super Admin</span>
+                    </span>
+                    <span class="material-symbols-outlined inv-profile-chevron">expand_more</span>
+                </button>
+                <div id="inv-owner-profile-panel" class="inv-owner-profile-panel inv-hidden" role="dialog" aria-label="Account settings">
+                    <div class="inv-owner-profile-panel-header">
+                        <div class="inv-owner-profile-panel-heading">
+                            <h3 class="inv-owner-profile-panel-title">My Account</h3>
+                            <p id="owner-profile-panel-subtitle" class="inv-owner-profile-panel-subtitle">Manage your profile</p>
+                        </div>
+                        <button id="inventory-logout-btn" type="button" class="inv-owner-profile-logout-btn">
+                            <span class="material-symbols-outlined">logout</span>
+                            Logout
+                        </button>
+                    </div>
+                    <form id="owner-profile-form" class="inv-owner-profile-section" novalidate>
+                        <h4 class="inv-owner-profile-section-title">Profile Details</h4>
+                        <div class="inv-owner-profile-fields">
+                            <div class="inv-mgmt-field">
+                                <label for="owner-profile-full-name">Full Name</label>
+                                <input id="owner-profile-full-name" class="inv-mgmt-input" type="text" autocomplete="name" required/>
+                            </div>
+                            <div class="inv-mgmt-field">
+                                <label for="owner-profile-email">Email</label>
+                                <input id="owner-profile-email" class="inv-mgmt-input" type="email" autocomplete="email" placeholder="Optional"/>
+                            </div>
+                            <div class="inv-mgmt-field">
+                                <label for="owner-profile-mobile">Mobile Number</label>
+                                <input id="owner-profile-mobile" class="inv-mgmt-input" type="text" inputmode="numeric" maxlength="10" autocomplete="tel" required/>
+                            </div>
+                        </div>
+                        <div class="inv-owner-profile-section-actions">
+                            <button type="submit" id="owner-profile-save-btn" class="inv-mgmt-btn inv-mgmt-btn--primary">Save Details</button>
+                        </div>
+                    </form>
+                    <form id="owner-password-form" class="inv-owner-profile-section" novalidate>
+                        <h4 class="inv-owner-profile-section-title">Change Password</h4>
+                        <div class="inv-owner-profile-fields">
+                            <div class="inv-mgmt-field">
+                                <label for="owner-profile-current-password">Current Password</label>
+                                <input id="owner-profile-current-password" class="inv-mgmt-input" type="password" autocomplete="current-password"/>
+                            </div>
+                            <div class="inv-mgmt-field">
+                                <label for="owner-profile-new-password">New Password</label>
+                                <input id="owner-profile-new-password" class="inv-mgmt-input" type="password" autocomplete="new-password" minlength="8"/>
+                            </div>
+                            <div class="inv-mgmt-field">
+                                <label for="owner-profile-confirm-password">Confirm New Password</label>
+                                <input id="owner-profile-confirm-password" class="inv-mgmt-input" type="password" autocomplete="new-password" minlength="8"/>
+                            </div>
+                        </div>
+                        <div class="inv-owner-profile-section-actions">
+                            <button type="submit" id="owner-password-save-btn" class="inv-mgmt-btn">Update Password</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<main class="inv-dashboard-main inv-chrome-page">
+    {% block content %}{% endblock %}
+</main>
+
+<script src="{% static 'js/core/constants.js' %}"></script>
+<script src="{% static 'js/components/toast.js' %}"></script>
+<script src="{% static 'js/components/loader.js' %}"></script>
+<script src="{% static 'js/components/confirm.js' %}"></script>
+<script src="{% static 'js/core/pagination.js' %}"></script>
+<script src="{% static 'js/layout/owner-profile.js' %}"></script>
+<script src="{% static 'js/components/column-customize.js' %}"></script>
+<script src="{% static 'js/components/table-cards.js' %}"></script>
+<script src="{% static 'js/layout/sidebar.js' %}"></script>
+<script src="{% static 'js/auth/auth.js' %}"></script>
+<script>InventoryAuth.guardSuperAdmin();</script>
+{% block page_scripts %}{% endblock %}
+</body>
+</html>

@@ -166,11 +166,12 @@ define("form", function (require, module, exports) {
         }
         var value = record[field.name];
         var labelHtml = '<label class="form-label">' + helpers.escapeHtml(field.label) +
-            (field.required ? ' <span class="text-danger">*</span>' : "") + "</label>";
+            (field.required ? ' <span class="inv-required-mark">*</span>' : "") + "</label>";
+        var requiredAttr = field.required ? " required" : "";
 
         if (field.type === "textarea") {
             wrap.innerHTML = labelHtml +
-                '<textarea class="form-control" name="' + field.name + '" rows="3">' +
+                '<textarea class="form-control" name="' + field.name + '" rows="3"' + requiredAttr + '>' +
                 helpers.escapeHtml(value || "") + "</textarea>" +
                 '<div class="invalid-feedback"></div>';
         } else if (field.type === "checkbox") {
@@ -181,7 +182,7 @@ define("form", function (require, module, exports) {
                 '<label class="form-check-label ms-2">' + helpers.escapeHtml(field.label) + "</label>";
         } else if (field.type === "select") {
             wrap.innerHTML = labelHtml +
-                '<select class="form-select" name="' + field.name + '" style="width:100%"></select>' +
+                '<select class="form-select" name="' + field.name + '" style="width:100%"' + requiredAttr + '></select>' +
                 '<div class="invalid-feedback"></div>';
         } else if (field.type === "choice") {
             var opts = (field.options || []).map(function (o) {
@@ -189,7 +190,7 @@ define("form", function (require, module, exports) {
                 return '<option value="' + o[0] + '" ' + sel + ">" + helpers.escapeHtml(o[1]) + "</option>";
             }).join("");
             wrap.innerHTML = labelHtml +
-                '<select class="form-select" name="' + field.name + '">' + opts + "</select>" +
+                '<select class="form-select" name="' + field.name + '"' + requiredAttr + '>' + opts + "</select>" +
                 '<div class="invalid-feedback"></div>';
         } else if (field.type === "image") {
 
@@ -240,7 +241,7 @@ define("form", function (require, module, exports) {
                 : "";
             wrap.innerHTML = labelHtml +
                 '<input class="form-control" type="' + inputType + '" name="' + field.name + '" value="' +
-                helpers.escapeHtml(val) + '"' + readonly + ' />' +
+                helpers.escapeHtml(val) + '"' + readonly + requiredAttr + ' />' +
                 '<div class="invalid-feedback"></div>';
         }
         return wrap;

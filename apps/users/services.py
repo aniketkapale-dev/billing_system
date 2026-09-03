@@ -16,6 +16,13 @@ class UserService(BaseService):
         self._hash_password(data)
 
     def before_update(self, instance, data):
+        if "is_active" in data:
+            from django.utils import timezone
+
+            if data["is_active"] is True and not instance.is_active:
+                data["approved_at"] = timezone.now()
+            elif data["is_active"] is False and instance.is_active:
+                data["approved_at"] = None
         self._normalize_and_validate(data, exclude_pk=instance.pk)
         self._hash_password(data)
 

@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Billing System - Billing Management Reimagined</title>
+    {% include "partials/inventory_theme.html" %}
+    {% load static %}
+    <link href="{% static 'css/landing.css' %}" rel="stylesheet"/>
+</head>
+<body>
+<nav aria-label="Top Navigation" class="inv-landing-nav">
+    <a href="/" class="inv-landing-brand" aria-label="Billing System home">
+        <span class="inv-brand-mark">
+            <span class="material-symbols-outlined material-symbols-outlined--filled">receipt_long</span>
+        </span>
+        <span>Billing System</span>
+    </a>
+    <div class="inv-landing-links">
+        <a href="#features">Features</a>
+        <a href="#businesses">Businesses</a>
+        <a href="#who">Who can use</a>
+        <a href="#faq">FAQ</a>
+    </div>
+    <div class="inv-landing-actions">
+        <a href="/login/" class="inv-landing-login">Login</a>
+        <a href="/register/" class="inv-landing-cta">Signup</a>
+    </div>
+</nav>
+
+<main class="inv-landing-main">
+    <section class="inv-hero inv-hero--showcase" aria-label="Billing System overview">
+        <div class="inv-hero-showcase-bg" aria-hidden="true"></div>
+        <div class="inv-hero-showcase-inner">
+            <div class="inv-hero-content inv-hero-content--center">
+                <div class="inv-hero-kicker">
+                    <span class="material-symbols-outlined material-symbols-outlined--filled">verified</span>
+                    GST ready billing software
+                </div>
+                <h1 class="inv-hero-title">
+                    <span class="inv-hero-title-accent">Smart billing platform</span>
+                    for growing businesses
+                </h1>
+                <p class="inv-hero-text">
+                    Create invoices, manage inventory, track customers, and review business reports from one simple online workspace.
+                </p>
+                <div class="inv-hero-actions inv-hero-actions--center">
+                    <a href="/register/" class="inv-btn inv-btn-primary">
+                        Start my free trial
+                        <span class="material-symbols-outlined">arrow_forward</span>
+                    </a>
+                    <a href="/login/" class="inv-btn inv-btn-outline inv-btn-outline--light">Login</a>
+                </div>
+            </div>
+
+            <div class="inv-hero-stage" aria-label="Dashboard preview with live charts">
+                <div class="inv-hero-roll inv-hero-roll--left" aria-hidden="true">
+                    <div class="inv-hero-roll-track">
+                        <article class="inv-hero-chart-card">
+                            <header><span class="material-symbols-outlined">payments</span><span>Total Receivables</span></header>
+                            <div class="inv-hero-chart-metric">₹ 2.4L</div>
+                            <div class="inv-hero-chart-bars"><span style="--h:48"></span><span style="--h:72"></span><span style="--h:56"></span><span style="--h:84"></span><span style="--h:62"></span></div>
+                        </article>
+                        <article class="inv-hero-chart-card">
+                            <header><span class="material-symbols-outlined">ssid_chart</span><span>Cash Flow</span></header>
+                            <div class="inv-hero-chart-metric inv-hero-chart-metric--up">+18.4%</div>
+                            <div class="inv-hero-chart-line"></div>
+                        </article>
+                        <article class="inv-hero-chart-card">
+                            <header><span class="material-symbols-outlined">monitoring</span><span>P &amp; L Report</span></header>
+                            <div class="inv-hero-chart-split"><div><small>Income</small><strong>₹ 8.2L</strong></div><div><small>Expense</small><strong>₹ 5.1L</strong></div></div>
+                        </article>
+                        <article class="inv-hero-chart-card">
+                            <header><span class="material-symbols-outlined">payments</span><span>Total Receivables</span></header>
+                            <div class="inv-hero-chart-metric">₹ 2.4L</div>
+                            <div class="inv-hero-chart-bars"><span style="--h:48"></span><span style="--h:72"></span><span style="--h:56"></span><span style="--h:84"></span><span style="--h:62"></span></div>
+                        </article>
+                        <article class="inv-hero-chart-card">
+                            <header><span class="material-symbols-outlined">ssid_chart</span><span>Cash Flow</span></header>
+                            <div class="inv-hero-chart-metric inv-hero-chart-metric--up">+18.4%</div>
+                            <div class="inv-hero-chart-line"></div>
+                        </article>
+                        <article class="inv-hero-chart-card">
+                            <header><span class="material-symbols-outlined">monitoring</span><span>P &amp; L Report</span></header>
+                            <div class="inv-hero-chart-split"><div><small>Income</small><strong>₹ 8.2L</strong></div><div><small>Expense</small><strong>₹ 5.1L</strong></div></div>
+                        </article>
+                    </div>
+                </div>
+
+                <div class="inv-hero-dashboard">
+                    <img src="{% static 'img/auth/business-owner-dashboard.png' %}" alt="Billing System dashboard preview" class="inv-hero-image" loading="eager"/>
+                </div>
+
+                <div class="inv-hero-roll inv-hero-roll--right" aria-hidden="true">
+                    <div class="inv-hero-roll-track">
+                        <article class="inv-hero-chart-card">
+                            <header><span class="material-symbols-outlined">inventory_2</span><span>Stock Value</span></header>
+                            <div class="inv-hero-chart-metric">₹ 12.4L</div>
+                            <div class="inv-hero-chart-bars inv-hero-chart-bars--cool"><span style="--h:64"></span><span style="--h:52"></span><span style="--h:78"></span><span style="--h:44"></span></div>
+                        </article>
+                        <article class="inv-hero-chart-card">
+                            <header><span class="material-symbols-outlined">receipt_long</span><span>Today's Sales</span></header>
+                            <div class="inv-hero-chart-metric">₹ 48,200</div>
+                            <p>24 invoices created</p>
+                        </article>
+                        <article class="inv-hero-chart-card inv-hero-chart-card--alert">
+                            <header><span class="material-symbols-outlined">warning</span><span>Low Stock</span></header>
+                            <div class="inv-hero-chart-metric">18 items</div>
+                            <p>Needs reorder review</p>
+                        </article>
+                        <article class="inv-hero-chart-card">
+                            <header><span class="material-symbols-outlined">inventory_2</span><span>Stock Value</span></header>
+                            <div class="inv-hero-chart-metric">₹ 12.4L</div>
+                            <div class="inv-hero-chart-bars inv-hero-chart-bars--cool"><span style="--h:64"></span><span style="--h:52"></span><span style="--h:78"></span><span style="--h:44"></span></div>
+                        </article>
+                        <article class="inv-hero-chart-card">
+                            <header><span class="material-symbols-outlined">receipt_long</span><span>Today's Sales</span></header>
+                            <div class="inv-hero-chart-metric">₹ 48,200</div>
+                            <p>24 invoices created</p>
+                        </article>
+                        <article class="inv-hero-chart-card inv-hero-chart-card--alert">
+                            <header><span class="material-symbols-outlined">warning</span><span>Low Stock</span></header>
+                            <div class="inv-hero-chart-metric">18 items</div>
+                            <p>Needs reorder review</p>
+                        </article>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="businesses" class="inv-trust inv-trust--enhanced" aria-label="Businesses that trust us">
+        <div class="inv-trust-header inv-trust-header--dark">
+            <span class="inv-section-label inv-section-label--dark">Trusted by businesses</span>
+            <h2>Make the switch to smarter business billing</h2>
+            <p>From single shops to multi-location teams — owners choose Billing System for fast invoices, stock control, and clear reports.</p>
+        </div>
+
+        <div class="inv-trust-showcase">
+            <div class="inv-trust-panel">
+                <div class="inv-trust-quotes" aria-label="Business testimonials">
+                    {% if businesses %}
+                    <div class="inv-trust-quotes-track">
+                        {% for business in businesses %}
+                        {% include "partials/landing_trust_quote_row.html" with headline=business.business_name|add:" runs daily billing and inventory in one workspace." %}
+                        {% endfor %}
+                        {% for business in businesses %}
+                        {% include "partials/landing_trust_quote_row.html" with headline=business.business_name|add:" runs daily billing and inventory in one workspace." %}
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="inv-trust-quotes-track inv-trust-quotes-track--static">
+                        <article class="inv-trust-quote-row">
+                            <span class="inv-trust-quote-thumb inv-trust-quote-thumb--initial" aria-hidden="true">R</span>
+                            <div class="inv-trust-quote-body">
+                                <p class="inv-trust-quote-headline">One billing solution for multiple outlets and staff roles.</p>
+                                <span class="inv-trust-quote-meta">Retail business owner</span>
+                            </div>
+                        </article>
+                        <article class="inv-trust-quote-row">
+                            <span class="inv-trust-quote-thumb inv-trust-quote-thumb--initial" aria-hidden="true">W</span>
+                            <div class="inv-trust-quote-body">
+                                <p class="inv-trust-quote-headline">Faster invoicing with purchase and stock tracking built in.</p>
+                                <span class="inv-trust-quote-meta">Wholesale manager</span>
+                            </div>
+                        </article>
+                        <article class="inv-trust-quote-row">
+                            <span class="inv-trust-quote-thumb inv-trust-quote-thumb--initial" aria-hidden="true">S</span>
+                            <div class="inv-trust-quote-body">
+                                <p class="inv-trust-quote-headline">We moved from manual registers to digital billing in weeks.</p>
+                                <span class="inv-trust-quote-meta">Service business owner</span>
+                            </div>
+                        </article>
+                        <article class="inv-trust-quote-row">
+                            <span class="inv-trust-quote-thumb inv-trust-quote-thumb--initial" aria-hidden="true">G</span>
+                            <div class="inv-trust-quote-body">
+                                <p class="inv-trust-quote-headline">GST-ready invoices and sales reports from the same dashboard.</p>
+                                <span class="inv-trust-quote-meta">Growing retail team</span>
+                            </div>
+                        </article>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <aside class="inv-trust-spotlight" aria-label="Featured testimonial">
+                    <span class="inv-trust-spotlight-mark" aria-hidden="true">&ldquo;</span>
+                    <p class="inv-trust-spotlight-text">
+                        I TRUST
+                        <span class="inv-trust-spotlight-brand">BILLING SYSTEM</span>
+                        FOR MY BUSINESS
+                    </p>
+                    <p class="inv-trust-spotlight-note">Simple billing, inventory, and reports — built for everyday Indian businesses.</p>
+                </aside>
+            </div>
+        </div>
+    </section>
+
+    <section id="features" class="inv-features-section" aria-label="Core features">
+        <div class="inv-section-copy inv-section-copy--center">
+            <span class="inv-section-label">Features</span>
+            <h2>Everything you need to run billing smoothly</h2>
+            <p>From first invoice to daily inventory checks — built for Indian businesses.</p>
+        </div>
+        <div class="inv-features">
+            <article class="inv-feature-card">
+                <div class="inv-feature-icon inv-feature-icon--primary"><span class="material-symbols-outlined">receipt_long</span></div>
+                <h3>Smart Invoicing</h3>
+                <p>Create GST-ready invoices, apply discounts, and track payments in one flow.</p>
+            </article>
+            <article class="inv-feature-card">
+                <div class="inv-feature-icon inv-feature-icon--outline"><span class="material-symbols-outlined">inventory_2</span></div>
+                <h3>Inventory Control</h3>
+                <p>Track stock levels, purchases, stock-in entries, and low-inventory alerts.</p>
+            </article>
+            <article class="inv-feature-card">
+                <div class="inv-feature-icon inv-feature-icon--success"><span class="material-symbols-outlined">groups</span></div>
+                <h3>Customer Management</h3>
+                <p>Store customer details and billing history for faster repeat sales.</p>
+            </article>
+            <article class="inv-feature-card">
+                <div class="inv-feature-icon inv-feature-icon--primary"><span class="material-symbols-outlined">storefront</span></div>
+                <h3>Multi-Business</h3>
+                <p>Manage multiple businesses from one account with separate settings.</p>
+            </article>
+            <article class="inv-feature-card">
+                <div class="inv-feature-icon inv-feature-icon--outline"><span class="material-symbols-outlined">shopping_cart</span></div>
+                <h3>Purchases &amp; Stock-In</h3>
+                <p>Record supplier purchases and stock movements with clear audit trails.</p>
+            </article>
+            <article class="inv-feature-card">
+                <div class="inv-feature-icon inv-feature-icon--success"><span class="material-symbols-outlined">monitoring</span></div>
+                <h3>Reports &amp; Insights</h3>
+                <p>See sales trends, stock value, and business health at a glance.</p>
+            </article>
+        </div>
+    </section>
+
+    <section id="who" class="inv-audience" aria-label="Who can use Billing System">
+        <div class="inv-section-copy inv-section-copy--center">
+            <span class="inv-section-label">Tailored for you</span>
+            <h2>An accounting solution for every business</h2>
+            <p>Whether you run a shop, warehouse, or service desk — Billing System adapts to your workflow.</p>
+        </div>
+        <div class="inv-audience-grid">
+            <article class="inv-audience-card">
+                <div class="inv-audience-icon inv-audience-icon--lime"><span class="material-symbols-outlined">store</span></div>
+                <h3>Retail &amp; shops</h3>
+                <p>Fast billing at the counter, stock tracking, and daily sales summaries.</p>
+            </article>
+            <article class="inv-audience-card">
+                <div class="inv-audience-icon inv-audience-icon--charcoal"><span class="material-symbols-outlined">warehouse</span></div>
+                <h3>Wholesale &amp; distributors</h3>
+                <p>Purchase orders, bulk stock-in, and multi-user access for your team.</p>
+            </article>
+            <article class="inv-audience-card">
+                <div class="inv-audience-icon inv-audience-icon--green"><span class="material-symbols-outlined">handyman</span></div>
+                <h3>Service businesses</h3>
+                <p>Professional invoices, customer records, and payment follow-ups.</p>
+            </article>
+            <article class="inv-audience-card">
+                <div class="inv-audience-icon inv-audience-icon--dark"><span class="material-symbols-outlined">groups</span></div>
+                <h3>Growing teams</h3>
+                <p>Add staff with role-based access and manage multiple locations.</p>
+            </article>
+        </div>
+    </section>
+
+    <section id="faq" class="inv-faq" aria-label="Frequently asked questions">
+        <div class="inv-section-copy inv-section-copy--center">
+            <span class="inv-section-label">FAQ</span>
+            <h2>Quick answers before you start</h2>
+        </div>
+        <div class="inv-faq-list">
+            <details class="inv-faq-item" open>
+                <summary>Can I start for free?</summary>
+                <p>Yes. Create an account and begin with the starter billing workflow at no cost.</p>
+            </details>
+            <details class="inv-faq-item">
+                <summary>Does it support GST billing?</summary>
+                <p>Yes. Configure tax settings and generate GST-ready invoices for your business.</p>
+            </details>
+            <details class="inv-faq-item">
+                <summary>Can I manage inventory and purchases?</summary>
+                <p>Yes. Track products, stock-in, purchases, and low-stock alerts from the dashboard.</p>
+            </details>
+            <details class="inv-faq-item">
+                <summary>Can multiple users access one business?</summary>
+                <p>Yes. Invite team members with role-based permissions and tab access control.</p>
+            </details>
+            <details class="inv-faq-item">
+                <summary>Can I run more than one business?</summary>
+                <p>Yes. Switch between businesses from one account with separate data for each.</p>
+            </details>
+        </div>
+    </section>
+</main>
+
+<footer class="inv-landing-footer inv-landing-footer--site">
+    <div class="inv-landing-footer-inner">
+        <a href="/" class="inv-landing-footer-brand" aria-label="Billing System home">
+            <span class="inv-brand-mark inv-brand-mark--footer">
+                <span class="material-symbols-outlined material-symbols-outlined--filled">receipt_long</span>
+            </span>
+            <span>Billing System</span>
+        </a>
+        <nav class="inv-landing-footer-nav" aria-label="Footer">
+            <a href="#features">Features</a>
+            <a href="#businesses">Businesses</a>
+            <a href="#who">Who can use</a>
+            <a href="#faq">FAQ</a>
+            <a href="/login/">Login</a>
+            <a href="/register/">Register</a>
+        </nav>
+        <p class="inv-landing-footer-copy">&copy; 2026 Billing System. All rights reserved.</p>
+    </div>
+</footer>
+
+<script src="{% static 'js/landing.js' %}"></script>
+</body>
+</html>

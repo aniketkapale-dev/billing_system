@@ -11,7 +11,9 @@ from apps.accounts.serializers import (
     LoginSerializer,
     ProfileSerializer,
     RefreshSerializer,
+    RegisterSerializer,
     ResetPasswordSerializer,
+    UpdateProfileSerializer,
 )
 from apps.accounts.services import AuthService
 from core.base_response import ApiResponse
@@ -21,10 +23,21 @@ class AuthViewSet(ViewSet):
     service = AuthService()
 
     def get_permissions(self):
-        public = {"login", "refresh", "forgot_password", "reset_password"}
+        public = {"login", "register", "refresh", "forgot_password", "reset_password"}
         if self.action in public:
             return [AllowAny()]
         return [IsAuthenticated()]
+
+    @action(detail=False, methods=["post"])
+    def register(self, request):
+        serializer = RegisterSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        result = self.service.register(**serializer.validated_data)
+        return ApiResponse.success(
+            data={},
+            message=result["message"],
+            status_code=201,
+        )
 
     @action(detail=False, methods=["post"])
     def login(self, request):
@@ -74,3 +87,11 @@ class AuthViewSet(ViewSet):
     def me(self, request):
         profile = ProfileSerializer(request.user, context={"request": request}).data
         return ApiResponse.success(data=profile, message="Current user")
+
+    @action(detail=False, methods=["patch"], url_path="me")
+    def update_me(self, request):
+        serializer = UpdateProfileSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        user = self.service.update_profile(request.user, **serializer.validated_data)
+        profile = ProfileSerializer(user, context={"request": request}).data
+        return ApiResponse.success(data=profile, message="Profile updated successfully")

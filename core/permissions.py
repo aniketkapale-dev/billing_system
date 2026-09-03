@@ -29,4 +29,18 @@ class HasRole(BasePermission):
                 "role__role_name", flat=True
             )
         )
-        return bool(user_roles.intersection(set(required)))
+        if user_roles.intersection(set(required)):
+            return True
+
+        if "Business Staff" in required and "Business Staff" in user_roles:
+            business_id = request.headers.get("X-Business-Id") or request.query_params.get("business_id")
+            if business_id:
+                from apps.business_users.models import BusinessUser
+
+                return BusinessUser.objects.filter(
+                    business_id=business_id,
+                    user_id=user.id,
+                    is_deleted=False,
+                    is_active=True,
+                ).exists()
+        return False

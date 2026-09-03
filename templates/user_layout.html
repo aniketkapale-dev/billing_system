@@ -1,0 +1,424 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+    <meta http-equiv="Pragma" content="no-cache"/>
+    <meta http-equiv="Expires" content="0"/>
+    <title>{% block title %}Billing System - Dashboard{% endblock %}</title>
+    {% include "partials/inventory_theme.html" %}
+    <link href="{% static 'css/dashboard.css' %}" rel="stylesheet"/>
+    <link href="{% static 'css/inventory-mgmt.css' %}" rel="stylesheet"/>
+</head>
+<body class="inv-auth-pending inv-dashboard-body inv-sidebar-collapsed">
+{% include "partials/inventory_ui.html" %}
+<nav class="inv-sidebar">
+    <div class="inv-sidebar-brand">
+        <span class="material-symbols-outlined inv-sidebar-brand-icon" aria-hidden="true">storefront</span>
+        <div class="inv-sidebar-brand-text">
+            <h1>Billing System</h1>
+            <p>Multi Store Dashboard</p>
+        </div>
+    </div>
+    <ul class="inv-sidebar-nav">
+        <li data-nav-tab="dashboard">
+            <a class="inv-nav-item{% if active_nav == 'dashboard' %} inv-nav-item--active{% endif %}" href="/dashboard/">
+                <span class="material-symbols-outlined inv-nav-icon">space_dashboard</span>
+                Dashboard
+            </a>
+        </li>
+        <li class="inv-nav-group{% if active_nav == 'products' or active_nav == 'products-units' or active_nav == 'products-categories' or active_nav == 'products-brands' %} inv-nav-group--has-active-child{% endif %}{% if active_nav == 'products' or active_nav == 'products-units' or active_nav == 'products-categories' or active_nav == 'products-brands' %} inv-nav-group--open{% endif %}" data-nav-group="products products-units products-categories products-brands">
+            <button type="button" class="inv-nav-item inv-nav-group-toggle" aria-expanded="{% if active_nav == 'products' or active_nav == 'products-units' or active_nav == 'products-categories' or active_nav == 'products-brands' %}true{% else %}false{% endif %}">
+                <span class="material-symbols-outlined inv-nav-icon">inventory</span>
+                Manage Products
+                <span class="material-symbols-outlined inv-nav-group-chevron">expand_more</span>
+            </button>
+            <ul class="inv-nav-sub">
+                <li data-nav-tab="products">
+                    <div class="inv-nav-row{% if active_nav == 'products' %} inv-nav-row--active{% endif %}">
+                        <a class="inv-nav-item inv-nav-item--sub{% if active_nav == 'products' %} inv-nav-item--active{% endif %}" href="/dashboard/products/">
+                            <span class="material-symbols-outlined inv-nav-icon inv-nav-icon--sub">package_2</span>
+                            Items
+                        </a>
+                        <a class="inv-nav-add-btn" href="/dashboard/products/?action=add" title="Add product" aria-label="Add product">
+                            <span class="material-symbols-outlined">add</span>
+                        </a>
+                    </div>
+                </li>
+                <li data-nav-tab="products-units">
+                    <div class="inv-nav-row{% if active_nav == 'products-units' %} inv-nav-row--active{% endif %}">
+                        <a class="inv-nav-item inv-nav-item--sub{% if active_nav == 'products-units' %} inv-nav-item--active{% endif %}" href="/dashboard/units/">
+                            <span class="material-symbols-outlined inv-nav-icon inv-nav-icon--sub">scale</span>
+                            Units
+                        </a>
+                        <a class="inv-nav-add-btn" href="/dashboard/units/?action=add" title="Add unit" aria-label="Add unit">
+                            <span class="material-symbols-outlined">add</span>
+                        </a>
+                    </div>
+                </li>
+                <li data-nav-tab="products-categories">
+                    <div class="inv-nav-row{% if active_nav == 'products-categories' %} inv-nav-row--active{% endif %}">
+                        <a class="inv-nav-item inv-nav-item--sub{% if active_nav == 'products-categories' %} inv-nav-item--active{% endif %}" href="/dashboard/categories/">
+                            <span class="material-symbols-outlined inv-nav-icon inv-nav-icon--sub">category</span>
+                            Categories
+                        </a>
+                        <a class="inv-nav-add-btn" href="/dashboard/categories/?action=add" title="Add category" aria-label="Add category">
+                            <span class="material-symbols-outlined">add</span>
+                        </a>
+                    </div>
+                </li>
+                <li data-nav-tab="products-brands">
+                    <div class="inv-nav-row{% if active_nav == 'products-brands' %} inv-nav-row--active{% endif %}">
+                        <a class="inv-nav-item inv-nav-item--sub{% if active_nav == 'products-brands' %} inv-nav-item--active{% endif %}" href="/dashboard/brands/">
+                            <span class="material-symbols-outlined inv-nav-icon inv-nav-icon--sub">workspace_premium</span>
+                            Brands
+                        </a>
+                        <a class="inv-nav-add-btn" href="/dashboard/brands/?action=add" title="Add brand" aria-label="Add brand">
+                            <span class="material-symbols-outlined">add</span>
+                        </a>
+                    </div>
+                </li>
+            </ul>
+        </li>
+        <li class="inv-nav-group{% if active_nav == 'stock-in' or active_nav == 'stock-in-vendors' %} inv-nav-group--has-active-child{% endif %}{% if active_nav == 'stock-in' or active_nav == 'stock-in-vendors' %} inv-nav-group--open{% endif %}" data-nav-group="stock-in stock-in-vendors">
+            <button type="button" class="inv-nav-item inv-nav-group-toggle" aria-expanded="{% if active_nav == 'stock-in' or active_nav == 'stock-in-vendors' %}true{% else %}false{% endif %}">
+                <span class="material-symbols-outlined inv-nav-icon">shopping_cart</span>
+                Purchase
+                <span class="material-symbols-outlined inv-nav-group-chevron">expand_more</span>
+            </button>
+            <ul class="inv-nav-sub">
+                <li data-nav-tab="stock-in">
+                    <div class="inv-nav-row{% if active_nav == 'stock-in' %} inv-nav-row--active{% endif %}">
+                        <a class="inv-nav-item inv-nav-item--sub{% if active_nav == 'stock-in' %} inv-nav-item--active{% endif %}" href="/dashboard/stock-in/">
+                            <span class="material-symbols-outlined inv-nav-icon inv-nav-icon--sub">receipt_long</span>
+                            Purchase (Stock In)
+                        </a>
+                        <a class="inv-nav-add-btn" href="/dashboard/stock-in/?action=add" title="Add purchase" aria-label="Add purchase">
+                            <span class="material-symbols-outlined">add</span>
+                        </a>
+                    </div>
+                </li>
+                <li data-nav-tab="stock-in-vendors">
+                    <div class="inv-nav-row{% if active_nav == 'stock-in-vendors' %} inv-nav-row--active{% endif %}">
+                        <a class="inv-nav-item inv-nav-item--sub{% if active_nav == 'stock-in-vendors' %} inv-nav-item--active{% endif %}" href="/dashboard/vendors/">
+                            <span class="material-symbols-outlined inv-nav-icon inv-nav-icon--sub">local_shipping</span>
+                            Vendors
+                        </a>
+                        <a class="inv-nav-add-btn" href="/dashboard/vendors/?action=add" title="Add vendor" aria-label="Add vendor">
+                            <span class="material-symbols-outlined">add</span>
+                        </a>
+                    </div>
+                </li>
+            </ul>
+        </li>
+        <li data-nav-tab="inventory">
+            <a class="inv-nav-item{% if active_nav == 'inventory' %} inv-nav-item--active{% endif %}" href="/dashboard/inventory/">
+                <span class="material-symbols-outlined inv-nav-icon">shelves</span>
+                Stock
+            </a>
+        </li>
+        <li class="inv-nav-group{% if active_nav == 'purchases' or active_nav == 'customers' %} inv-nav-group--has-active-child{% endif %}{% if active_nav == 'purchases' or active_nav == 'customers' %} inv-nav-group--open{% endif %}" data-nav-group="purchases customers">
+            <button type="button" class="inv-nav-item inv-nav-group-toggle" aria-expanded="{% if active_nav == 'purchases' or active_nav == 'customers' %}true{% else %}false{% endif %}">
+                <span class="material-symbols-outlined inv-nav-icon">payments</span>
+                Manage Sales
+                <span class="material-symbols-outlined inv-nav-group-chevron">expand_more</span>
+            </button>
+            <ul class="inv-nav-sub">
+                <li data-nav-tab="purchases">
+                    <div class="inv-nav-row{% if active_nav == 'purchases' %} inv-nav-row--active{% endif %}">
+                        <a class="inv-nav-item inv-nav-item--sub{% if active_nav == 'purchases' %} inv-nav-item--active{% endif %}" href="/dashboard/purchases/">
+                            <span class="material-symbols-outlined inv-nav-icon inv-nav-icon--sub">receipt_long</span>
+                            Create Invoice
+                        </a>
+                        <a class="inv-nav-add-btn" href="/dashboard/purchases/?action=add" title="Add sale" aria-label="Add sale">
+                            <span class="material-symbols-outlined">add</span>
+                        </a>
+                    </div>
+                </li>
+                <li data-nav-tab="customers">
+                    <div class="inv-nav-row{% if active_nav == 'customers' %} inv-nav-row--active{% endif %}">
+                        <a class="inv-nav-item inv-nav-item--sub{% if active_nav == 'customers' %} inv-nav-item--active{% endif %}" href="/dashboard/customers/">
+                            <span class="material-symbols-outlined inv-nav-icon inv-nav-icon--sub">contacts</span>
+                            Customers
+                        </a>
+                        <a class="inv-nav-add-btn" href="/dashboard/customers/?action=add" title="Add customer" aria-label="Add customer">
+                            <span class="material-symbols-outlined">add</span>
+                        </a>
+                    </div>
+                </li>
+            </ul>
+        </li>
+        <li data-nav-tab="business">
+            <div class="inv-nav-row{% if active_nav == 'business' %} inv-nav-row--active{% endif %}">
+                <a class="inv-nav-item{% if active_nav == 'business' %} inv-nav-item--active{% endif %}" href="/dashboard/business/">
+                    <span class="material-symbols-outlined inv-nav-icon">business_center</span>
+                    Business
+                </a>
+                <button type="button" class="inv-nav-add-btn" data-add-action="business" title="Add business" aria-label="Add business">
+                    <span class="material-symbols-outlined">add</span>
+                </button>
+            </div>
+        </li>
+        <li class="inv-nav-group{% if active_nav == 'settings-tax' or active_nav == 'settings-invoice' %} inv-nav-group--has-active-child{% endif %}{% if active_nav == 'settings-tax' or active_nav == 'settings-invoice' %} inv-nav-group--open{% endif %}" data-nav-group="settings-tax settings-invoice">
+            <button type="button" class="inv-nav-item inv-nav-group-toggle" aria-expanded="{% if active_nav == 'settings-tax' or active_nav == 'settings-invoice' %}true{% else %}false{% endif %}">
+                <span class="material-symbols-outlined inv-nav-icon">tune</span>
+                Settings
+                <span class="material-symbols-outlined inv-nav-group-chevron">expand_more</span>
+            </button>
+            <ul class="inv-nav-sub">
+                <li data-nav-tab="settings-tax">
+                    <div class="inv-nav-row{% if active_nav == 'settings-tax' %} inv-nav-row--active{% endif %}">
+                        <a class="inv-nav-item inv-nav-item--sub{% if active_nav == 'settings-tax' %} inv-nav-item--active{% endif %}" href="/dashboard/settings/tax/">
+                            <span class="material-symbols-outlined inv-nav-icon inv-nav-icon--sub">calculate</span>
+                            Tax
+                        </a>
+                        <a class="inv-nav-add-btn" href="/dashboard/settings/tax/?action=add" title="Add tax" aria-label="Add tax">
+                            <span class="material-symbols-outlined">add</span>
+                        </a>
+                    </div>
+                </li>
+                <li data-nav-tab="settings-invoice">
+                    <div class="inv-nav-row{% if active_nav == 'settings-invoice' %} inv-nav-row--active{% endif %}">
+                        <a class="inv-nav-item inv-nav-item--sub{% if active_nav == 'settings-invoice' %} inv-nav-item--active{% endif %}" href="/dashboard/settings/invoice/">
+                            <span class="material-symbols-outlined inv-nav-icon inv-nav-icon--sub">receipt</span>
+                            Invoice
+                        </a>
+                        <a class="inv-nav-add-btn" href="/dashboard/settings/invoice/?action=add" title="Add invoice setting" aria-label="Add invoice setting">
+                            <span class="material-symbols-outlined">add</span>
+                        </a>
+                    </div>
+                </li>
+            </ul>
+        </li>
+    </ul>
+</nav>
+
+<header class="inv-dashboard-header inv-chrome-header">
+    <div class="inv-chrome-header-top">
+        {% include "partials/inv_sidebar_toggle.html" %}
+        <div class="inv-chrome-active-business" id="inv-active-business">
+            <span id="inv-active-business-icon" class="inv-active-business-icon" aria-hidden="true">
+                <span class="material-symbols-outlined">store</span>
+            </span>
+            <div class="inv-active-business-text">
+                <span class="inv-active-business-label">Active Business</span>
+                <span id="inv-active-business-name" class="inv-active-business-name">Select business</span>
+            </div>
+        </div>
+        <div class="inv-header-right">
+            <div class="inv-quick-access" id="inv-quick-access">
+                <button type="button" id="inv-quick-access-btn" class="inv-quick-access-trigger" aria-expanded="false" aria-haspopup="true" title="Quick create" aria-label="Quick create">
+                    <span class="material-symbols-outlined">bolt</span>
+                </button>
+                <div id="inv-quick-access-panel" class="inv-quick-access-panel inv-hidden" role="menu" aria-label="Quick create">
+                    <div class="inv-quick-access-grid">
+                        <div class="inv-quick-access-col">
+                            <h3 class="inv-quick-access-heading">
+                                <span class="material-symbols-outlined">apps</span>
+                                General
+                            </h3>
+                            <ul class="inv-quick-access-list">
+                                <li><a href="#" data-quick-action="business" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Business</a></li>
+                                <li><a href="/dashboard/products/?action=add" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Item</a></li>
+                                <li><a href="/dashboard/units/?action=add" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Unit</a></li>
+                                <li><a href="/dashboard/categories/?action=add" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Category</a></li>
+                                <li><a href="/dashboard/brands/?action=add" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Brand</a></li>
+                            </ul>
+                        </div>
+                        <div class="inv-quick-access-col">
+                            <h3 class="inv-quick-access-heading">
+                                <span class="material-symbols-outlined">point_of_sale</span>
+                                Sales
+                            </h3>
+                            <ul class="inv-quick-access-list">
+                                <li><a href="/dashboard/customers/?action=add" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Customer</a></li>
+                                <li><a href="/dashboard/purchases/?action=add" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Sale</a></li>
+                            </ul>
+                        </div>
+                        <div class="inv-quick-access-col">
+                            <h3 class="inv-quick-access-heading">
+                                <span class="material-symbols-outlined">shopping_bag</span>
+                                Purchases
+                            </h3>
+                            <ul class="inv-quick-access-list">
+                                <li><a href="/dashboard/stock-in/?action=add" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Purchase (Stock In)</a></li>
+                                <li><a href="/dashboard/vendors/?action=add" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Vendor</a></li>
+                            </ul>
+                        </div>
+                        <div class="inv-quick-access-col">
+                            <h3 class="inv-quick-access-heading">
+                                <span class="material-symbols-outlined">warehouse</span>
+                                Inventory
+                            </h3>
+                            <ul class="inv-quick-access-list">
+                                <li><a href="/dashboard/inventory/" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> View Stock</a></li>
+                                <li><a href="/dashboard/stock-in/?action=add" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Purchase (Stock In)</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="inv-profile" id="inv-owner-profile">
+                <button type="button" id="inv-owner-profile-trigger" class="inv-profile-trigger" aria-expanded="false" aria-haspopup="true" title="Account settings">
+                    <div id="profile-avatar" class="inv-profile-avatar">
+                        <span class="material-symbols-outlined">person</span>
+                    </div>
+                    <span class="inv-profile-meta">
+                        <span id="profile-name" class="inv-profile-name">Business Owner</span>
+                        <span id="profile-role" class="inv-profile-role">Business Owner</span>
+                    </span>
+                    <span class="material-symbols-outlined inv-profile-chevron">expand_more</span>
+                </button>
+                <div id="inv-owner-profile-panel" class="inv-owner-profile-panel inv-hidden" role="dialog" aria-label="Account settings">
+                    <div class="inv-owner-profile-panel-header">
+                        <div class="inv-owner-profile-panel-heading">
+                            <h3 class="inv-owner-profile-panel-title">My Account</h3>
+                            <p id="owner-profile-panel-subtitle" class="inv-owner-profile-panel-subtitle">Manage your profile</p>
+                        </div>
+                        <button id="inventory-logout-btn" type="button" class="inv-owner-profile-logout-btn">
+                            <span class="material-symbols-outlined">logout</span>
+                            Logout
+                        </button>
+                    </div>
+                    <form id="owner-profile-form" class="inv-owner-profile-section" novalidate>
+                        <h4 class="inv-owner-profile-section-title">Profile Details</h4>
+                        <div class="inv-owner-profile-fields">
+                            <div class="inv-mgmt-field">
+                                <label for="owner-profile-full-name">Full Name</label>
+                                <input id="owner-profile-full-name" class="inv-mgmt-input" type="text" autocomplete="name" required/>
+                            </div>
+                            <div class="inv-mgmt-field">
+                                <label for="owner-profile-email">Email</label>
+                                <input id="owner-profile-email" class="inv-mgmt-input" type="email" autocomplete="email" placeholder="Optional"/>
+                            </div>
+                            <div class="inv-mgmt-field">
+                                <label for="owner-profile-mobile">Mobile Number</label>
+                                <input id="owner-profile-mobile" class="inv-mgmt-input" type="text" inputmode="numeric" maxlength="10" autocomplete="tel" required/>
+                            </div>
+                        </div>
+                        <div class="inv-owner-profile-section-actions">
+                            <button type="submit" id="owner-profile-save-btn" class="inv-mgmt-btn inv-mgmt-btn--primary">Save Details</button>
+                        </div>
+                    </form>
+                    <form id="owner-password-form" class="inv-owner-profile-section" novalidate>
+                        <h4 class="inv-owner-profile-section-title">Change Password</h4>
+                        <div class="inv-owner-profile-fields">
+                            <div class="inv-mgmt-field">
+                                <label for="owner-profile-current-password">Current Password</label>
+                                <input id="owner-profile-current-password" class="inv-mgmt-input" type="password" autocomplete="current-password"/>
+                            </div>
+                            <div class="inv-mgmt-field">
+                                <label for="owner-profile-new-password">New Password</label>
+                                <input id="owner-profile-new-password" class="inv-mgmt-input" type="password" autocomplete="new-password" minlength="8"/>
+                            </div>
+                            <div class="inv-mgmt-field">
+                                <label for="owner-profile-confirm-password">Confirm New Password</label>
+                                <input id="owner-profile-confirm-password" class="inv-mgmt-input" type="password" autocomplete="new-password" minlength="8"/>
+                            </div>
+                        </div>
+                        <div class="inv-owner-profile-section-actions">
+                            <button type="submit" id="owner-password-save-btn" class="inv-mgmt-btn">Update Password</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="inv-chrome-header-bottom">
+        <div class="inv-business-switcher">
+            <div id="inv-business-tabs" class="inv-business-tabs" role="tablist" aria-label="Business tabs"></div>
+            <button id="inv-business-add-btn" type="button" class="inv-business-tab-add" title="New business tab" aria-label="Add business">
+                <span class="material-symbols-outlined">add</span>
+            </button>
+        </div>
+    </div>
+</header>
+
+<main class="inv-dashboard-main inv-chrome-page">
+    <div id="inv-business-empty" class="inv-business-empty inv-hidden">
+        <p>Create your first business to manage products, purchases, and inventory.</p>
+        <button type="button" class="inv-mgmt-btn inv-mgmt-btn--primary" id="inv-business-empty-add-btn">
+            <span class="material-symbols-outlined">add</span>
+            Add Business
+        </button>
+    </div>
+    {% block content %}{% endblock %}
+</main>
+
+<div id="business-modal" class="inv-modal inv-hidden" aria-hidden="true">
+    <div class="inv-modal-backdrop" data-modal-close></div>
+    <div class="inv-modal-dialog inv-modal-dialog--wide" role="dialog" aria-modal="true" aria-labelledby="business-modal-title">
+        <div class="inv-modal-header">
+            <h3 id="business-modal-title">Add Business</h3>
+            <button type="button" class="inv-modal-close" data-modal-close aria-label="Close">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="inv-modal-body">
+            <div class="inv-mgmt-form-grid" style="padding:0;">
+                <div class="inv-mgmt-field inv-mgmt-field--full">
+                    <label for="business-name">Business Name</label>
+                    <input id="business-name" class="inv-mgmt-input" type="text" placeholder="Business name" required/>
+                </div>
+                <div class="inv-mgmt-field">
+                    <label for="business-gst">GST Number</label>
+                    <input id="business-gst" class="inv-mgmt-input" type="text" placeholder="GST number"/>
+                </div>
+                <div class="inv-mgmt-field">
+                    <label for="business-phone">Phone</label>
+                    <input id="business-phone" class="inv-mgmt-input" type="text" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number"/>
+                </div>
+                <div class="inv-mgmt-field inv-mgmt-field--full">
+                    <label for="business-email">Email</label>
+                    <input id="business-email" class="inv-mgmt-input" type="email" placeholder="Business email"/>
+                </div>
+                <div class="inv-mgmt-field inv-mgmt-field--full">
+                    <label for="business-address">Address</label>
+                    <textarea id="business-address" class="inv-mgmt-textarea" rows="3" placeholder="Business address"></textarea>
+                </div>
+                <div class="inv-mgmt-field inv-mgmt-field--full">
+                    <label for="business-logo">Logo</label>
+                    <input id="business-logo" class="inv-mgmt-input" type="file" accept="image/*"/>
+                </div>
+            </div>
+        </div>
+        <div class="inv-modal-footer">
+            <button type="button" class="inv-mgmt-btn" data-modal-close>Cancel</button>
+            <button id="business-save-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Save Business</button>
+        </div>
+    </div>
+</div>
+
+<script src="{% static 'js/core/constants.js' %}"></script>
+<script src="{% static 'js/components/toast.js' %}"></script>
+<script src="{% static 'js/components/loader.js' %}"></script>
+<script src="{% static 'js/components/confirm.js' %}"></script>
+<script src="{% static 'js/core/pagination.js' %}"></script>
+<script src="{% static 'js/components/page-panel.js' %}"></script>
+<script src="{% static 'js/components/modal.js' %}"></script>
+<script src="{% static 'js/core/api.js' %}"></script>
+<script src="{% static 'js/layout/business.js' %}"></script>
+<script src="{% static 'js/layout/nav-access.js' %}"></script>
+<script src="{% static 'js/components/bulk-select.js' %}"></script>
+<script src="{% static 'js/components/document-export.js' %}"></script>
+<script src="{% static 'js/components/column-customize.js' %}"></script>
+<script src="{% static 'js/components/searchable-select.js' %}"></script>
+<script src="{% static 'js/components/table-cards.js' %}"></script>
+<script src="{% static 'js/layout/sidebar.js' %}"></script>
+<script src="{% static 'js/layout/quick-access.js' %}"></script>
+<script src="{% static 'js/layout/owner-profile.js' %}"></script>
+<script src="{% static 'js/auth/auth.js' %}"></script>
+<script>
+InventoryAuth.guardUser();
+InventoryBusiness.init().then(function () {
+    InventoryNavAccess.init();
+});
+document.getElementById("inv-business-empty-add-btn").addEventListener("click", function () {
+    document.getElementById("inv-business-add-btn").click();
+});
+</script>
+{% block page_scripts %}{% endblock %}
+</body>
+</html>

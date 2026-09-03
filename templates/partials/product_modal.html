@@ -1,0 +1,18 @@
+<div id="product-modal" class="inv-modal inv-hidden" aria-hidden="true">
+    <div class="inv-modal-backdrop" data-modal-close></div>
+    <div class="inv-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="product-modal-title">
+        <div class="inv-modal-header">
+            <h3 id="product-modal-title">Add Product</h3>
+            <button type="button" class="inv-modal-close" data-modal-close aria-label="Close">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="inv-modal-body">
+            {% include "partials/product_form_fields.html" %}
+        </div>
+        <div class="inv-modal-footer">
+            <button type="button" class="inv-mgmt-btn" data-modal-close>Cancel</button>
+            <button id="product-save-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Save Product</button>
+        </div>
+    </div>
+</div>

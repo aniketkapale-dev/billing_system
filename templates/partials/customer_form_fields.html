@@ -1,0 +1,52 @@
+<div class="inv-mgmt-form-grid inv-mgmt-form-grid--sale-top" style="padding:0;">
+    <div class="inv-mgmt-field">
+        <label for="customer-name">Full Name</label>
+        <input id="customer-name" class="inv-mgmt-input" type="text" placeholder="Customer full name" required/>
+    </div>
+    <div class="inv-mgmt-field">
+        <label for="customer-mobile">Mobile Number</label>
+        <input id="customer-mobile" class="inv-mgmt-input" type="text" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number" required/>
+    </div>
+    <div class="inv-mgmt-field">
+        <label for="customer-email">Email <span class="inv-field-optional">(optional)</span></label>
+        <input id="customer-email" class="inv-mgmt-input" type="email" placeholder="Email address"/>
+    </div>
+</div>
+<div class="inv-mgmt-form-grid" style="padding:0;margin-top:16px;">
+    <div class="inv-mgmt-field inv-mgmt-field--full">
+        <label for="customer-address">Address <span class="inv-field-optional">(optional)</span></label>
+        <textarea id="customer-address" class="inv-mgmt-textarea" rows="3" placeholder="Customer address"></textarea>
+    </div>
+</div>
+
+<div class="inv-customer-business-toggle" style="margin-top:20px;">
+    <label class="inv-mgmt-checkbox-label" for="customer-add-business">
+        <input id="customer-add-business" type="checkbox"/>
+        <span>Add company</span>
+    </label>
+</div>
+
+<div id="customer-business-fields" class="inv-customer-business-fields inv-hidden" style="margin-top:16px;">
+    <div class="inv-mgmt-form-grid inv-mgmt-form-grid--sale-top" style="padding:0;">
+        <div class="inv-mgmt-field">
+            <label for="customer-company-name">Company Name</label>
+            <input id="customer-company-name" class="inv-mgmt-input" type="text" placeholder="Company name"/>
+        </div>
+        <div class="inv-mgmt-field">
+            <label for="customer-gst">GST No <span class="inv-field-optional">(optional)</span></label>
+            <input id="customer-gst" class="inv-mgmt-input" type="text" placeholder="GST number" maxlength="30"/>
+        </div>
+    </div>
+    <div class="inv-mgmt-form-grid" style="padding:0;margin-top:16px;">
+        <div class="inv-mgmt-field inv-mgmt-field--full">
+            <label for="customer-business-address">Company Address <span class="inv-field-optional">(optional)</span></label>
+            <textarea id="customer-business-address" class="inv-mgmt-textarea" rows="3" placeholder="Company address"></textarea>
+        </div>
+    </div>
+    <div class="inv-mgmt-form-grid" style="padding:0;margin-top:16px;">
+        <div class="inv-mgmt-field inv-mgmt-field--full">
+            <label for="customer-shipping-address">Shipping Address <span class="inv-field-optional">(optional)</span></label>
+            <textarea id="customer-shipping-address" class="inv-mgmt-textarea" rows="3" placeholder="Shipping address"></textarea>
+        </div>
+    </div>
+</div>

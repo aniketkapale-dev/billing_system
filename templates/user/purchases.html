@@ -1,0 +1,172 @@
+{% extends "user_layout.html" %}
+{% load static %}
+{% block title %}Sale - Billing System{% endblock %}
+
+{% block content %}
+<div class="inv-mgmt-page">
+    <div id="purchases-list-panel" class="inv-mgmt-page-panel">
+        <div class="inv-mgmt-header">
+            <h2 class="inv-dashboard-greeting">Sale</h2>
+            <button id="purchase-open-modal-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">
+                <span class="material-symbols-outlined">add</span>
+                Add Sale
+            </button>
+        </div>
+
+        <div class="inv-mgmt-card">
+            <div class="inv-mgmt-toolbar inv-mgmt-toolbar--filters">
+                <input type="search" id="purchases-search" class="inv-mgmt-search" placeholder="Search customer, invoice no...."/>
+                <div class="inv-mgmt-filter-dates">
+                    <input type="date" id="purchases-date-from" class="inv-mgmt-input inv-mgmt-filter-date" aria-label="From date"/>
+                    <span class="inv-mgmt-filter-sep">to</span>
+                    <input type="date" id="purchases-date-to" class="inv-mgmt-input inv-mgmt-filter-date" aria-label="To date"/>
+                </div>
+                <button type="button" id="purchases-clear-filters" class="inv-mgmt-btn">Clear</button>
+            </div>
+            <div class="inv-mgmt-table-wrap">
+                <table class="inv-mgmt-table inv-mgmt-table--purchases">
+                    <thead>
+                        <tr></tr>
+                    </thead>
+                    <tbody id="purchases-table-body">
+                        <tr><td colspan="7" class="inv-mgmt-empty">Loading sales...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="purchases-pagination" class="inv-pagination"></div>
+        </div>
+    </div>
+
+    <div id="purchases-form-panel" class="inv-mgmt-page-panel inv-hidden">
+        <div class="inv-mgmt-panel-header">
+            <h2 id="purchase-form-title" class="inv-dashboard-greeting">Add Sale</h2>
+            <button type="button" class="inv-mgmt-btn inv-page-back-btn" data-page-back="purchases-list-panel">
+                <span class="material-symbols-outlined">arrow_back</span>
+                Back to List
+            </button>
+        </div>
+        <div class="inv-mgmt-card inv-mgmt-panel-card">
+            <div class="inv-mgmt-panel-body">
+                <div class="inv-mgmt-form-grid inv-mgmt-form-grid--sale-top" style="padding:0;">
+                    <div id="purchase-invoice-setting-field" class="inv-mgmt-field">
+                        <label for="purchase-invoice-setting">Invoice</label>
+                        <select id="purchase-invoice-setting" class="inv-mgmt-select" required>
+                            <option value="">Select invoice</option>
+                        </select>
+                    </div>
+                    <div class="inv-mgmt-field">
+                        <label for="purchase-customer">Customer/Company</label>
+                        <div class="inv-field-inline">
+                            <select id="purchase-customer" class="inv-mgmt-select" required>
+                                <option value="">Select customer or company</option>
+                            </select>
+                            <button id="purchase-customer-add-btn" type="button" class="inv-inline-add-btn" title="Add customer" aria-label="Add customer">
+                                <span class="material-symbols-outlined">add</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="inv-mgmt-field">
+                        <label for="purchase-date">Sale Date</label>
+                        <input id="purchase-date" class="inv-mgmt-input" type="date"/>
+                    </div>
+                    <div class="inv-mgmt-field">
+                        <label for="purchase-payment-type">Payment Type <span class="inv-field-optional">(optional)</span></label>
+                        <div class="inv-field-inline">
+                            <select id="purchase-payment-type" class="inv-mgmt-select">
+                                <option value="">Select payment type (optional)</option>
+                            </select>
+                            <button id="purchase-payment-type-add-btn" type="button" class="inv-inline-add-btn" title="Add new payment type" aria-label="Add new payment type">
+                                <span class="material-symbols-outlined">add</span>
+                            </button>
+                        </div>
+                        <div id="purchase-payment-type-new-panel" class="inv-inline-add-panel inv-hidden">
+                            <input id="purchase-payment-type-new-name" class="inv-mgmt-input" type="text" placeholder="New payment type (e.g. Cash, UPI)"/>
+                            <div class="inv-inline-add-actions">
+                                <button id="purchase-payment-type-save-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Save Payment Type</button>
+                                <button id="purchase-payment-type-cancel-btn" type="button" class="inv-mgmt-btn">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="inv-mgmt-form-grid inv-mgmt-form-grid--sale-addresses" style="padding:0;">
+                    <div class="inv-mgmt-field">
+                        <label for="purchase-billing-address">Billing Address <span class="inv-field-optional">(optional)</span></label>
+                        <textarea id="purchase-billing-address" class="inv-mgmt-textarea" rows="3" placeholder="Billing address"></textarea>
+                    </div>
+                    <div class="inv-mgmt-field">
+                        <label for="purchase-shipping-address">Shipping Address <span class="inv-field-optional">(optional)</span></label>
+                        <textarea id="purchase-shipping-address" class="inv-mgmt-textarea" rows="3" placeholder="Shipping address"></textarea>
+                    </div>
+                </div>
+
+                <div class="inv-mgmt-items-panel" style="margin-top:16px;border-radius:12px;">
+                    <div class="inv-mgmt-items-header">
+                        <div>
+                            <h4 style="margin:0;font-size:16px;font-weight:600;color:var(--inv-primary);">Products to Sell</h4>
+                        </div>
+                        <button id="purchase-add-item-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Add Product</button>
+                    </div>
+                    <div id="purchase-items-container"></div>
+                    <div id="purchase-totals" class="inv-stockin-totals">
+                        <div class="inv-stockin-total-row">
+                            <div class="inv-stockin-total-label">
+                                <span>Total Cost</span>
+                                <small>Total purchase cost of items sold</small>
+                            </div>
+                            <strong id="purchase-total-cost" class="inv-stockin-total-value">0.00</strong>
+                        </div>
+                        <div class="inv-stockin-total-row inv-stockin-total-row--grand">
+                            <div class="inv-stockin-total-label">
+                                <span>Sale Amount</span>
+                                <small>Total amount received from the sale</small>
+                            </div>
+                            <strong id="purchase-sale-amount" class="inv-stockin-total-value">0.00</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="inv-mgmt-panel-footer">
+                <button type="button" class="inv-mgmt-btn" data-page-back="purchases-list-panel">Cancel</button>
+                <button id="purchase-save-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Create Sale</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="purchases-view-panel" class="inv-mgmt-page-panel inv-hidden">
+        <div class="inv-mgmt-panel-header">
+            <h2 id="purchase-view-title" class="inv-dashboard-greeting">Sale Details</h2>
+            <button type="button" class="inv-mgmt-btn inv-page-back-btn" data-page-back="purchases-list-panel">
+                <span class="material-symbols-outlined">arrow_back</span>
+                Back to List
+            </button>
+        </div>
+        <div class="inv-mgmt-card inv-mgmt-panel-card">
+            <div class="inv-mgmt-panel-body">
+                <div id="purchase-view-body" class="inv-product-view-grid"></div>
+                <div id="purchase-view-items-wrap" class="inv-stockin-view-items"></div>
+            </div>
+            <div class="inv-mgmt-panel-footer">
+                <button type="button" class="inv-mgmt-btn inv-mgmt-btn--primary" data-page-back="purchases-list-panel">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include "partials/customer_modal.html" %}
+{% endblock %}
+
+{% block page_scripts %}
+<link href="{% static 'css/inventory-mgmt.css' %}" rel="stylesheet"/>
+<script src="{% static 'js/core/api.js' %}"></script>
+<script src="{% static 'js/components/modal.js' %}"></script>
+<script src="{% static 'js/components/page-panel.js' %}"></script>
+<script src="{% static 'js/components/multi-select.js' %}"></script>
+<script src="{% static 'js/components/tax-select.js' %}"></script>
+<script src="{% static 'js/inventory/customers.js' %}"></script>
+<script src="{% static 'js/inventory/purchases.js' %}"></script>
+<script>
+InventoryPagePanel.init();
+InventoryCustomers.init();
+InventoryPurchases.init();
+</script>
+{% endblock %}

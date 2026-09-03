@@ -1,0 +1,228 @@
+{% extends "user_layout.html" %}
+{% load static %}
+{% block title %}Business - Billing System{% endblock %}
+
+{% block content %}
+<div class="inv-mgmt-page inv-business-page">
+    <div id="business-main-content">
+        <div id="business-profile-empty" class="inv-business-empty inv-hidden">
+            <p>Select or create a business using the tabs above to view and edit its details.</p>
+            <button type="button" class="inv-mgmt-btn inv-mgmt-btn--primary" id="business-profile-empty-add-btn">
+                <span class="material-symbols-outlined">add</span>
+                Add Business
+            </button>
+        </div>
+
+        <div id="business-profile-panel" class="inv-hidden">
+            <div class="inv-mgmt-card inv-business-profile-card">
+                <div class="inv-business-info-header">
+                    <span class="inv-business-info-header-icon" aria-hidden="true">
+                        <span class="material-symbols-outlined">store</span>
+                    </span>
+                    <div class="inv-business-info-header-text">
+                        <h3 class="inv-business-info-title">Business Information</h3>
+                    </div>
+                </div>
+
+                <form id="business-profile-form" class="inv-business-profile-form" novalidate>
+                    <div class="inv-business-profile">
+                        <div class="inv-business-profile-grid">
+                            <div class="inv-business-profile-logo-card">
+                                <div id="business-profile-logo-preview" class="inv-business-profile-logo-preview" aria-hidden="true">
+                                    <span class="material-symbols-outlined">storefront</span>
+                                </div>
+                                <span class="inv-business-profile-logo-label">Store Logo</span>
+                                <div class="inv-business-profile-logo-actions">
+                                    <label class="inv-mgmt-btn inv-business-logo-upload-btn" for="business-profile-logo">
+                                        <span class="material-symbols-outlined">upload</span>
+                                        Change Logo
+                                    </label>
+                                    <input id="business-profile-logo" class="inv-hidden" type="file" accept="image/*"/>
+                                    <button type="button" id="business-profile-logo-clear" class="inv-mgmt-btn inv-hidden">Remove Logo</button>
+                                    <button type="button" id="business-user-add-btn" class="inv-mgmt-btn inv-mgmt-btn--primary inv-business-logo-add-user inv-hidden">
+                                        <span class="material-symbols-outlined">person_add</span>
+                                        Add User
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="inv-business-profile-fields">
+                                <div class="inv-mgmt-form-grid inv-mgmt-form-grid--business-profile" style="padding:0;">
+                                    <div class="inv-mgmt-field inv-mgmt-field--full">
+                                        <label for="business-profile-name">Business Name</label>
+                                        <div class="inv-input-icon-wrap">
+                                            <input id="business-profile-name" class="inv-mgmt-input inv-mgmt-input--trailing-icon" type="text" placeholder="Business name" required/>
+                                            <span class="inv-input-trailing-icon material-symbols-outlined" aria-hidden="true">badge</span>
+                                        </div>
+                                    </div>
+                                    <div class="inv-mgmt-field">
+                                        <label for="business-profile-gst">GST Number</label>
+                                        <div class="inv-input-icon-wrap">
+                                            <input id="business-profile-gst" class="inv-mgmt-input inv-mgmt-input--trailing-icon" type="text" placeholder="GST number"/>
+                                            <span class="inv-input-trailing-icon material-symbols-outlined" aria-hidden="true">receipt_long</span>
+                                        </div>
+                                    </div>
+                                    <div class="inv-mgmt-field">
+                                        <label for="business-profile-phone">Phone Number</label>
+                                        <div class="inv-input-icon-wrap">
+                                            <input id="business-profile-phone" class="inv-mgmt-input inv-mgmt-input--trailing-icon" type="text" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number"/>
+                                            <span class="inv-input-trailing-icon material-symbols-outlined" aria-hidden="true">call</span>
+                                        </div>
+                                    </div>
+                                    <div class="inv-mgmt-field inv-mgmt-field--full">
+                                        <label for="business-profile-email">Email Address</label>
+                                        <div class="inv-input-icon-wrap">
+                                            <input id="business-profile-email" class="inv-mgmt-input inv-mgmt-input--trailing-icon" type="email" placeholder="Business email"/>
+                                            <span class="inv-input-trailing-icon material-symbols-outlined" aria-hidden="true">mail</span>
+                                        </div>
+                                    </div>
+                                    <div class="inv-mgmt-field inv-mgmt-field--full">
+                                        <label for="business-profile-address">Business Address</label>
+                                        <div class="inv-input-icon-wrap inv-input-icon-wrap--textarea">
+                                            <textarea id="business-profile-address" class="inv-mgmt-textarea inv-mgmt-input--trailing-icon" rows="3" placeholder="Business address"></textarea>
+                                            <span class="inv-input-trailing-icon material-symbols-outlined" aria-hidden="true">location_on</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="inv-business-profile-meta">
+                            <div class="inv-business-profile-meta-item">
+                                <span class="inv-business-profile-meta-icon" aria-hidden="true">
+                                    <span class="material-symbols-outlined">person</span>
+                                </span>
+                                <div class="inv-business-profile-meta-content">
+                                    <span class="inv-business-profile-meta-label">Owner</span>
+                                    <span id="business-profile-owner" class="inv-business-profile-meta-value">—</span>
+                                    <span class="inv-business-profile-meta-sub inv-business-profile-meta-sub--accent">Business Owner</span>
+                                </div>
+                            </div>
+                            <div class="inv-business-profile-meta-item">
+                                <span class="inv-business-profile-meta-icon" aria-hidden="true">
+                                    <span class="material-symbols-outlined">calendar_today</span>
+                                </span>
+                                <div class="inv-business-profile-meta-content">
+                                    <span class="inv-business-profile-meta-label">Created On</span>
+                                    <span id="business-profile-created-date" class="inv-business-profile-meta-value">—</span>
+                                    <span id="business-profile-created-time" class="inv-business-profile-meta-sub">—</span>
+                                </div>
+                            </div>
+                            <div class="inv-business-profile-meta-item">
+                                <span class="inv-business-profile-meta-icon" aria-hidden="true">
+                                    <span class="material-symbols-outlined">schedule</span>
+                                </span>
+                                <div class="inv-business-profile-meta-content">
+                                    <span class="inv-business-profile-meta-label">Last Updated</span>
+                                    <span id="business-profile-updated-date" class="inv-business-profile-meta-value">—</span>
+                                    <span id="business-profile-updated-time" class="inv-business-profile-meta-sub">—</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="inv-business-profile-actions">
+                            <button type="submit" id="business-profile-save-btn" class="inv-mgmt-btn inv-mgmt-btn--primary">
+                                <span class="material-symbols-outlined">save</span>
+                                Save Changes
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div id="business-users-panel" class="inv-mgmt-card inv-business-users-card inv-hidden">
+                <div class="inv-business-users-section">
+                    <h3 class="inv-business-section-title">Admin Users</h3>
+                    <div class="inv-mgmt-table-wrap inv-business-users-table-wrap">
+                        <table class="inv-mgmt-table">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th class="inv-mgmt-cell--action">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="business-users-table-body">
+                                <tr><td colspan="4" class="inv-mgmt-empty">Loading users...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="business-user-form-panel" class="inv-hidden">
+        <div class="inv-mgmt-panel-header">
+            <div>
+                <h3 id="business-user-form-title" class="inv-business-section-title">Add User</h3>
+                <p class="inv-text-muted">Staff can sign in with mobile number and password.</p>
+            </div>
+            <button type="button" class="inv-mgmt-btn inv-page-back-btn" id="business-user-form-back-btn">
+                <span class="material-symbols-outlined">arrow_back</span>
+                Back to Business
+            </button>
+        </div>
+        <div class="inv-mgmt-card inv-mgmt-panel-card">
+            <div class="inv-mgmt-panel-body">
+                <div class="inv-mgmt-form-grid inv-mgmt-form-grid--invoice-setting" style="padding:0;">
+                    <div class="inv-mgmt-field">
+                        <label for="business-user-full-name">Full Name</label>
+                        <input id="business-user-full-name" class="inv-mgmt-input" type="text" required/>
+                    </div>
+                    <div class="inv-mgmt-field">
+                        <label for="business-user-mobile">Mobile Number</label>
+                        <input id="business-user-mobile" class="inv-mgmt-input" type="text" inputmode="numeric" maxlength="10" required/>
+                    </div>
+                    <div class="inv-mgmt-field">
+                        <label for="business-user-email">Email <span class="inv-field-optional">(optional)</span></label>
+                        <input id="business-user-email" class="inv-mgmt-input" type="email"/>
+                    </div>
+                    <div class="inv-mgmt-field">
+                        <label id="business-user-password-label" for="business-user-password">Password</label>
+                        <input id="business-user-password" class="inv-mgmt-input" type="password" minlength="6" required/>
+                    </div>
+                    <div class="inv-mgmt-field">
+                        <label for="business-user-role">Role</label>
+                        <div class="inv-field-inline">
+                            <select id="business-user-role" class="inv-mgmt-select" required>
+                                <option value="">Select role</option>
+                            </select>
+                            <button id="business-user-role-add-btn" type="button" class="inv-inline-add-btn" title="Add role" aria-label="Add role">
+                                <span class="material-symbols-outlined">add</span>
+                            </button>
+                        </div>
+                        <div id="business-user-role-new-panel" class="inv-inline-add-panel inv-hidden">
+                            <input id="business-user-role-new-name" class="inv-mgmt-input" type="text" placeholder="New role (e.g. Cashier, Manager)"/>
+                            <div class="inv-mgmt-field" style="margin-top:12px;">
+                                <label>Tab Access for Role</label>
+                                <div id="business-user-role-tabs" class="inv-tab-check-grid"></div>
+                            </div>
+                            <div class="inv-inline-add-actions">
+                                <button id="business-user-role-save-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Save Role</button>
+                                <button id="business-user-role-cancel-btn" type="button" class="inv-mgmt-btn">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="inv-mgmt-panel-footer">
+                <button type="button" class="inv-mgmt-btn" id="business-user-cancel-btn">Cancel</button>
+                <button type="button" id="business-user-save-btn" class="inv-mgmt-btn inv-mgmt-btn--primary">Save User</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<link href="{% static 'css/inventory-mgmt.css' %}" rel="stylesheet"/>
+<script src="{% static 'js/core/api.js' %}"></script>
+<script src="{% static 'js/inventory/business-profile.js' %}"></script>
+<script src="{% static 'js/inventory/business-users.js' %}"></script>
+<script>
+InventoryBusinessProfile.init();
+InventoryBusinessUsers.init();
+</script>
+{% endblock %}

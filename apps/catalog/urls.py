@@ -1,0 +1,114 @@
+from django.urls import path
+
+from apps.catalog.views import BrandViewSet, CategoryViewSet, ManufacturerViewSet, PaymentTypeViewSet, UnitViewSet, VendorViewSet
+
+urlpatterns = [
+    path("units/", UnitViewSet.as_view({"get": "list", "post": "create"}), name="unit-list"),
+    path(
+        "units/<int:pk>/",
+        UnitViewSet.as_view({
+            "get": "retrieve",
+            "put": "update",
+            "patch": "partial_update",
+            "delete": "destroy",
+        }),
+        name="unit-detail",
+    ),
+    path(
+        "units/<int:pk>/restore/",
+        UnitViewSet.as_view({"post": "restore"}),
+        name="unit-restore",
+    ),
+    path(
+        "categories/",
+        CategoryViewSet.as_view({"get": "list", "post": "create"}),
+        name="category-list",
+    ),
+    path(
+        "categories/<int:pk>/",
+        CategoryViewSet.as_view({
+            "get": "retrieve",
+            "put": "update",
+            "patch": "partial_update",
+            "delete": "destroy",
+        }),
+        name="category-detail",
+    ),
+    path(
+        "categories/<int:pk>/restore/",
+        CategoryViewSet.as_view({"post": "restore"}),
+        name="category-restore",
+    ),
+    path("brands/", BrandViewSet.as_view({"get": "list", "post": "create"}), name="brand-list"),
+    path(
+        "brands/<int:pk>/",
+        BrandViewSet.as_view({
+            "get": "retrieve",
+            "put": "update",
+            "patch": "partial_update",
+            "delete": "destroy",
+        }),
+        name="brand-detail",
+    ),
+    path(
+        "brands/<int:pk>/restore/",
+        BrandViewSet.as_view({"post": "restore"}),
+        name="brand-restore",
+    ),
+    path(
+        "manufacturers/",
+        ManufacturerViewSet.as_view({"get": "list", "post": "create"}),
+        name="manufacturer-list",
+    ),
+    path(
+        "manufacturers/<int:pk>/",
+        ManufacturerViewSet.as_view({
+            "get": "retrieve",
+            "put": "update",
+            "patch": "partial_update",
+            "delete": "destroy",
+        }),
+        name="manufacturer-detail",
+    ),
+    path(
+        "manufacturers/<int:pk>/restore/",
+        ManufacturerViewSet.as_view({"post": "restore"}),
+        name="manufacturer-restore",
+    ),
+    path(
+        "payment-types/",
+        PaymentTypeViewSet.as_view({"get": "list", "post": "create"}),
+        name="payment-type-list",
+    ),
+    path(
+        "payment-types/<int:pk>/",
+        PaymentTypeViewSet.as_view({
+            "get": "retrieve",
+            "put": "update",
+            "patch": "partial_update",
+            "delete": "destroy",
+        }),
+        name="payment-type-detail",
+    ),
+    path(
+        "payment-types/<int:pk>/restore/",
+        PaymentTypeViewSet.as_view({"post": "restore"}),
+        name="payment-type-restore",
+    ),
+    path("vendors/", VendorViewSet.as_view({"get": "list", "post": "create"}), name="vendor-list"),
+    path(
+        "vendors/<int:pk>/",
+        VendorViewSet.as_view({
+            "get": "retrieve",
+            "put": "update",
+            "patch": "partial_update",
+            "delete": "destroy",
+        }),
+        name="vendor-detail",
+    ),
+    path(
+        "vendors/<int:pk>/restore/",
+        VendorViewSet.as_view({"post": "restore"}),
+        name="vendor-restore",
+    ),
+]

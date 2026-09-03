@@ -7,8 +7,25 @@ from core.utils import build_absolute_uri
 
 
 class LoginSerializer(serializers.Serializer):
-    email = serializers.EmailField()
+    email = serializers.CharField(max_length=254)
     password = serializers.CharField(write_only=True)
+
+
+class RegisterSerializer(serializers.Serializer):
+    full_name = serializers.CharField(max_length=150)
+    email = serializers.EmailField(required=False, allow_blank=True, default="")
+    mobile_number = serializers.CharField(min_length=10, max_length=10)
+    password = serializers.CharField(min_length=8, write_only=True)
+
+    def validate_email(self, value):
+        if not value or not str(value).strip():
+            return ""
+        return value.strip().lower()
+
+    def validate_mobile_number(self, value):
+        from core.validators import validate_mobile_number
+
+        return validate_mobile_number(value)
 
 
 class RefreshSerializer(serializers.Serializer):
@@ -29,11 +46,32 @@ class ChangePasswordSerializer(serializers.Serializer):
     new_password = serializers.CharField(min_length=8, write_only=True)
 
 
+class UpdateProfileSerializer(serializers.Serializer):
+    full_name = serializers.CharField(max_length=150, required=False)
+    email = serializers.EmailField(required=False, allow_blank=True)
+    mobile_number = serializers.CharField(min_length=10, max_length=10, required=False)
+
+    def validate_email(self, value):
+        if value is None:
+            return None
+        if not str(value).strip():
+            return ""
+        return str(value).strip().lower()
+
+    def validate_mobile_number(self, value):
+        if value is None:
+            return None
+        from core.validators import validate_mobile_number
+
+        return validate_mobile_number(value)
+
+
 class ProfileSerializer(serializers.Serializer):
     id = serializers.IntegerField(read_only=True)
     full_name = serializers.CharField(read_only=True)
     email = serializers.EmailField(read_only=True)
     mobile_number = serializers.CharField(read_only=True)
+    is_active = serializers.BooleanField(read_only=True)
     profile_image = serializers.SerializerMethodField()
     roles = serializers.SerializerMethodField()
 

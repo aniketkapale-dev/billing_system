@@ -1,0 +1,80 @@
+/* Superadmin users — page-specific styles (shared table/layout from inventory-mgmt.css) */
+
+.inv-status-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.inv-status-badge--active {
+    background: var(--inv-success-bg);
+    color: var(--inv-success-text);
+}
+
+.inv-status-badge--inactive {
+    background: var(--inv-error-container);
+    color: var(--inv-on-error-container);
+}
+
+.inv-user-toggle-btn--activate {
+    color: var(--inv-success-text);
+    border-color: var(--inv-success-bg);
+    background: var(--inv-success-bg);
+}
+
+.inv-user-toggle-btn--activate:hover:not(:disabled) {
+    background: var(--inv-success-text);
+    color: var(--inv-white);
+    border-color: var(--inv-success-text);
+}
+
+.inv-user-toggle-btn--deactivate {
+    color: var(--inv-error);
+    border-color: var(--inv-error-container);
+    background: var(--inv-error-container);
+}
+
+.inv-user-toggle-btn--deactivate:hover:not(:disabled) {
+    background: var(--inv-error);
+    color: var(--inv-white);
+    border-color: var(--inv-error);
+}
+
+.inv-user-detail-avatar {
+    width: 72px;
+    height: 72px;
+    border-radius: 12px;
+    object-fit: cover;
+    border: 1px solid var(--inv-outline-variant);
+}
+
+.inv-user-detail-businesses {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+}
+
+.inv-mgmt-table--users th:nth-child(1),
+.inv-mgmt-table--users td:nth-child(1) { width: 14%; }
+
+.inv-mgmt-table--users th:nth-child(2),
+.inv-mgmt-table--users td:nth-child(2) { width: 18%; }
+
+.inv-mgmt-table--users th:nth-child(3),
+.inv-mgmt-table--users td:nth-child(3) { width: 12%; }
+
+.inv-mgmt-table--users th:nth-child(4),
+.inv-mgmt-table--users td:nth-child(4),
+.inv-mgmt-table--users th:nth-child(5),
+.inv-mgmt-table--users td:nth-child(5) { width: 11%; }
+
+.inv-mgmt-table--users th:nth-child(6),
+.inv-mgmt-table--users td:nth-child(6) { width: 12%; }
+
+.inv-mgmt-table--users th:nth-child(7),
+.inv-mgmt-table--users td:nth-child(7) { width: 9%; }
+
+.inv-mgmt-table--users th:nth-child(8),
+.inv-mgmt-table--users td:nth-child(8) { width: 13%; }

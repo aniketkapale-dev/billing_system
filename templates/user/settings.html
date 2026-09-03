@@ -1,0 +1,168 @@
+{% extends "user_layout.html" %}
+{% load static %}
+{% block title %}{% if settings_section == 'tax' %}Tax Settings{% elif settings_section == 'invoice' %}Invoice Settings{% else %}Settings{% endif %} - Billing System{% endblock %}
+
+{% block content %}
+<div class="inv-mgmt-page">
+    {% if settings_section == 'tax' %}
+    <div id="settings-tax-list-panel" class="inv-mgmt-page-panel">
+        <div class="inv-mgmt-header">
+            <h2 class="inv-dashboard-greeting">Tax Settings</h2>
+            <button id="settings-tax-add-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">
+                <span class="material-symbols-outlined">add</span>
+                Add Tax
+            </button>
+        </div>
+
+        <div class="inv-mgmt-card">
+            <div class="inv-mgmt-table-wrap">
+                <table class="inv-mgmt-table inv-mgmt-table--settings-tax">
+                    <colgroup>
+                        <col style="width:33.3333%"/>
+                        <col style="width:33.3333%"/>
+                        <col style="width:33.3333%"/>
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th>Key</th>
+                            <th class="inv-mgmt-cell--num">Value (%)</th>
+                            <th class="inv-mgmt-cell--action">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="settings-tax-table-body">
+                        <tr><td colspan="3" class="inv-mgmt-empty">Loading taxes...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="settings-tax-pagination" class="inv-pagination"></div>
+        </div>
+    </div>
+
+    <div id="settings-tax-form-panel" class="inv-mgmt-page-panel inv-hidden">
+        <div class="inv-mgmt-panel-header">
+            <h2 id="settings-tax-form-title" class="inv-dashboard-greeting">Add Tax</h2>
+            <button type="button" class="inv-mgmt-btn inv-page-back-btn" data-page-back="settings-tax-list-panel">
+                <span class="material-symbols-outlined">arrow_back</span>
+                Back to List
+            </button>
+        </div>
+        <div class="inv-mgmt-card inv-mgmt-panel-card">
+            <div class="inv-mgmt-panel-body">
+                <div class="inv-mgmt-form-grid" style="padding:0;">
+                    <div class="inv-mgmt-field">
+                        <label for="settings-tax-key">Key</label>
+                        <input id="settings-tax-key" class="inv-mgmt-input" type="text" placeholder="e.g. gst12%" required/>
+                    </div>
+                    <div class="inv-mgmt-field">
+                        <label for="settings-tax-value">Value (%)</label>
+                        <input id="settings-tax-value" class="inv-mgmt-input" type="number" min="0" max="100" step="0.01" placeholder="e.g. 12" required/>
+                    </div>
+                </div>
+            </div>
+            <div class="inv-mgmt-panel-footer">
+                <button type="button" class="inv-mgmt-btn" data-page-back="settings-tax-list-panel">Cancel</button>
+                <button id="settings-tax-save-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Save</button>
+            </div>
+        </div>
+    </div>
+
+    {% elif settings_section == 'invoice' %}
+    <div id="settings-invoice-list-panel" class="inv-mgmt-page-panel">
+        <div class="inv-mgmt-header">
+            <h2 class="inv-dashboard-greeting">Invoice Settings</h2>
+            <button id="settings-invoice-add-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">
+                <span class="material-symbols-outlined">add</span>
+                Add Invoice Setting
+            </button>
+        </div>
+
+        <div class="inv-mgmt-card">
+            <div class="inv-mgmt-table-wrap">
+                <table class="inv-mgmt-table inv-mgmt-table--settings-invoice">
+                    <colgroup>
+                        <col style="width:14.2857%"/>
+                        <col style="width:14.2857%"/>
+                        <col style="width:14.2857%"/>
+                        <col style="width:14.2857%"/>
+                        <col style="width:14.2857%"/>
+                        <col style="width:14.2857%"/>
+                        <col style="width:14.2857%"/>
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th class="inv-mgmt-cell--num">Year</th>
+                            <th>Prefix</th>
+                            <th>Suffix</th>
+                            <th class="inv-mgmt-cell--num">Start Counter</th>
+                            <th class="inv-mgmt-cell--num">Current Counter</th>
+                            <th>End Counter</th>
+                            <th class="inv-mgmt-cell--action">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="settings-invoice-table-body">
+                        <tr><td colspan="7" class="inv-mgmt-empty">Loading invoice settings...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="settings-invoice-pagination" class="inv-pagination"></div>
+        </div>
+    </div>
+
+    <div id="settings-invoice-form-panel" class="inv-mgmt-page-panel inv-hidden">
+        <div class="inv-mgmt-panel-header">
+            <h2 id="settings-invoice-form-title" class="inv-dashboard-greeting">Add Invoice Setting</h2>
+            <button type="button" class="inv-mgmt-btn inv-page-back-btn" data-page-back="settings-invoice-list-panel">
+                <span class="material-symbols-outlined">arrow_back</span>
+                Back to List
+            </button>
+        </div>
+        <div class="inv-mgmt-card inv-mgmt-panel-card">
+            <div class="inv-mgmt-panel-body">
+                <div class="inv-mgmt-form-grid inv-mgmt-form-grid--invoice-setting" style="padding:0;">
+                    <div class="inv-mgmt-field">
+                        <label for="settings-invoice-year">Year</label>
+                        <input id="settings-invoice-year" class="inv-mgmt-input" type="number" min="2000" max="2100" step="1" placeholder="e.g. 2026" required/>
+                    </div>
+                    <div class="inv-mgmt-field">
+                        <label for="settings-invoice-prefix">Prefix</label>
+                        <input id="settings-invoice-prefix" class="inv-mgmt-input" type="text" placeholder="e.g.Quotation"/>
+                    </div>
+                    <div class="inv-mgmt-field">
+                        <label for="settings-invoice-suffix">Suffix</label>
+                        <input id="settings-invoice-suffix" class="inv-mgmt-input" type="text" placeholder="e.g.INV"/>
+                    </div>
+                    <div class="inv-mgmt-field">
+                        <label for="settings-invoice-start-counter">Start Counter</label>
+                        <input id="settings-invoice-start-counter" class="inv-mgmt-input" type="number" min="0" step="1" placeholder="e.g. 1" value="1"/>
+                    </div>
+                    <div class="inv-mgmt-field">
+                        <label for="settings-invoice-end-counter">End Counter</label>
+                        <input id="settings-invoice-end-counter" class="inv-mgmt-input" type="date"/>
+                    </div>
+                </div>
+            </div>
+            <div class="inv-mgmt-panel-footer">
+                <button type="button" class="inv-mgmt-btn" data-page-back="settings-invoice-list-panel">Cancel</button>
+                <button id="settings-invoice-save-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Save</button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+{% if settings_section == 'tax' %}
+<script src="{% static 'js/inventory/settings-tax.js' %}"></script>
+<script>
+InventoryPagePanel.init();
+InventorySettingsTax.init();
+</script>
+{% elif settings_section == 'invoice' %}
+<script src="{% static 'js/inventory/settings-invoice.js' %}"></script>
+<script>
+InventoryPagePanel.init();
+InventorySettingsInvoice.init();
+</script>
+{% endif %}
+{% endblock %}

@@ -88,6 +88,15 @@ class BaseViewSet(GenericViewSet):
 
                 order_by.append("-" + mapped if desc else mapped)
 
+            # Append default tie-breakers (e.g. created_at) not already in the sort.
+            ordered_fields = set()
+            for item in order_by:
+                ordered_fields.add(item[1:] if item.startswith("-") else item)
+            for item in getattr(self, "ordering_default", ()):
+                name = item[1:] if item.startswith("-") else item
+                if name not in ordered_fields:
+                    order_by.append(item)
+
             queryset = queryset.order_by(*order_by)
         else:
             queryset = queryset.order_by(*self.ordering_default)
