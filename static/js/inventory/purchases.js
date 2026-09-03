@@ -104,7 +104,10 @@ var InventoryPurchases = (function () {
                     return;
                 }
                 var html = InventoryDocumentExport.buildSalesDocumentHtml(sales);
-                InventoryDocumentExport.printHtml("Sales", html);
+                var printTitle = sales.length === 1
+                    ? "Sale Invoice" + (sales[0].reference_no ? " - " + sales[0].reference_no : "")
+                    : "Sales Invoices";
+                InventoryDocumentExport.printHtml(printTitle, html);
             })
             .finally(function () {
                 InventoryLoader.hide();
@@ -525,101 +528,150 @@ var InventoryPurchases = (function () {
         };
     }
 
-    function getRowDiscountValue(row) {
-        var el = row.querySelector(".inv-item-discount-value");
+    function getRowDiscountValue(row, inputSelector) {
+        var el = row.querySelector(inputSelector || ".inv-item-discount-value");
         var val = Number(el ? el.value : 0);
         if (isNaN(val) || val < 0) return 0;
         return val;
     }
 
-    function getRowDiscountType(row) {
-        var toggle = row.querySelector(".inv-discount-type-toggle");
+    function getRowDiscountType(row, toggleSelector) {
+        var toggle = row.querySelector(toggleSelector || ".inv-item-discount-type-toggle");
         if (!toggle) return "percent";
         return toggle.getAttribute("data-discount-type") === "amount" ? "amount" : "percent";
     }
 
-    function setRowDiscountType(row, type) {
-        var toggle = row.querySelector(".inv-discount-type-toggle");
+    function setRowDiscountType(row, type, toggleSelector, buttonSelector) {
+        var toggle = row.querySelector(toggleSelector || ".inv-item-discount-type-toggle");
         if (!toggle) return;
         var normalized = type === "amount" ? "amount" : "percent";
         toggle.setAttribute("data-discount-type", normalized);
-        toggle.querySelectorAll(".inv-item-discount-type").forEach(function (btn) {
+        toggle.querySelectorAll(buttonSelector || ".inv-item-discount-type").forEach(function (btn) {
             var isActive = btn.getAttribute("data-type") === normalized;
             btn.classList.toggle("is-active", isActive);
             btn.setAttribute("aria-pressed", isActive ? "true" : "false");
         });
     }
 
-    function wireRowDiscountTypeToggle(row) {
-        var toggle = row.querySelector(".inv-discount-type-toggle");
+    function wireRowDiscountTypeToggle(row, options) {
+        options = options || {};
+        var toggleSelector = options.toggleSelector || ".inv-item-discount-type-toggle";
+        var buttonSelector = options.buttonSelector || ".inv-item-discount-type";
+        var inputSelector = options.inputSelector || ".inv-item-discount-value";
+        var toggle = row.querySelector(toggleSelector);
         if (!toggle || toggle.dataset.wired === "1") return;
         toggle.dataset.wired = "1";
-        toggle.querySelectorAll(".inv-item-discount-type").forEach(function (btn) {
+        toggle.querySelectorAll(buttonSelector).forEach(function (btn) {
             btn.addEventListener("click", function () {
-                setRowDiscountType(row, btn.getAttribute("data-type") || "percent");
+                setRowDiscountType(row, btn.getAttribute("data-type") || "percent", toggleSelector, buttonSelector);
                 updateRowPricing(row);
             });
         });
+        var inputEl = row.querySelector(inputSelector);
+        if (inputEl && !inputEl.dataset.discountWired) {
+            inputEl.dataset.discountWired = "1";
+            inputEl.addEventListener("input", function () {
+                if (getRowDiscountType(row, toggleSelector) === "percent") {
+                    var discountVal = getRowDiscountValue(row, inputSelector);
+                    if (discountVal > 100) inputEl.value = "100";
+                }
+                updateRowPricing(row);
+            });
+            inputEl.addEventListener("change", function () {
+                updateRowPricing(row);
+            });
+        }
     }
 
-    function applyRowDiscount(basePrice, row) {
+    function applyDiscountToPrice(basePrice, discountValue, discountType) {
         var base = Number(basePrice || 0);
         if (isNaN(base) || base < 0) base = 0;
-        var discount = getRowDiscountValue(row);
-        if (discount <= 0) return roundMoney(base);
+        var discount = Number(discountValue || 0);
+        if (isNaN(discount) || discount <= 0) return roundMoney(base);
 
-        if (getRowDiscountType(row) === "percent") {
+        if (discountType === "percent") {
             var pct = Math.min(discount, 100);
-            return roundMoney(base * (1 - pct / 100));
+            return roundMoney(Math.max(0, base * (1 - pct / 100)));
         }
-        return roundMoney(base);
+        return roundMoney(Math.max(0, base - discount));
+    }
+
+    function getRowSellPrice(row) {
+        var saleActualEl = row.querySelector(".inv-item-sale-actual");
+        if (!saleActualEl) return 0;
+        var base = Number(saleActualEl.value || 0);
+        if (isNaN(base) || base < 0) base = 0;
+        return base;
+    }
+
+    function getRowNewSalePrice(row) {
+        return applyDiscountToPrice(
+            getRowSellPrice(row),
+            getRowDiscountValue(row, ".inv-item-discount-value"),
+            getRowDiscountType(row, ".inv-item-discount-type-toggle")
+        );
+    }
+
+    function getRowAfterDistributorPrice(row) {
+        return applyDiscountToPrice(
+            getRowNewSalePrice(row),
+            getRowDiscountValue(row, ".inv-item-distributor-discount-value"),
+            getRowDiscountType(row, ".inv-item-distributor-discount-type-toggle")
+        );
     }
 
     function getRowFinalSalePrice(row) {
-        var saleActualEl = row.querySelector(".inv-item-sale-actual");
-        if (!saleActualEl) return 0;
-
-        var base = Number(saleActualEl.value || 0);
-        if (isNaN(base) || base < 0) base = 0;
-
-        var taxRate = getRowTaxRate(row);
-        var discountedBase = applyRowDiscount(base, row);
-        var priceWithTax = computeWithGst(discountedBase, taxRate);
-
-        if (getRowDiscountType(row) === "amount") {
-            var amountOff = getRowDiscountValue(row);
-            if (amountOff <= 0) return priceWithTax;
-            return roundMoney(Math.max(0, priceWithTax - amountOff));
-        }
-
-        return priceWithTax;
+        return computeWithGst(getRowAfterDistributorPrice(row), getRowTaxRate(row));
     }
 
     function clearRowDiscount(row) {
         var valueEl = row.querySelector(".inv-item-discount-value");
         if (valueEl) valueEl.value = "";
         setRowDiscountType(row, "percent");
+        var distributorValueEl = row.querySelector(".inv-item-distributor-discount-value");
+        if (distributorValueEl) distributorValueEl.value = "";
+        setRowDiscountType(row, "percent", ".inv-item-distributor-discount-type-toggle", ".inv-item-distributor-discount-type");
+    }
+
+    function discountFieldHtml(config) {
+        config = config || {};
+        var label = config.label || "Discount";
+        var valueClass = config.valueClass || "inv-item-discount-value";
+        var toggleClass = config.toggleClass || "inv-item-discount-type-toggle";
+        var buttonClass = config.buttonClass || "inv-item-discount-type";
+        var discountType = config.discount_type === "amount" ? "amount" : "percent";
+        var discountValue = config.discount_value != null && config.discount_value !== "" ? config.discount_value : "";
+
+        return (
+            '<div class="inv-mgmt-field inv-mgmt-field--discount">' +
+            '<label>' + label + ' <span class="inv-field-optional">(optional)</span></label>' +
+            '<div class="inv-discount-inline">' +
+            '<input class="inv-mgmt-input ' + valueClass + '" type="number" min="0" step="0.01" placeholder="0" value="' + discountValue + '"/>' +
+            '<div class="' + toggleClass + ' inv-discount-type-toggle" role="group" aria-label="' + label + ' type" data-discount-type="' + discountType + '">' +
+            '<button type="button" class="inv-discount-type-btn ' + buttonClass + (discountType === "percent" ? " is-active" : "") + '" data-type="percent" aria-pressed="' + (discountType === "percent" ? "true" : "false") + '" title="Percentage discount">%</button>' +
+            '<button type="button" class="inv-discount-type-btn ' + buttonClass + (discountType === "amount" ? " is-active" : "") + '" data-type="amount" aria-pressed="' + (discountType === "amount" ? "true" : "false") + '" title="Fixed amount discount">₹</button>' +
+            "</div></div></div>"
+        );
     }
 
     function updateRowPricing(row, skipTotals) {
         if (!row) return;
         var product = getProduct(row.querySelector(".inv-item-product").value);
-        var actualEl = row.querySelector(".inv-item-actual");
-        var buyGstEl = row.querySelector(".inv-item-buy-gst");
-        var buyEl = row.querySelector(".inv-item-buy");
+        var priceWithTaxEl = row.querySelector(".inv-item-price-with-tax");
         var finalEl = row.querySelector(".inv-item-final-price");
         var totalEl = row.querySelector(".inv-item-total");
 
-        if (product) {
-            var buyDetails = getProductBuyDetails(product);
-            if (actualEl) actualEl.value = InventoryApi.formatMoney(buyDetails.actual);
-            if (buyGstEl) buyGstEl.value = InventoryApi.formatMoney(buyDetails.gstAmount);
-            if (buyEl) buyEl.value = InventoryApi.formatMoney(buyDetails.buyPrice);
-        } else {
-            if (actualEl) actualEl.value = InventoryApi.formatMoney(0);
-            if (buyGstEl) buyGstEl.value = InventoryApi.formatMoney(0);
-            if (buyEl) buyEl.value = InventoryApi.formatMoney(0);
+        if (priceWithTaxEl) {
+            if (product) {
+                priceWithTaxEl.value = InventoryApi.formatMoney(getProductBuyDetails(product).buyPrice);
+            } else {
+                priceWithTaxEl.value = InventoryApi.formatMoney(0);
+            }
         }
+
+        var newSaleEl = row.querySelector(".inv-item-new-sale-price");
+        var newSalePrice = getRowNewSalePrice(row);
+        if (newSaleEl) newSaleEl.value = InventoryApi.formatMoney(newSalePrice);
 
         var finalUnit = getRowFinalSalePrice(row);
         if (finalEl) finalEl.value = InventoryApi.formatMoney(finalUnit);
@@ -802,17 +854,17 @@ var InventoryPurchases = (function () {
 
         if (mrp > 0) {
             saleActualInput.max = mrp;
-            saleActualInput.setAttribute("title", "Maximum sale price: " + InventoryApi.formatMoney(mrp));
+            saleActualInput.setAttribute("title", "Maximum sell price: " + InventoryApi.formatMoney(mrp));
             row.dataset.productMrp = String(mrp);
             if (label) {
-                label.innerHTML = 'Sale Price <span class="inv-field-optional">(max MRP ' +
+                label.innerHTML = 'Sell Price <span class="inv-field-optional">(max MRP ' +
                     InventoryApi.escapeHtml(InventoryApi.formatMoney(mrp)) + ")</span>";
             }
         } else {
             saleActualInput.removeAttribute("max");
             saleActualInput.removeAttribute("title");
             delete row.dataset.productMrp;
-            if (label) label.textContent = "Sale Price";
+            if (label) label.textContent = "Sell Price";
         }
     }
 
@@ -828,7 +880,7 @@ var InventoryPurchases = (function () {
 
         saleActualInput.value = mrp;
         if (showWarning) {
-            InventoryToast.warning("Sale price cannot exceed MRP (" + InventoryApi.formatMoney(mrp) + ").");
+            InventoryToast.warning("Sell price cannot exceed MRP (" + InventoryApi.formatMoney(mrp) + ").");
         }
         return false;
     }
@@ -906,20 +958,24 @@ var InventoryPurchases = (function () {
         row.innerHTML =
             '<div class="inv-mgmt-field"><label>Available Product</label><select class="inv-mgmt-select inv-item-product" required>' + productOptions(data.product_id, row) + "</select></div>" +
             '<div class="inv-mgmt-field"><label>Quantity</label><input class="inv-mgmt-input inv-item-qty" type="number" min="0.01" step="0.01" value="' + (data.quantity || 1) + '" required/></div>' +
-            '<div class="inv-mgmt-field"><label>Actual Price</label><input class="inv-mgmt-input inv-item-actual" type="text" readonly value="0.00"/></div>' +
-            '<div class="inv-mgmt-field"><label>Tax Price</label><input class="inv-mgmt-input inv-item-buy-gst" type="text" readonly value="0.00"/></div>' +
-            '<div class="inv-mgmt-field"><label>Buy Price</label><input class="inv-mgmt-input inv-item-buy" type="text" readonly value="0.00"/></div>' +
+            '<div class="inv-mgmt-field"><label>Actual Price with Tax (per product)</label><input class="inv-mgmt-input inv-item-price-with-tax" type="text" readonly value="0.00"/></div>' +
+            '<div class="inv-mgmt-field"><label>Sell Price</label><input class="inv-mgmt-input inv-item-sale-actual" type="number" min="0" step="0.01" placeholder="0.00" value="' + (data.sale_actual_price != null && data.sale_actual_price !== "" ? data.sale_actual_price : "") + '" required/></div>' +
+            discountFieldHtml({
+                label: "Discount",
+                discount_type: data.discount_type,
+                discount_value: data.discount_value
+            }) +
+            '<div class="inv-mgmt-field"><label>New Sale Price</label><input class="inv-mgmt-input inv-item-new-sale-price" type="text" readonly value="0.00"/></div>' +
+            discountFieldHtml({
+                label: "Distributor Discount",
+                valueClass: "inv-item-distributor-discount-value",
+                toggleClass: "inv-item-distributor-discount-type-toggle",
+                buttonClass: "inv-item-distributor-discount-type",
+                discount_type: data.distributor_discount_type,
+                discount_value: data.distributor_discount_value
+            }) +
             '<div class="inv-mgmt-field"><label>Tax for Sale</label>' + rowTaxMultiSelectHtml() + "</div>" +
-            '<div class="inv-mgmt-field"><label>Sale Price</label><input class="inv-mgmt-input inv-item-sale-actual" type="number" min="0" step="0.01" placeholder="0.00" value="' + (data.sale_actual_price != null && data.sale_actual_price !== "" ? data.sale_actual_price : "") + '" required/></div>' +
-            '<div class="inv-mgmt-field inv-mgmt-field--discount">' +
-            '<label>Discount <span class="inv-field-optional">(optional)</span></label>' +
-            '<div class="inv-discount-inline">' +
-            '<input class="inv-mgmt-input inv-item-discount-value" type="number" min="0" step="0.01" placeholder="0" value="' + (data.discount_value != null && data.discount_value !== "" ? data.discount_value : "") + '"/>' +
-            '<div class="inv-discount-type-toggle" role="group" aria-label="Discount type" data-discount-type="' + (data.discount_type === "amount" ? "amount" : "percent") + '">' +
-            '<button type="button" class="inv-discount-type-btn inv-item-discount-type' + ((data.discount_type || "percent") === "percent" ? " is-active" : "") + '" data-type="percent" aria-pressed="' + ((data.discount_type || "percent") === "percent" ? "true" : "false") + '" title="Percentage discount">%</button>' +
-            '<button type="button" class="inv-discount-type-btn inv-item-discount-type' + (data.discount_type === "amount" ? " is-active" : "") + '" data-type="amount" aria-pressed="' + (data.discount_type === "amount" ? "true" : "false") + '" title="Fixed amount discount">₹</button>' +
-            "</div></div></div>" +
-            '<div class="inv-mgmt-field"><label>Final Sale Price</label><input class="inv-mgmt-input inv-item-final-price" type="text" readonly value="0.00"/></div>' +
+            '<div class="inv-mgmt-field"><label>Final Price</label><input class="inv-mgmt-input inv-item-final-price" type="text" readonly value="0.00"/></div>' +
             '<div class="inv-mgmt-field"><label>Total Price</label><input class="inv-mgmt-input inv-item-total" type="text" readonly value="0.00"/></div>' +
             '<div class="inv-mgmt-item-row-remove">' +
             '<button type="button" class="inv-row-action-btn inv-row-action-btn--delete inv-item-remove" title="Remove" aria-label="Remove product row">' +
@@ -946,17 +1002,12 @@ var InventoryPurchases = (function () {
             enforceRowSalePriceLimit(row, true);
             updateRowPricing(row);
         });
-        row.querySelector(".inv-item-discount-value").addEventListener("input", function () {
-            var discountVal = getRowDiscountValue(row);
-            if (getRowDiscountType(row) === "percent" && discountVal > 100) {
-                row.querySelector(".inv-item-discount-value").value = "100";
-            }
-            updateRowPricing(row);
-        });
-        row.querySelector(".inv-item-discount-value").addEventListener("change", function () {
-            updateRowPricing(row);
-        });
         wireRowDiscountTypeToggle(row);
+        wireRowDiscountTypeToggle(row, {
+            toggleSelector: ".inv-item-distributor-discount-type-toggle",
+            buttonSelector: ".inv-item-distributor-discount-type",
+            inputSelector: ".inv-item-distributor-discount-value"
+        });
         initRowTaxMultiSelect(row, data.sale_tax_ids || data.sale_tax_id || []);
         row.querySelector(".inv-item-remove").addEventListener("click", function () {
             row.remove();
@@ -993,13 +1044,13 @@ var InventoryPurchases = (function () {
         row.innerHTML =
             '<div class="inv-mgmt-field"><label>Product</label><input class="inv-mgmt-input" type="text" readonly value="' + label + '"/></div>' +
             '<div class="inv-mgmt-field"><label>Quantity</label><input class="inv-mgmt-input" type="text" readonly value="' + InventoryApi.escapeHtml(formatQty(line.quantity)) + '"/></div>' +
-            '<div class="inv-mgmt-field"><label>Actual Price</label><input class="inv-mgmt-input" type="text" readonly value="—"/></div>' +
-            '<div class="inv-mgmt-field"><label>Tax Price</label><input class="inv-mgmt-input" type="text" readonly value="—"/></div>' +
-            '<div class="inv-mgmt-field"><label>Buy Price</label><input class="inv-mgmt-input inv-item-buy" type="text" readonly value="' + InventoryApi.formatMoney(unitCost) + '"/></div>' +
-            '<div class="inv-mgmt-field"><label>Tax for Sale</label><input class="inv-mgmt-input" type="text" readonly value="—"/></div>' +
-            '<div class="inv-mgmt-field"><label>Sale Price</label><input class="inv-mgmt-input" type="text" readonly value="' + InventoryApi.formatMoney(unitSale) + '"/></div>' +
+            '<div class="inv-mgmt-field"><label>Actual Price with Tax (per product)</label><input class="inv-mgmt-input inv-item-price-with-tax" type="text" readonly value="' + InventoryApi.formatMoney(unitCost) + '"/></div>' +
+            '<div class="inv-mgmt-field"><label>Sell Price</label><input class="inv-mgmt-input" type="text" readonly value="' + InventoryApi.formatMoney(unitSale) + '"/></div>' +
             '<div class="inv-mgmt-field"><label>Discount</label><input class="inv-mgmt-input" type="text" readonly value="—"/></div>' +
-            '<div class="inv-mgmt-field"><label>Final Sale Price</label><input class="inv-mgmt-input" type="text" readonly value="' + InventoryApi.formatMoney(unitSale) + '"/></div>' +
+            '<div class="inv-mgmt-field"><label>New Sale Price</label><input class="inv-mgmt-input" type="text" readonly value="—"/></div>' +
+            '<div class="inv-mgmt-field"><label>Distributor Discount</label><input class="inv-mgmt-input" type="text" readonly value="—"/></div>' +
+            '<div class="inv-mgmt-field"><label>Tax for Sale</label><input class="inv-mgmt-input" type="text" readonly value="—"/></div>' +
+            '<div class="inv-mgmt-field"><label>Final Price</label><input class="inv-mgmt-input" type="text" readonly value="' + InventoryApi.formatMoney(unitSale) + '"/></div>' +
             '<div class="inv-mgmt-field"><label>Total Price</label><input class="inv-mgmt-input" type="text" readonly value="' + InventoryApi.formatMoney(line.line_total) + '"/></div>' +
             '<div class="inv-mgmt-item-row-remove">' +
             '<button type="button" class="inv-row-action-btn inv-row-action-btn--delete inv-item-remove inv-hidden" disabled title="Remove" aria-label="Remove product row">' +
@@ -1322,7 +1373,7 @@ var InventoryPurchases = (function () {
             }
 
             if (!saleActualEl || saleActualEl.value === "") {
-                InventoryToast.error("Enter a sale price for " + product.name + ".");
+                InventoryToast.error("Enter a sell price for " + product.name + ".");
                 return null;
             }
 
@@ -1330,7 +1381,7 @@ var InventoryPurchases = (function () {
             var mrp = getProductMrp(product);
             if (mrp > 0 && saleBase > mrp) {
                 InventoryToast.error(
-                    product.name + ": sale price cannot exceed MRP (" + InventoryApi.formatMoney(mrp) + ")."
+                    product.name + ": sell price cannot exceed MRP (" + InventoryApi.formatMoney(mrp) + ")."
                 );
                 saleActualEl.focus();
                 return null;

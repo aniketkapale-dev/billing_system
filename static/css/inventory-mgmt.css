@@ -986,12 +986,12 @@ colgroup .inv-col-check-col {
 }
 
 .inv-mgmt-table--products td.inv-col-brand,
-.inv-mgmt-table--products td.inv-col-buy {
+.inv-mgmt-table--products td.inv-col-price-with-tax {
     font-variant-numeric: tabular-nums;
 }
 
 .inv-mgmt-table--products {
-    min-width: 1280px;
+    min-width: 1120px;
 }
 
 /* Products card rows — all columns on one line */
@@ -1053,19 +1053,37 @@ colgroup .inv-col-check-col {
     min-width: 72px;
 }
 
-.inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-actual,
-.inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-buy,
-.inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-qty {
-    flex-basis: 82px;
-    min-width: 72px;
-}
-
-.inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-gst {
-    flex-basis: 108px;
-    min-width: 96px;
+.inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-price-with-tax {
+    flex: 0 0 92px;
+    flex-basis: 92px;
+    min-width: 88px;
+    max-width: 96px;
     white-space: normal;
 }
 
+.inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-qty {
+    flex-basis: 110px;
+    min-width: 96px;
+}
+
+.inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-price-with-tax::before {
+    white-space: pre-line;
+    max-width: 88px;
+    line-height: 1.3;
+    word-break: normal;
+}
+
+.inv-mgmt-table-wrap > .inv-mgmt-table--products > thead > tr > th.inv-col-price-with-tax,
+.inv-mgmt-table-wrap > .inv-mgmt-table--products > thead > tr > th.inv-col-price-with-tax-hd {
+    flex-basis: 96px;
+    min-width: 88px;
+    max-width: 96px;
+    white-space: normal;
+    line-height: 1.3;
+}
+
+.inv-mgmt-table-wrap > .inv-mgmt-table--products > thead > tr > th.inv-col-price-with-tax .inv-th-sub,
+.inv-mgmt-table-wrap > .inv-mgmt-table--products > thead > tr > th.inv-col-price-with-tax-hd .inv-th-sub,
 .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-opening {
     flex-basis: 148px;
     min-width: 132px;
@@ -2221,8 +2239,8 @@ body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sideb
 }
 
 .inv-mgmt-item-row.inv-mgmt-item-row--sale {
-    grid-template-columns: minmax(150px, 1.5fr) minmax(60px, 0.7fr) minmax(72px, 0.75fr) minmax(72px, 0.75fr) minmax(72px, 0.75fr) minmax(95px, 0.95fr) minmax(80px, 0.85fr) minmax(180px, 1.5fr) minmax(88px, 0.9fr) minmax(80px, 0.85fr) 40px;
-    min-width: 1360px;
+    grid-template-columns: minmax(140px, 1.35fr) minmax(56px, 0.65fr) minmax(96px, 0.9fr) minmax(72px, 0.8fr) minmax(150px, 1.25fr) minmax(78px, 0.82fr) minmax(150px, 1.25fr) minmax(88px, 0.88fr) minmax(78px, 0.82fr) minmax(78px, 0.82fr) 40px;
+    min-width: 1480px;
 }
 
 @media (max-width: 900px) {

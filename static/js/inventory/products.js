@@ -40,9 +40,17 @@ var InventoryProducts = (function () {
                     { id: "sku", label: "SKU", sortKey: "sku", headerClass: "inv-col-sku", cell: function (item) { return '<td class="inv-col-sku">' + cellText(item.sku) + "</td>"; } },
                     { id: "category", label: "Category", sortKey: "category", headerClass: "inv-col-category", cell: function (item) { return '<td class="inv-col-category">' + cellText(item.category_name) + "</td>"; } },
                     { id: "brand", label: "Brand", sortKey: "brand", headerClass: "inv-col-brand", cell: function (item) { return '<td class="inv-col-brand">' + cellText(item.brand_name) + "</td>"; } },
-                    { id: "actual_price", label: "Actual Price", sortKey: "actual_price", headerClass: "inv-col-actual inv-mgmt-cell--num", cell: function (item) { return '<td class="inv-col-actual inv-mgmt-cell--num">' + cellMoney(item.actual_price) + "</td>"; } },
-                    { id: "gst", label: "Tax", sortKey: "tax", headerClass: "inv-col-gst", cell: function (item) { return '<td class="inv-col-gst">' + formatTaxCell(item) + "</td>"; } },
-                    { id: "buy_price", label: "Buy Price", sortKey: "purchase_price", headerClass: "inv-col-buy inv-mgmt-cell--num", cell: function (item) { return '<td class="inv-col-buy inv-mgmt-cell--num">' + cellMoney(item.purchase_price) + "</td>"; } },
+                    {
+                        id: "price_with_tax",
+                        label: "Actual Price with Tax (per product)",
+                        cardLabel: "Actual Price\nwith Tax\n(per product)",
+                        headerHtml: 'Actual Price<br/>with Tax<br/><span class="inv-th-sub">(per product)</span>',
+                        sortKey: "purchase_price",
+                        headerClass: "inv-col-price-with-tax inv-col-price-with-tax-hd inv-mgmt-cell--num",
+                        cell: function (item) {
+                            return '<td class="inv-col-price-with-tax inv-mgmt-cell--num">' + cellPriceWithTax(item) + "</td>";
+                        }
+                    },
                     { id: "qty", label: "Qty", headerClass: "inv-col-qty inv-mgmt-cell--num", cell: function (item) { return '<td class="inv-col-qty inv-mgmt-cell--num">' + cellQty(item.quantity) + "</td>"; } },
                     {
                         id: "opening_qty",
@@ -93,16 +101,14 @@ var InventoryProducts = (function () {
         if (!items.length) return;
         InventoryDocumentExport.downloadTablePdf(
             "Products",
-            ["Name", "SKU", "Category", "Brand", "Actual Price", "Tax", "Buy Price", "Qty", "Unit"],
+            ["Name", "SKU", "Category", "Brand", "Actual Price with Tax (per product)", "Qty", "Unit"],
             items.map(function (item) {
                 return [
                     item.name || "",
                     item.sku || "",
                     item.category_name || "",
                     item.brand_name || "",
-                    item.actual_price || "",
-                    item.tax_key ? item.tax_key + " (" + item.tax_value + "%)" : "",
-                    item.purchase_price || "",
+                    item.purchase_price || item.actual_price || "",
                     item.quantity || "",
                     item.unit_short_name || item.unit_name || ""
                 ];
@@ -116,16 +122,14 @@ var InventoryProducts = (function () {
         if (!items.length) return;
         var html = InventoryDocumentExport.buildTableHtml(
             "Products",
-            ["Name", "SKU", "Category", "Brand", "Actual Price", "Tax", "Buy Price", "Qty", "Unit"],
+            ["Name", "SKU", "Category", "Brand", "Actual Price with Tax (per product)", "Qty", "Unit"],
             items.map(function (item) {
                 return [
                     item.name || "",
                     item.sku || "",
                     item.category_name || "",
                     item.brand_name || "",
-                    item.actual_price || "",
-                    item.tax_key ? item.tax_key + " (" + item.tax_value + "%)" : "",
-                    item.purchase_price || "",
+                    item.purchase_price || item.actual_price || "",
                     item.quantity || "",
                     item.unit_short_name || item.unit_name || ""
                 ];
@@ -343,6 +347,13 @@ var InventoryProducts = (function () {
     function cellMoney(value) {
         if (isEmpty(value)) return "—";
         return InventoryApi.formatMoney(value);
+    }
+
+    function cellPriceWithTax(item) {
+        var price = item.purchase_price != null && Number(item.purchase_price) > 0
+            ? item.purchase_price
+            : item.actual_price;
+        return cellMoney(price);
     }
 
     function displayValue(value) {
@@ -898,7 +909,6 @@ var InventoryProducts = (function () {
             { label: "Manufacturer", value: displayValue(product.manufacturer_name) },
             { label: "Actual Price with Tax (per product)", value: cellMoney(product.purchase_price || product.actual_price) },
             { label: "MRP", value: cellMoney(product.mrp) },
-            { label: "Sell Price", value: cellMoney(product.sale_price) },
             { label: "Unit", value: displayValue(product.unit_short_name || product.unit_name) },
             { label: "Quantity", value: displayValue(formatQty(product.quantity)) },
             { label: "Description", value: displayValue(product.description), full: true }

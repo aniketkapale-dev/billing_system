@@ -8,6 +8,10 @@ var InventoryTableCards = (function () {
         if (th.classList.contains("inv-col-check") || th.classList.contains("d-none")) {
             return null;
         }
+        var cardLabel = th.getAttribute("data-card-label");
+        if (cardLabel) {
+            return cardLabel;
+        }
         var sortLabel = th.querySelector(".inv-col-sort-label");
         var text = sortLabel ? sortLabel.textContent : th.textContent;
         text = String(text || "").replace(/\s+/g, " ").trim();

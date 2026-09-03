@@ -267,10 +267,11 @@ var InventoryColumnCustomize = (function () {
         return String(html || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
     }
 
-    function addCellLabel(cellHtml, label) {
+    function addCellLabel(cellHtml, label, useRawLabel) {
         if (!cellHtml || cellHtml.indexOf("<td") === -1) return cellHtml;
         if (/data-label=/i.test(cellHtml)) return cellHtml;
-        return cellHtml.replace(/<td(\s|>)/i, '<td data-label="' + escapeAttr(stripTags(label)) + '"$1');
+        var text = useRawLabel ? String(label || "") : stripTags(label);
+        return cellHtml.replace(/<td(\s|>)/i, '<td data-label="' + escapeAttr(text) + '"$1');
     }
 
     function renderSortHeader(ctrl, col) {
@@ -406,7 +407,7 @@ var InventoryColumnCustomize = (function () {
 
         ctrl.renderRowCells = function (item) {
             return ctrl.getVisibleColumns().map(function (col) {
-                return addCellLabel(col.cell(item), col.label);
+                return addCellLabel(col.cell(item), col.cardLabel || col.label, !!col.cardLabel);
             }).join("");
         };
 
