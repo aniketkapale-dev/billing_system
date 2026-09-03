@@ -56,13 +56,41 @@ var InventoryMultiSelect = (function () {
         var menu = root.querySelector(".inv-multi-select-menu");
         if (!menu) return;
 
+        var searchWrap = menu.querySelector(".inv-multi-select-search-wrap");
+        if (!searchWrap) {
+            searchWrap = document.createElement("div");
+            searchWrap.className = "inv-multi-select-search-wrap";
+            searchWrap.innerHTML =
+                '<input type="search" class="inv-multi-select-search inv-mgmt-search" placeholder="Search..." autocomplete="off" aria-label="Search options"/>';
+            menu.insertBefore(searchWrap, menu.firstChild);
+            var searchInput = searchWrap.querySelector(".inv-multi-select-search");
+            searchInput.addEventListener("click", function (e) {
+                e.stopPropagation();
+            });
+            searchInput.addEventListener("input", function () {
+                renderMenu(root, config, getSelected(root));
+            });
+        }
+
+        var query = (searchWrap.querySelector(".inv-multi-select-search").value || "").trim().toLowerCase();
+        var optionsHost = menu.querySelector(".inv-multi-select-options");
+        if (!optionsHost) {
+            optionsHost = document.createElement("div");
+            optionsHost.className = "inv-multi-select-options";
+            menu.appendChild(optionsHost);
+        }
+
         if (!config.options.length) {
-            menu.innerHTML = '<div class="inv-multi-select-empty">No options available</div>';
+            optionsHost.innerHTML = '<div class="inv-multi-select-empty">No options available</div>';
             return;
         }
 
-        menu.innerHTML = config.options.map(function (option) {
+        var visibleCount = 0;
+        optionsHost.innerHTML = config.options.map(function (option) {
             var id = String(option.id);
+            var labelText = config.labelFn(option).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+            if (query && labelText.toLowerCase().indexOf(query) === -1) return "";
+            visibleCount += 1;
             var checked = selectedIds.indexOf(id) !== -1;
             return (
                 '<label class="inv-multi-select-option">' +
@@ -73,6 +101,10 @@ var InventoryMultiSelect = (function () {
                 "</label>"
             );
         }).join("");
+
+        if (!visibleCount) {
+            optionsHost.innerHTML = '<div class="inv-multi-select-empty">No matches found</div>';
+        }
     }
 
     function updateDisplay(root, selectedIds, silent) {
@@ -161,7 +193,18 @@ var InventoryMultiSelect = (function () {
         root.classList.add("is-open");
         var menu = root.querySelector(".inv-multi-select-menu");
         if (menu) menu.classList.remove("inv-hidden");
+        var searchInput = root.querySelector(".inv-multi-select-search");
+        if (searchInput) {
+            searchInput.value = "";
+        }
         positionMenu(root);
+        var config = getConfig(root);
+        if (config) {
+            renderMenu(root, config, getSelected(root));
+        }
+        if (searchInput) {
+            searchInput.focus();
+        }
     }
 
     function wireDocument() {
@@ -215,10 +258,15 @@ var InventoryMultiSelect = (function () {
             menu.addEventListener("change", function (e) {
                 var checkbox = e.target;
                 if (!checkbox || checkbox.type !== "checkbox") return;
-                var selected = [];
-                menu.querySelectorAll('input[type="checkbox"]:checked').forEach(function (input) {
-                    selected.push(String(input.value));
-                });
+                var selected = getSelected(root);
+                var id = String(checkbox.value);
+                if (checkbox.checked) {
+                    if (selected.indexOf(id) === -1) selected.push(id);
+                } else {
+                    selected = selected.filter(function (value) {
+                        return value !== id;
+                    });
+                }
                 updateDisplay(root, selected, false);
             });
         }

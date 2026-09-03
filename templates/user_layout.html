@@ -82,16 +82,36 @@
                 </li>
             </ul>
         </li>
-        <li data-nav-tab="stock-in">
-            <div class="inv-nav-row{% if active_nav == 'stock-in' %} inv-nav-row--active{% endif %}">
-                <a class="inv-nav-item{% if active_nav == 'stock-in' %} inv-nav-item--active{% endif %}" href="/dashboard/stock-in/">
-                    <span class="material-symbols-outlined inv-nav-icon">shopping_cart</span>
-                    Purchase
-                </a>
-                <a class="inv-nav-add-btn" href="/dashboard/stock-in/?action=add" title="Add purchase" aria-label="Add purchase">
-                    <span class="material-symbols-outlined">add</span>
-                </a>
-            </div>
+        <li class="inv-nav-group{% if active_nav == 'stock-in' or active_nav == 'stock-in-vendors' %} inv-nav-group--has-active-child{% endif %}{% if active_nav == 'stock-in' or active_nav == 'stock-in-vendors' %} inv-nav-group--open{% endif %}" data-nav-group="stock-in stock-in-vendors">
+            <button type="button" class="inv-nav-item inv-nav-group-toggle" aria-expanded="{% if active_nav == 'stock-in' or active_nav == 'stock-in-vendors' %}true{% else %}false{% endif %}">
+                <span class="material-symbols-outlined inv-nav-icon">shopping_cart</span>
+                Purchase
+                <span class="material-symbols-outlined inv-nav-group-chevron">expand_more</span>
+            </button>
+            <ul class="inv-nav-sub">
+                <li data-nav-tab="stock-in">
+                    <div class="inv-nav-row{% if active_nav == 'stock-in' %} inv-nav-row--active{% endif %}">
+                        <a class="inv-nav-item inv-nav-item--sub{% if active_nav == 'stock-in' %} inv-nav-item--active{% endif %}" href="/dashboard/stock-in/">
+                            <span class="material-symbols-outlined inv-nav-icon inv-nav-icon--sub">receipt_long</span>
+                            Purchase (Stock In)
+                        </a>
+                        <a class="inv-nav-add-btn" href="/dashboard/stock-in/?action=add" title="Add purchase" aria-label="Add purchase">
+                            <span class="material-symbols-outlined">add</span>
+                        </a>
+                    </div>
+                </li>
+                <li data-nav-tab="stock-in-vendors">
+                    <div class="inv-nav-row{% if active_nav == 'stock-in-vendors' %} inv-nav-row--active{% endif %}">
+                        <a class="inv-nav-item inv-nav-item--sub{% if active_nav == 'stock-in-vendors' %} inv-nav-item--active{% endif %}" href="/dashboard/vendors/">
+                            <span class="material-symbols-outlined inv-nav-icon inv-nav-icon--sub">local_shipping</span>
+                            Vendors
+                        </a>
+                        <a class="inv-nav-add-btn" href="/dashboard/vendors/?action=add" title="Add vendor" aria-label="Add vendor">
+                            <span class="material-symbols-outlined">add</span>
+                        </a>
+                    </div>
+                </li>
+            </ul>
         </li>
         <li data-nav-tab="inventory">
             <a class="inv-nav-item{% if active_nav == 'inventory' %} inv-nav-item--active{% endif %}" href="/dashboard/inventory/">
@@ -224,6 +244,7 @@
                             </h3>
                             <ul class="inv-quick-access-list">
                                 <li><a href="/dashboard/stock-in/?action=add" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Purchase (Stock In)</a></li>
+                                <li><a href="/dashboard/vendors/?action=add" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Vendor</a></li>
                             </ul>
                         </div>
                         <div class="inv-quick-access-col">
@@ -233,7 +254,7 @@
                             </h3>
                             <ul class="inv-quick-access-list">
                                 <li><a href="/dashboard/inventory/" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> View Stock</a></li>
-                                <li><a href="/dashboard/stock-in/?action=add" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Add Stock via Purchase</a></li>
+                                <li><a href="/dashboard/stock-in/?action=add" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Purchase (Stock In)</a></li>
                             </ul>
                         </div>
                     </div>
@@ -383,6 +404,7 @@
 <script src="{% static 'js/inventory-bulk-select.js' %}"></script>
 <script src="{% static 'js/inventory-document-export.js' %}"></script>
 <script src="{% static 'js/inventory-column-customize.js' %}"></script>
+<script src="{% static 'js/inventory-searchable-select.js' %}"></script>
 <script src="{% static 'js/inventory-table-cards.js' %}"></script>
 <script src="{% static 'js/inventory-sidebar.js' %}"></script>
 <script src="{% static 'js/inventory-quick-access.js' %}"></script>

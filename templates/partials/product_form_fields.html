@@ -93,29 +93,8 @@
     </div>
 
     <div class="inv-mgmt-field">
-        <label for="product-actual-price">Actual Price</label>
-        <input id="product-actual-price" class="inv-mgmt-input" type="number" min="0" step="0.01" placeholder="0.00"/>
-    </div>
-    <div class="inv-mgmt-field">
-        <label for="product-tax-select">Tax</label>
-        <div class="inv-field-inline inv-field-inline--tax">
-            <div id="product-tax-select" class="inv-tax-select-wrap"></div>
-            <button id="product-tax-add-btn" type="button" class="inv-inline-add-btn" title="Add Tax" aria-label="Add Tax">
-                <span class="material-symbols-outlined">add</span>
-            </button>
-        </div>
-        <div id="product-tax-new-panel" class="inv-inline-add-panel inv-inline-add-panel--fields-row inv-hidden">
-            <input id="product-tax-new-key" class="inv-mgmt-input" type="text" placeholder="Key (e.g. gst12%)"/>
-            <input id="product-tax-new-value" class="inv-mgmt-input" type="number" min="0" max="100" step="0.01" placeholder="Value % (e.g. 12)"/>
-            <div class="inv-inline-add-actions">
-                <button id="product-tax-save-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Save Tax</button>
-                <button id="product-tax-cancel-btn" type="button" class="inv-mgmt-btn">Cancel</button>
-            </div>
-        </div>
-    </div>
-    <div class="inv-mgmt-field">
-        <label for="product-purchase-price">Buy Price</label>
-        <input id="product-purchase-price" class="inv-mgmt-input" type="text" readonly placeholder="0.00"/>
+        <label for="product-price-with-tax">Actual Price with Tax (per product)</label>
+        <input id="product-price-with-tax" class="inv-mgmt-input" type="number" min="0" step="0.01" placeholder="0.00"/>
     </div>
     <div class="inv-mgmt-field">
         <label for="product-mrp">MRP <span class="inv-field-optional">(optional)</span></label>

@@ -77,6 +77,28 @@ var InventoryCatalog = (function () {
             populate: function (item) {
                 document.getElementById("catalog-field-name").value = item.name || "";
             }
+        },
+        vendors: {
+            title: "Vendor",
+            plural: "Vendors",
+            columns: [
+                { key: "name", label: "Name" }
+            ],
+            fields: [
+                { id: "name", label: "Vendor Name", type: "text", required: true, placeholder: "Vendor name" }
+            ],
+            buildPayload: function () {
+                return {
+                    name: document.getElementById("catalog-field-name").value.trim()
+                };
+            },
+            validate: function (payload) {
+                if (!payload.name) return "Vendor name is required.";
+                return null;
+            },
+            populate: function (item) {
+                document.getElementById("catalog-field-name").value = item.name || "";
+            }
         }
     };
 
@@ -431,7 +453,14 @@ var InventoryCatalog = (function () {
 
         resource = root.getAttribute("data-resource") || "";
         config = configs[resource];
-        if (!config) return;
+        if (!config) {
+            var missingTbody = document.getElementById(resource + "-table-body");
+            if (missingTbody) {
+                missingTbody.innerHTML =
+                    '<tr><td colspan="4" class="inv-mgmt-empty">Unable to load this page. Please refresh the browser.</td></tr>';
+            }
+            return;
+        }
 
         listPanelId = root.getAttribute("data-list-panel") || resource + "-list-panel";
         formPanelId = root.getAttribute("data-form-panel") || resource + "-form-panel";
@@ -446,7 +475,10 @@ var InventoryCatalog = (function () {
         var tbody = document.getElementById(resource + "-table-body");
 
         function boot() {
-            if (!InventoryBusiness.getActiveId()) return;
+            if (!InventoryBusiness.getActiveId()) {
+                renderRows([]);
+                return;
+            }
             loadList(1);
         }
 

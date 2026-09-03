@@ -18,6 +18,21 @@ class PurchaseInvoiceService(BaseService):
         self.batch_service = BatchInventoryService()
         self.inventory_service = InventoryStockService()
 
+    def _resolve_vendor(self, business_id, vendor_id):
+        if not vendor_id:
+            return None
+
+        from apps.catalog.models import Vendor
+
+        try:
+            return Vendor.objects.get(
+                pk=vendor_id,
+                business_id=business_id,
+                is_deleted=False,
+            )
+        except Vendor.DoesNotExist:
+            raise NotFoundException("Vendor not found.")
+
     @transaction.atomic
     def create_with_items(self, data):
         business_id = data.get("business_id")
@@ -63,6 +78,7 @@ class PurchaseInvoiceService(BaseService):
                 raise NotFoundException(f"Product with id {product_id} not found.")
 
             selling_price = Decimal(str(product.sale_price or 0))
+            vendor = self._resolve_vendor(business_id, item.get("vendor_id"))
 
             line_total = (quantity * purchase_price) - discount
             line_subtotal = line_total - tax
@@ -78,6 +94,7 @@ class PurchaseInvoiceService(BaseService):
                 "discount": discount,
                 "tax": tax,
                 "batch_number": item.get("batch_number", "") or "",
+                "vendor": vendor,
                 "expiry_date": item.get("expiry_date"),
                 "line_total": line_total,
             })
@@ -101,6 +118,7 @@ class PurchaseInvoiceService(BaseService):
                 discount=item["discount"],
                 tax=item["tax"],
                 batch_number=item["batch_number"],
+                vendor=item["vendor"],
                 expiry_date=item["expiry_date"],
                 line_total=item["line_total"],
             )

@@ -133,3 +133,28 @@ class PaymentType(BaseEntity):
 
     def __str__(self):
         return self.name
+
+
+class Vendor(BaseEntity):
+    business = models.ForeignKey(
+        "businesses.Business",
+        on_delete=models.CASCADE,
+        related_name="vendors",
+        db_column="business_id",
+    )
+    name = models.CharField(max_length=150)
+
+    class Meta:
+        db_table = "vendors"
+        verbose_name = "Vendor"
+        verbose_name_plural = "Vendors"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["business", "name"],
+                condition=models.Q(is_deleted=False),
+                name="uniq_active_business_vendor_name",
+            )
+        ]
+
+    def __str__(self):
+        return self.name

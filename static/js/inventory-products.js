@@ -377,6 +377,9 @@ var InventoryProducts = (function () {
             option.textContent = labelFn(item);
             select.appendChild(option);
         });
+        if (window.InventorySearchableSelect) {
+            InventorySearchableSelect.refresh(select);
+        }
     }
 
     function renderCategorySelect(selectedId) {
@@ -727,7 +730,6 @@ var InventoryProducts = (function () {
             loadCategories(),
             loadBrands(),
             loadManufacturers(),
-            loadTaxes(),
         ]);
     }
 
@@ -846,22 +848,23 @@ var InventoryProducts = (function () {
         document.getElementById("product-manufacturer").value = "";
         document.getElementById("product-unit").value = "";
         document.getElementById("product-quantity").value = "";
-        document.getElementById("product-actual-price").value = "";
+        document.getElementById("product-price-with-tax").value = "";
         document.getElementById("product-mrp").value = "";
-        var taxWrap = document.getElementById("product-tax-select");
-        if (taxWrap) taxWrap.innerHTML = "";
-        document.getElementById("product-purchase-price").value = "";
         document.getElementById("product-description").value = "";
-        if (taxes.length) {
-            initProductTaxSelect([]);
-        } else {
-            updateBuyPriceDisplay();
-        }
         toggleCategoryPanel(false);
         toggleBrandPanel(false);
         toggleManufacturerPanel(false);
         toggleUnitPanel(false);
         toggleTaxPanel(false);
+        syncProductSelectDisplays();
+    }
+
+    function syncProductSelectDisplays() {
+        if (!window.InventorySearchableSelect) return;
+        ["product-category", "product-brand", "product-manufacturer", "product-unit"].forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) InventorySearchableSelect.refresh(el);
+        });
     }
 
     function populateForm(product) {
@@ -873,12 +876,13 @@ var InventoryProducts = (function () {
         document.getElementById("product-manufacturer").value = product.manufacturer || "";
         document.getElementById("product-unit").value = product.unit || "";
         document.getElementById("product-quantity").value = product.quantity != null ? product.quantity : "";
-        document.getElementById("product-actual-price").value = product.actual_price != null ? product.actual_price : "";
-        loadTaxes(product.tax ? [product.tax] : []).then(function () {
-            updateBuyPriceDisplay();
-        });
+        var priceWithTax = product.purchase_price != null && Number(product.purchase_price) > 0
+            ? product.purchase_price
+            : product.actual_price;
+        document.getElementById("product-price-with-tax").value = priceWithTax != null ? priceWithTax : "";
         document.getElementById("product-mrp").value = product.mrp != null ? product.mrp : "";
         document.getElementById("product-description").value = product.description || "";
+        syncProductSelectDisplays();
     }
 
     function renderViewDetails(product) {
@@ -892,9 +896,7 @@ var InventoryProducts = (function () {
             { label: "Category", value: displayValue(product.category_name) },
             { label: "Brand", value: displayValue(product.brand_name) },
             { label: "Manufacturer", value: displayValue(product.manufacturer_name) },
-            { label: "Actual Price", value: cellMoney(product.actual_price) },
-            { label: "Tax", value: product.tax_key ? displayValue(product.tax_key + " (" + product.tax_value + "%)") : "—" },
-            { label: "Buy Price", value: cellMoney(product.purchase_price) },
+            { label: "Actual Price with Tax (per product)", value: cellMoney(product.purchase_price || product.actual_price) },
             { label: "MRP", value: cellMoney(product.mrp) },
             { label: "Sell Price", value: cellMoney(product.sale_price) },
             { label: "Unit", value: displayValue(product.unit_short_name || product.unit_name) },
@@ -1022,21 +1024,21 @@ var InventoryProducts = (function () {
             return;
         }
 
-        var actualPrice = parsePrice("product-actual-price");
-        if (actualPrice < 0) {
-            InventoryToast.error("Actual price must be 0 or greater.");
+        var priceWithTax = parsePrice("product-price-with-tax");
+        if (priceWithTax < 0) {
+            InventoryToast.error("Actual price with tax (per product) must be 0 or greater.");
             return;
         }
         if (openingStock > 0) {
-            var requiredActualPrice = parseRequiredPrice("product-actual-price", "Actual price");
-            if (requiredActualPrice === null) return;
-            if (requiredActualPrice <= 0) {
-                InventoryToast.error("Actual price must be greater than 0 when opening stock is added.");
+            var requiredPrice = parseRequiredPrice("product-price-with-tax", "Actual price with tax (per product)");
+            if (requiredPrice === null) return;
+            if (requiredPrice <= 0) {
+                InventoryToast.error("Actual price with tax (per product) must be greater than 0 when opening stock is added.");
                 return;
             }
-            actualPrice = requiredActualPrice;
+            priceWithTax = requiredPrice;
         }
-        actualPrice = roundMoney(actualPrice);
+        priceWithTax = roundMoney(priceWithTax);
 
         var mrp = parsePrice("product-mrp");
         if (mrp < 0) {
@@ -1047,7 +1049,6 @@ var InventoryProducts = (function () {
 
         var brandId = document.getElementById("product-brand").value;
         var manufacturerId = document.getElementById("product-manufacturer").value;
-        var taxIds = InventoryTaxSelect.getSelected(getProductTaxRoot()).map(Number);
         var payload = {
             name: name,
             sku: sku,
@@ -1055,9 +1056,9 @@ var InventoryProducts = (function () {
             unit_id: Number(unitId),
             description: document.getElementById("product-description").value.trim(),
             quantity: openingStock,
-            actual_price: actualPrice,
-            mrp: mrp,
-            tax_ids: taxIds
+            actual_price: priceWithTax,
+            tax_ids: [],
+            mrp: mrp
         };
 
         if (categoryId) payload.category_id = Number(categoryId);
@@ -1132,6 +1133,10 @@ var InventoryProducts = (function () {
         });
     }
 
+    function isProductsPage() {
+        return !!document.getElementById("products-table-body");
+    }
+
     function init() {
         var searchEl = document.getElementById("products-search");
         var saveBtn = document.getElementById("product-save-btn");
@@ -1145,22 +1150,24 @@ var InventoryProducts = (function () {
             InventoryPagePanel.init();
         }
 
-        getColumnCtrl();
+        if (isProductsPage()) {
+            getColumnCtrl();
 
-        function boot() {
-            if (!InventoryBusiness.getActiveId()) return;
-            loadCatalogOptions().then(function () {
-                loadProducts("", 1);
-            });
-        }
-
-        InventoryBusiness.whenReady(function () {
-            boot();
-            if (window.InventorySidebar && InventorySidebar.consumeAddAction()) {
-                openAddModal();
+            function boot() {
+                if (!InventoryBusiness.getActiveId()) return;
+                loadCatalogOptions().then(function () {
+                    loadProducts("", 1);
+                });
             }
-        });
-        window.addEventListener("inventory:business-changed", boot);
+
+            InventoryBusiness.whenReady(function () {
+                boot();
+                if (window.InventorySidebar && InventorySidebar.consumeAddAction()) {
+                    openAddModal();
+                }
+            });
+            window.addEventListener("inventory:business-changed", boot);
+        }
 
         if (openBtn) {
             openBtn.addEventListener("click", openAddModal);
@@ -1236,26 +1243,6 @@ var InventoryProducts = (function () {
         if (unitCancelBtn) unitCancelBtn.addEventListener("click", function () {
             toggleUnitPanel(false);
         });
-
-        var taxAddBtn = document.getElementById("product-tax-add-btn");
-        var taxSaveBtn = document.getElementById("product-tax-save-btn");
-        var taxCancelBtn = document.getElementById("product-tax-cancel-btn");
-
-        if (taxAddBtn) {
-            taxAddBtn.addEventListener("click", function () {
-                var panel = document.getElementById("product-tax-new-panel");
-                toggleTaxPanel(panel.classList.contains("inv-hidden"));
-            });
-        }
-        if (taxSaveBtn) taxSaveBtn.addEventListener("click", saveNewTax);
-        if (taxCancelBtn) taxCancelBtn.addEventListener("click", function () {
-            toggleTaxPanel(false);
-        });
-
-        var actualPriceEl = document.getElementById("product-actual-price");
-        if (actualPriceEl) {
-            actualPriceEl.addEventListener("input", updateBuyPriceDisplay);
-        }
 
         if (tbody) {
             tbody.addEventListener("click", function (e) {

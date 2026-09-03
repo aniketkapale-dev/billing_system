@@ -485,7 +485,7 @@ body.inv-dashboard-body--superadmin .inv-sidebar {
     white-space: nowrap;
 }
 
-/* Business switcher tabs — pill style on dark bar */
+/* Business switcher tabs — rectangle highlight on dark bar */
 .inv-business-tab {
     position: relative;
     display: inline-flex;
@@ -553,7 +553,12 @@ body.inv-dashboard-body--superadmin .inv-sidebar {
     background: var(--inv-chrome-page-bg);
     color: var(--inv-charcoal);
     font-weight: 700;
-    border-radius: var(--inv-radius-pill);
+    border-radius: 2px;
+}
+
+.inv-business-tab--active:hover {
+    background: var(--inv-chrome-page-bg);
+    color: var(--inv-charcoal);
 }
 
 .inv-business-tab--active .inv-business-tab-icon--default {

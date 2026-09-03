@@ -1,6 +1,6 @@
 from django.urls import path
 
-from apps.catalog.views import BrandViewSet, CategoryViewSet, ManufacturerViewSet, PaymentTypeViewSet, UnitViewSet
+from apps.catalog.views import BrandViewSet, CategoryViewSet, ManufacturerViewSet, PaymentTypeViewSet, UnitViewSet, VendorViewSet
 
 urlpatterns = [
     path("units/", UnitViewSet.as_view({"get": "list", "post": "create"}), name="unit-list"),
@@ -94,5 +94,21 @@ urlpatterns = [
         "payment-types/<int:pk>/restore/",
         PaymentTypeViewSet.as_view({"post": "restore"}),
         name="payment-type-restore",
+    ),
+    path("vendors/", VendorViewSet.as_view({"get": "list", "post": "create"}), name="vendor-list"),
+    path(
+        "vendors/<int:pk>/",
+        VendorViewSet.as_view({
+            "get": "retrieve",
+            "put": "update",
+            "patch": "partial_update",
+            "delete": "destroy",
+        }),
+        name="vendor-detail",
+    ),
+    path(
+        "vendors/<int:pk>/restore/",
+        VendorViewSet.as_view({"post": "restore"}),
+        name="vendor-restore",
     ),
 ]

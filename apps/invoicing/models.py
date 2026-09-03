@@ -72,6 +72,14 @@ class PurchaseInvoiceItem(BaseEntity):
     discount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0"))
     tax = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0"))
     batch_number = models.CharField(max_length=50, blank=True, default="")
+    vendor = models.ForeignKey(
+        "catalog.Vendor",
+        on_delete=models.SET_NULL,
+        related_name="purchase_invoice_items",
+        db_column="vendor_id",
+        null=True,
+        blank=True,
+    )
     expiry_date = models.DateField(null=True, blank=True)
     line_total = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
 

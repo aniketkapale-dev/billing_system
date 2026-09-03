@@ -234,8 +234,7 @@ var InventoryPurchases = (function () {
 
     function invoiceSettingLabel(item) {
         var number = formatInvoiceNumber(item.prefix, item.current_counter, item.suffix);
-        if (!number) number = "—";
-        return number + " (" + item.year + ")";
+        return number || "—";
     }
 
     function renderInvoiceSettingSelect(selectedId) {
@@ -256,6 +255,9 @@ var InventoryPurchases = (function () {
         select.innerHTML = html;
         if (selectedId) {
             select.value = String(selectedId);
+        }
+        if (window.InventorySearchableSelect) {
+            InventorySearchableSelect.refresh(select);
         }
     }
 
@@ -349,6 +351,9 @@ var InventoryPurchases = (function () {
         select.innerHTML = html;
         if (selectedId) {
             select.value = String(selectedId);
+        }
+        if (window.InventorySearchableSelect) {
+            InventorySearchableSelect.refresh(select);
         }
     }
 
@@ -764,6 +769,9 @@ var InventoryPurchases = (function () {
                 select.value = String(selectedId);
                 updateRowQtyLimits(row, getProduct(select.value));
             }
+            if (window.InventorySearchableSelect) {
+                InventorySearchableSelect.refresh(select);
+            }
         });
     }
 
@@ -1059,6 +1067,8 @@ var InventoryPurchases = (function () {
             '<span class="material-symbols-outlined">visibility</span></button>' +
             '<button type="button" class="inv-row-action-btn inv-row-action-btn--edit inv-purchase-edit" data-id="' + purchase.id + '" title="Edit" aria-label="Edit sale">' +
             '<span class="material-symbols-outlined">edit</span></button>' +
+            '<button type="button" class="inv-row-action-btn inv-row-action-btn--view inv-purchase-print" data-id="' + purchase.id + '" title="Print" aria-label="Print sale">' +
+            '<span class="material-symbols-outlined">print</span></button>' +
             "</div>"
         );
     }
@@ -1638,6 +1648,12 @@ var InventoryPurchases = (function () {
                 var editBtn = e.target.closest(".inv-purchase-edit");
                 if (editBtn) {
                     openEditPurchase(editBtn.getAttribute("data-id"));
+                    return;
+                }
+
+                var printBtn = e.target.closest(".inv-purchase-print");
+                if (printBtn) {
+                    exportSalesPrint([printBtn.getAttribute("data-id")]);
                 }
             });
         }

@@ -109,6 +109,16 @@ def user_catalog_brands(request):
 
 
 @never_cache
+def user_catalog_vendors(request):
+    return render(request, "user/catalog.html", {
+        "active_nav": "stock-in-vendors",
+        "catalog_resource": "vendors",
+        "catalog_title": "Vendors",
+        "catalog_add_label": "Add Vendor",
+    })
+
+
+@never_cache
 def user_settings(request):
     return redirect("user-settings-tax")
 

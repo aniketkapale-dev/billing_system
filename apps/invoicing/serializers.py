@@ -23,6 +23,7 @@ class PurchaseInvoiceItemSerializer(BaseModelSerializer):
     product_name = serializers.CharField(source="product.name", read_only=True)
     product_sku = serializers.CharField(source="product.sku", read_only=True)
     product_unit = serializers.CharField(source="product.unit.short_name", read_only=True)
+    vendor_name = serializers.CharField(source="vendor.name", read_only=True, default="")
 
     class Meta:
         model = PurchaseInvoiceItem
@@ -37,6 +38,8 @@ class PurchaseInvoiceItemSerializer(BaseModelSerializer):
             "discount",
             "tax",
             "batch_number",
+            "vendor",
+            "vendor_name",
             "expiry_date",
             "line_total",
         )
@@ -109,6 +112,7 @@ class PurchaseInvoiceItemWriteSerializer(serializers.Serializer):
     discount = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, default=0)
     tax = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, default=0)
     batch_number = serializers.CharField(max_length=50, required=False, allow_blank=True, default="")
+    vendor_id = serializers.IntegerField(required=False, allow_null=True)
     expiry_date = serializers.DateField(required=False, allow_null=True)
 
 

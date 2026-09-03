@@ -1661,12 +1661,30 @@ body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sideb
 .inv-multi-select-menu {
     position: fixed;
     z-index: 10050;
-    max-height: 220px;
-    overflow-y: auto;
+    max-height: 260px;
+    overflow: hidden;
     background: var(--inv-surface);
     border: 1px solid var(--inv-outline-variant);
     border-radius: 8px;
     box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18);
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.inv-multi-select-search-wrap {
+    flex-shrink: 0;
+    padding: 6px 6px 0;
+}
+
+.inv-multi-select-search {
+    max-width: none;
+    border-radius: var(--inv-radius);
+}
+
+.inv-multi-select-options {
+    overflow-y: auto;
+    max-height: 220px;
     padding: 6px;
 }
 
@@ -1739,6 +1757,130 @@ body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sideb
 
 .inv-field-inline--tax .inv-inline-add-btn {
     flex-shrink: 0;
+}
+
+/* Searchable single-select dropdown */
+.inv-search-select {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+}
+
+.inv-mgmt-field .inv-search-select {
+    width: 100%;
+}
+
+.inv-field-inline .inv-search-select {
+    flex: 1;
+    min-width: 0;
+}
+
+.inv-search-select-native {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.inv-search-select-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+}
+
+.inv-search-select-trigger:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+.inv-search-select-label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.inv-search-select-trigger.is-placeholder .inv-search-select-label {
+    color: var(--inv-secondary);
+}
+
+.inv-search-select-icon {
+    flex-shrink: 0;
+    font-size: 20px;
+    color: var(--inv-secondary);
+    transition: transform 0.15s ease;
+}
+
+.inv-search-select.is-open .inv-search-select-icon {
+    transform: rotate(180deg);
+}
+
+.inv-search-select-menu {
+    background: #fff;
+    border: var(--inv-border-width) solid var(--inv-input-border);
+    border-radius: var(--inv-radius);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.inv-search-select-input {
+    max-width: none;
+    border: none;
+    border-bottom: var(--inv-border-width) solid var(--inv-input-border);
+    border-radius: 0;
+}
+
+.inv-search-select-input:focus {
+    border-bottom: var(--inv-border-width-focus) solid var(--inv-accent);
+}
+
+.inv-search-select-list {
+    list-style: none;
+    margin: 0;
+    padding: 4px 0;
+    overflow-y: auto;
+}
+
+.inv-search-select-option {
+    padding: 9px 14px;
+    font-size: 14px;
+    line-height: 1.35;
+    cursor: pointer;
+}
+
+.inv-search-select-option:hover,
+.inv-search-select-option.is-highlighted {
+    background: var(--inv-primary-container);
+}
+
+.inv-search-select-option.is-selected {
+    color: var(--inv-primary);
+    font-weight: 600;
+}
+
+.inv-search-select-empty {
+    padding: 12px 14px;
+    font-size: 13px;
+    color: var(--inv-secondary);
+    cursor: default;
+}
+
+.inv-pagination-size .inv-search-select {
+    flex: 0 0 auto;
+    min-width: 72px;
 }
 
 .inv-discount-inline {
@@ -2074,8 +2216,8 @@ body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sideb
 }
 
 .inv-mgmt-item-row.inv-mgmt-item-row--stockin {
-    grid-template-columns: minmax(160px, 1.8fr) minmax(65px, 0.75fr) minmax(80px, 0.85fr) minmax(100px, 1fr) minmax(80px, 0.85fr) minmax(80px, 0.85fr) minmax(85px, 0.9fr) minmax(95px, 1fr) 40px;
-    min-width: 1180px;
+    grid-template-columns: minmax(160px, 1.8fr) minmax(110px, 1.1fr) minmax(65px, 0.75fr) minmax(110px, 1fr) minmax(80px, 0.85fr) minmax(85px, 0.9fr) minmax(95px, 1fr) 40px;
+    min-width: 980px;
 }
 
 .inv-mgmt-item-row.inv-mgmt-item-row--sale {

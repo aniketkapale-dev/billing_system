@@ -103,6 +103,9 @@ var InventoryBusinessUsers = (function () {
         }
         select.innerHTML = html;
         if (selectedId) select.value = String(selectedId);
+        if (window.InventorySearchableSelect) {
+            InventorySearchableSelect.refresh(select);
+        }
     }
 
     function toggleRolePanel(show) {
