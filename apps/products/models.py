@@ -62,6 +62,7 @@ class Product(BaseEntity):
     barcode = models.CharField(max_length=100, blank=True, default="")
     description = models.TextField(blank=True, default="")
     actual_price = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0"))
+    mrp = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0"))
     purchase_price = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0"))
     sale_price = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0"))
 

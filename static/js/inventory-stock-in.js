@@ -184,39 +184,29 @@ var InventoryStockIn = (function () {
         return roundMoney(actual * (1 + rate / 100));
     }
 
-    function rowTaxOptions(selectedId) {
-        var options = '<option value="">Select Tax (optional)</option>';
-        options += taxes.map(function (tax) {
-            var selected = String(tax.id) === String(selectedId) ? " selected" : "";
-            return '<option value="' + tax.id + '"' + selected + '>' +
-                InventoryApi.escapeHtml(taxLabel(tax)) + "</option>";
-        }).join("");
-        return options;
-    }
+    function initRowTaxMultiSelect(row, selectedIds) {
+        var root = row.querySelector(".inv-item-tax-select");
+        if (!root || !window.InventoryTaxSelect) return;
 
-    function renderRowTaxSelect(select, selectedId) {
-        if (!select) return;
-        var current = selectedId !== undefined && selectedId !== null
-            ? String(selectedId)
-            : select.value;
-        select.innerHTML = rowTaxOptions(current);
-        if (current) select.value = current;
+        InventoryTaxSelect.init(root, {
+            taxes: taxes,
+            selectedIds: selectedIds || [],
+            placeholder: "No Tax",
+            onChange: function () {
+                updateRowBuyPrice(row);
+            }
+        });
     }
 
     function refreshAllRowTaxSelects() {
-        document.querySelectorAll("#stockin-items-container .inv-item-tax").forEach(function (select) {
-            renderRowTaxSelect(select, select.value);
-        });
+        InventoryTaxSelect.refreshAll("#stockin-items-container .inv-item-tax-select", taxes);
         updateAllRowBuyPrices();
     }
 
-    function getRowTaxId(row) {
-        var rowTax = row.querySelector(".inv-item-tax");
-        return rowTax ? rowTax.value : "";
-    }
-
     function getEffectiveTaxRate(row) {
-        return getTaxRate(getRowTaxId(row));
+        var root = row.querySelector(".inv-item-tax-select");
+        if (!root || !window.InventoryTaxSelect) return 0;
+        return InventoryTaxSelect.getCombinedRate(taxes, InventoryTaxSelect.getSelected(root));
     }
 
     function updateRowBuyPrice(row, skipTotals) {
@@ -302,9 +292,13 @@ var InventoryStockIn = (function () {
             }
             refreshAllRowTaxSelects();
             if (selectedId && pendingTaxRow) {
-                var select = pendingTaxRow.querySelector(".inv-item-tax");
-                if (select) {
-                    select.value = String(selectedId);
+                var taxRoot = pendingTaxRow.querySelector(".inv-item-tax-select");
+                if (taxRoot) {
+                    var selected = InventoryTaxSelect.getSelected(taxRoot);
+                    if (selected.indexOf(String(selectedId)) === -1) {
+                        selected.push(String(selectedId));
+                    }
+                    InventoryTaxSelect.setSelected(taxRoot, selected);
                     updateRowBuyPrice(pendingTaxRow);
                 }
                 pendingTaxRow = null;
@@ -400,13 +394,14 @@ var InventoryStockIn = (function () {
 
     function applyProductToRow(row, product) {
         var actualEl = row.querySelector(".inv-item-actual");
-        var taxSelect = row.querySelector(".inv-item-tax");
+        var taxRoot = row.querySelector(".inv-item-tax-select");
         if (!product) {
+            if (taxRoot) InventoryTaxSelect.setSelected(taxRoot, [], true);
             updateRowBuyPrice(row);
             return;
         }
-        if (taxSelect && product.tax) {
-            taxSelect.value = String(product.tax);
+        if (taxRoot && product.tax) {
+            InventoryTaxSelect.setSelected(taxRoot, [String(product.tax)], true);
         }
         if (actualEl) {
             if (product.actual_price != null && String(product.actual_price).trim() !== "" && Number(product.actual_price) > 0) {
@@ -458,8 +453,8 @@ var InventoryStockIn = (function () {
             '<div class="inv-mgmt-field"><label>Quantity</label><input class="inv-mgmt-input inv-item-qty" type="number" min="0.01" step="0.01" value="' + (data.quantity || 1) + '" required/></div>' +
             '<div class="inv-mgmt-field"><label>Actual Price</label><input class="inv-mgmt-input inv-item-actual" type="number" min="0" step="0.01" placeholder="0.00" value="' + (data.actual_price != null ? data.actual_price : "") + '"/></div>' +
             '<div class="inv-mgmt-field"><label>Tax</label>' +
-            '<div class="inv-field-inline">' +
-            '<select class="inv-mgmt-select inv-item-tax">' + rowTaxOptions(data.tax_id || "") + "</select>" +
+            '<div class="inv-field-inline inv-field-inline--tax">' +
+            InventoryTaxSelect.html("inv-item-tax-select", "No Tax") +
             '<button type="button" class="inv-inline-add-btn inv-item-tax-add" title="Add Tax" aria-label="Add Tax">' +
             '<span class="material-symbols-outlined">add</span></button></div></div>' +
             '<div class="inv-mgmt-field"><label>Buy Price</label><input class="inv-mgmt-input inv-item-buy" type="text" readonly value="0.00"/></div>' +
@@ -480,6 +475,8 @@ var InventoryStockIn = (function () {
         row.querySelector(".inv-item-product-add").addEventListener("click", function () {
             openAddProductModal(row);
         });
+
+        initRowTaxMultiSelect(row, data.tax_ids || (data.tax_id ? [data.tax_id] : []));
 
         if (data.product_id) {
             applyProductToRow(row, getProduct(data.product_id));
@@ -750,7 +747,7 @@ var InventoryStockIn = (function () {
 
     function setItemsEditable(editable) {
         document.querySelectorAll("#stockin-items-container .inv-mgmt-item-row").forEach(function (row) {
-            row.querySelectorAll("input, select, button.inv-item-product-add, button.inv-item-tax-add, button.inv-item-remove").forEach(function (el) {
+            row.querySelectorAll("input, select, button.inv-item-product-add, button.inv-item-tax-add, button.inv-item-remove, .inv-multi-select-trigger").forEach(function (el) {
                 el.disabled = !editable;
             });
         });
@@ -1086,11 +1083,6 @@ var InventoryStockIn = (function () {
         if (itemsContainer) {
             itemsContainer.addEventListener("input", function (e) {
                 if (!e.target.matches(".inv-item-actual, .inv-item-qty")) return;
-                var row = e.target.closest(".inv-mgmt-item-row");
-                if (row) updateRowBuyPrice(row);
-            });
-            itemsContainer.addEventListener("change", function (e) {
-                if (!e.target.matches(".inv-item-tax")) return;
                 var row = e.target.closest(".inv-mgmt-item-row");
                 if (row) updateRowBuyPrice(row);
             });

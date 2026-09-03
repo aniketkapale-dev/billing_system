@@ -23,14 +23,43 @@ class ProductService(BaseService):
         self._business_id = None
         self._update_quantity = None
 
-    def _compute_purchase_price(self, actual_price, tax):
+    def _compute_purchase_price(self, actual_price, tax=None, combined_rate=None):
         actual = Decimal(str(actual_price or 0))
-        if tax is not None and tax.value:
+        if combined_rate is not None:
+            rate = Decimal(str(combined_rate))
+        elif tax is not None and tax.value:
             rate = Decimal(str(tax.value))
-            return (actual * (Decimal("1") + rate / Decimal("100"))).quantize(Decimal("0.01"))
-        return actual.quantize(Decimal("0.01"))
+        else:
+            return actual.quantize(Decimal("0.01"))
+        return (actual * (Decimal("1") + rate / Decimal("100"))).quantize(Decimal("0.01"))
 
-    def _resolve_prices(self, data, tax=None, instance=None):
+    def _resolve_tax_ids(self, data, business_id):
+        tax_ids = data.pop("tax_ids", None)
+        if tax_ids is None:
+            return None
+        if not tax_ids:
+            data["tax"] = None
+            return Decimal("0")
+
+        from apps.settings.models import Tax
+
+        taxes = list(
+            Tax.objects.filter(
+                pk__in=tax_ids,
+                business_id=business_id,
+                is_deleted=False,
+                is_active=True,
+            )
+        )
+        if len(taxes) != len(set(tax_ids)):
+            raise ValidationException("One or more selected taxes are not available.")
+
+        order = {pk: idx for idx, pk in enumerate(tax_ids)}
+        taxes.sort(key=lambda item: order.get(item.pk, 0))
+        data["tax"] = taxes[0]
+        return sum(Decimal(str(item.value or 0)) for item in taxes)
+
+    def _resolve_prices(self, data, tax=None, instance=None, combined_tax_rate=None):
         if "actual_price" in data:
             actual_price = Decimal(str(data.get("actual_price") or 0))
         elif instance is not None:
@@ -39,9 +68,15 @@ class ProductService(BaseService):
             actual_price = Decimal(str(data.get("purchase_price") or 0))
         if actual_price < 0:
             raise ValidationException("Actual price cannot be negative.")
-        if tax is None:
-            tax = data.get("tax")
-        purchase_price = self._compute_purchase_price(actual_price, tax)
+        if combined_tax_rate is None:
+            if tax is None:
+                tax = data.get("tax")
+            purchase_price = self._compute_purchase_price(actual_price, tax=tax)
+        else:
+            purchase_price = self._compute_purchase_price(
+                actual_price,
+                combined_rate=combined_tax_rate,
+            )
         data["actual_price"] = actual_price
         data["purchase_price"] = purchase_price
         return actual_price, purchase_price
@@ -61,7 +96,14 @@ class ProductService(BaseService):
         if self._initial_quantity < 0:
             raise ValidationException("Quantity cannot be negative.")
         data.pop("purchase_price", None)
-        actual_price, purchase_price = self._resolve_prices(data)
+        combined_tax_rate = self._resolve_tax_ids(data, business_id)
+        if combined_tax_rate is not None:
+            actual_price, purchase_price = self._resolve_prices(
+                data,
+                combined_tax_rate=combined_tax_rate,
+            )
+        else:
+            actual_price, purchase_price = self._resolve_prices(data)
         if self._initial_quantity > 0:
             if actual_price <= 0:
                 raise ValidationException("Actual price is required when opening stock is added.")
@@ -123,14 +165,24 @@ class ProductService(BaseService):
                 raise ValidationException("Quantity cannot be negative.")
         else:
             self._update_quantity = None
+        has_tax_ids = "tax_ids" in data
         if self._update_quantity is not None and self._update_quantity > 0:
             actual_price = data.get("actual_price", instance.actual_price)
             if actual_price is not None and Decimal(str(actual_price)) <= 0:
                 raise ValidationException("Actual price is required when stock quantity is set.")
-        if "actual_price" in data or "tax" in data:
+        if "actual_price" in data or "tax" in data or has_tax_ids:
+            combined_tax_rate = self._resolve_tax_ids(data, instance.business_id) if has_tax_ids else None
             tax = data["tax"] if "tax" in data else instance.tax
             data.pop("purchase_price", None)
-            self._resolve_prices(data, tax=tax, instance=instance)
+            if combined_tax_rate is not None:
+                self._resolve_prices(
+                    data,
+                    tax=tax,
+                    instance=instance,
+                    combined_tax_rate=combined_tax_rate,
+                )
+            else:
+                self._resolve_prices(data, tax=tax, instance=instance)
         if "sku" in data:
             data["sku"] = self._resolve_sku(data, instance.business_id, exclude_pk=instance.pk)
         self._validate_catalog_refs(data, instance.business_id, instance=instance)
@@ -292,6 +344,10 @@ class ProductService(BaseService):
         if "sale_price" in data and data.get("sale_price") is not None:
             if data["sale_price"] < 0:
                 raise ValidationException("Sell price cannot be negative.")
+
+        if "mrp" in data and data.get("mrp") is not None:
+            if data["mrp"] < 0:
+                raise ValidationException("MRP cannot be negative.")
 
         sku = data.get("sku")
         if sku is not None:

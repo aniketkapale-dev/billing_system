@@ -30,6 +30,7 @@ class PurchaseSerializer(BaseModelSerializer):
     business_name = serializers.CharField(source="business.business_name", read_only=True)
     payment_type_name = serializers.CharField(source="payment_type.name", read_only=True, default="")
     customer_mobile = serializers.CharField(source="customer.mobile", read_only=True, default="")
+    company_name = serializers.CharField(source="customer.company_name", read_only=True, default="")
 
     class Meta:
         model = Purchase
@@ -41,6 +42,7 @@ class PurchaseSerializer(BaseModelSerializer):
             "customer",
             "customer_name",
             "customer_mobile",
+            "company_name",
             "supplier_name",
             "reference_no",
             "purchase_date",

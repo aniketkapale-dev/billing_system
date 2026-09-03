@@ -48,6 +48,7 @@ class ProductSerializer(BaseModelSerializer):
             "barcode",
             "description",
             "actual_price",
+            "mrp",
             "purchase_price",
             "sale_price",
             "quantity",
@@ -103,16 +104,26 @@ class ProductWriteSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True,
     )
+    tax_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        allow_empty=True,
+        write_only=True,
+    )
     quantity = serializers.DecimalField(
         max_digits=12, decimal_places=2, min_value=0, required=False, default=0, write_only=True
     )
     actual_price = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=0, required=False, default=0)
+    mrp = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=0, required=False, default=0)
     purchase_price = serializers.DecimalField(
         max_digits=12, decimal_places=2, min_value=0, required=False, read_only=True
     )
     sale_price = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=0, required=False, default=0)
 
     def validate_actual_price(self, value):
+        return Decimal(str(value or 0)).quantize(Decimal("0.01"))
+
+    def validate_mrp(self, value):
         return Decimal(str(value or 0)).quantize(Decimal("0.01"))
 
     def validate_sku(self, value):
@@ -129,8 +140,10 @@ class ProductWriteSerializer(serializers.ModelSerializer):
             "manufacturer_id",
             "unit_id",
             "tax_id",
+            "tax_ids",
             "description",
             "actual_price",
+            "mrp",
             "purchase_price",
             "sale_price",
             "quantity",

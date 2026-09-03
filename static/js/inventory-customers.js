@@ -240,12 +240,34 @@ var InventoryCustomers = (function () {
             });
     }
 
+    function setBusinessFieldsVisible(show) {
+        var panel = document.getElementById("customer-business-fields");
+        var checkbox = document.getElementById("customer-add-business");
+        if (checkbox) checkbox.checked = !!show;
+        if (panel) panel.classList.toggle("inv-hidden", !show);
+    }
+
+    function hasBusinessData(customer) {
+        if (!customer) return false;
+        return !!(
+            (customer.company_name && String(customer.company_name).trim()) ||
+            (customer.gst_number && String(customer.gst_number).trim()) ||
+            (customer.business_address && String(customer.business_address).trim()) ||
+            (customer.shipping_address && String(customer.shipping_address).trim())
+        );
+    }
+
     function resetForm() {
         editingId = null;
         document.getElementById("customer-name").value = "";
         document.getElementById("customer-mobile").value = "";
         document.getElementById("customer-email").value = "";
         document.getElementById("customer-address").value = "";
+        document.getElementById("customer-company-name").value = "";
+        document.getElementById("customer-gst").value = "";
+        document.getElementById("customer-business-address").value = "";
+        document.getElementById("customer-shipping-address").value = "";
+        setBusinessFieldsVisible(false);
         var formTitle = document.getElementById("customer-form-title");
         var modalTitle = document.getElementById("customer-modal-title");
         var saveBtn = document.getElementById("customer-save-btn");
@@ -259,6 +281,11 @@ var InventoryCustomers = (function () {
         document.getElementById("customer-mobile").value = customer.mobile || "";
         document.getElementById("customer-email").value = customer.email || "";
         document.getElementById("customer-address").value = customer.address || "";
+        document.getElementById("customer-company-name").value = customer.company_name || "";
+        document.getElementById("customer-gst").value = customer.gst_number || "";
+        document.getElementById("customer-business-address").value = customer.business_address || "";
+        document.getElementById("customer-shipping-address").value = customer.shipping_address || "";
+        setBusinessFieldsVisible(hasBusinessData(customer));
     }
 
     function isValidMobile(value) {
@@ -273,6 +300,11 @@ var InventoryCustomers = (function () {
         var mobile = document.getElementById("customer-mobile").value.trim();
         var email = document.getElementById("customer-email").value.trim();
         var address = document.getElementById("customer-address").value.trim();
+        var addBusiness = document.getElementById("customer-add-business").checked;
+        var companyName = document.getElementById("customer-company-name").value.trim();
+        var gstNumber = document.getElementById("customer-gst").value.trim();
+        var businessAddress = document.getElementById("customer-business-address").value.trim();
+        var shippingAddress = document.getElementById("customer-shipping-address").value.trim();
 
         if (!name) {
             InventoryToast.error("Full name is required.");
@@ -290,11 +322,21 @@ var InventoryCustomers = (function () {
             return null;
         }
 
+        if (addBusiness && !companyName) {
+            InventoryToast.error("Company name is required when Add company is selected.");
+            document.getElementById("customer-company-name").focus();
+            return null;
+        }
+
         return {
             name: name,
             mobile: mobile,
             email: email,
-            address: address
+            address: address,
+            company_name: addBusiness ? companyName : "",
+            gst_number: addBusiness ? gstNumber : "",
+            business_address: addBusiness ? businessAddress : "",
+            shipping_address: addBusiness ? shippingAddress : ""
         };
     }
 
@@ -326,10 +368,22 @@ var InventoryCustomers = (function () {
             { label: "Full Name", value: displayValue(customer.name) },
             { label: "Mobile", value: displayValue(customer.mobile) },
             { label: "Email", value: displayValue(customer.email) },
-            { label: "Address", value: displayValue(customer.address), full: true },
+            { label: "Address", value: displayValue(customer.address), full: true }
+        ];
+
+        if (hasBusinessData(customer)) {
+            rows.push(
+                { label: "Company Name", value: displayValue(customer.company_name) },
+                { label: "GST No", value: displayValue(customer.gst_number) },
+                { label: "Company Address", value: displayValue(customer.business_address), full: true },
+                { label: "Shipping Address", value: displayValue(customer.shipping_address), full: true }
+            );
+        }
+
+        rows.push(
             { label: "Created", value: displayValue(formatDate(customer.created_at)) },
             { label: "Last Updated", value: displayValue(formatDate(customer.updated_at)) }
-        ];
+        );
 
         container.innerHTML = rows.map(function (row) {
             var cls = row.full ? " inv-product-view-item--full" : "";
@@ -467,6 +521,16 @@ var InventoryCustomers = (function () {
 
         if (window.InventoryAuth && typeof InventoryAuth.wireMobileInput === "function") {
             InventoryAuth.wireMobileInput(document.getElementById("customer-mobile"));
+        }
+
+        var addBusinessCheckbox = document.getElementById("customer-add-business");
+        if (addBusinessCheckbox) {
+            addBusinessCheckbox.addEventListener("change", function () {
+                setBusinessFieldsVisible(addBusinessCheckbox.checked);
+                if (addBusinessCheckbox.checked) {
+                    document.getElementById("customer-company-name").focus();
+                }
+            });
         }
 
         var openBtn = document.getElementById("customer-open-form-btn");

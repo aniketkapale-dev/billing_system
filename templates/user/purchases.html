@@ -55,10 +55,10 @@
                         </select>
                     </div>
                     <div class="inv-mgmt-field">
-                        <label for="purchase-customer">Customer</label>
+                        <label for="purchase-customer">Customer/Company</label>
                         <div class="inv-field-inline">
                             <select id="purchase-customer" class="inv-mgmt-select" required>
-                                <option value="">Select customer</option>
+                                <option value="">Select customer or company</option>
                             </select>
                             <button id="purchase-customer-add-btn" type="button" class="inv-inline-add-btn" title="Add customer" aria-label="Add customer">
                                 <span class="material-symbols-outlined">add</span>
@@ -160,6 +160,8 @@
 <script src="{% static 'js/inventory-api.js' %}"></script>
 <script src="{% static 'js/inventory-modal.js' %}"></script>
 <script src="{% static 'js/inventory-page-panel.js' %}"></script>
+<script src="{% static 'js/inventory-multi-select.js' %}"></script>
+<script src="{% static 'js/inventory-tax-select.js' %}"></script>
 <script src="{% static 'js/inventory-customers.js' %}"></script>
 <script src="{% static 'js/inventory-purchases.js' %}"></script>
 <script>

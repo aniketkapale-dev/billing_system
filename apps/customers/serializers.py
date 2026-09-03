@@ -16,8 +16,11 @@ class CustomerSerializer(BaseModelSerializer):
             "name",
             "mobile",
             "email",
+            "company_name",
             "gst_number",
             "address",
+            "business_address",
+            "shipping_address",
             "is_active",
             "is_deleted",
             "created_at",
@@ -31,7 +34,17 @@ class CustomerWriteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Customer
-        fields = ("name", "mobile", "email", "gst_number", "address", "is_active")
+        fields = (
+            "name",
+            "mobile",
+            "email",
+            "company_name",
+            "gst_number",
+            "address",
+            "business_address",
+            "shipping_address",
+            "is_active",
+        )
 
     def validate_name(self, value):
         value = (value or "").strip()
@@ -53,6 +66,15 @@ class CustomerWriteSerializer(serializers.ModelSerializer):
         return ""
 
     def validate_gst_number(self, value):
+        return (value or "").strip()
+
+    def validate_company_name(self, value):
+        return (value or "").strip()
+
+    def validate_business_address(self, value):
+        return (value or "").strip()
+
+    def validate_shipping_address(self, value):
         return (value or "").strip()
 
     def validate_address(self, value):
