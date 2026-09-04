@@ -65,9 +65,13 @@ class InvoiceSettingService(BaseService):
         if not user:
             raise ValidationException("Authentication required.")
         data.pop("owner_id", None)
+        data.pop("clear_qr", None)
         business_id = data.get("business_id")
         if not business_id:
             raise ValidationException("Business is required.")
+
+        if "terms_conditions" in data:
+            data["terms_conditions"] = str(data.get("terms_conditions") or "").strip()
 
         counter = data.get("counter")
         if counter is None or counter == "":
@@ -79,6 +83,12 @@ class InvoiceSettingService(BaseService):
     def before_update(self, instance, data):
         data.pop("owner_id", None)
         data.pop("business_id", None)
+        if data.pop("clear_qr", False):
+            if instance.qr_image:
+                instance.qr_image.delete(save=False)
+            data["qr_image"] = None
+        if "terms_conditions" in data:
+            data["terms_conditions"] = str(data.get("terms_conditions") or "").strip()
         self._validate(data, exclude_pk=instance.pk, business_id=instance.business_id, instance=instance)
 
     def _validate(self, data, exclude_pk=None, business_id=None, instance=None):

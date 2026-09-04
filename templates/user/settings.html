@@ -139,6 +139,43 @@
                         <label for="settings-invoice-end-counter">End Counter</label>
                         <input id="settings-invoice-end-counter" class="inv-mgmt-input" type="date"/>
                     </div>
+                    <div class="inv-invoice-terms-qr-row">
+                        <div class="inv-mgmt-field inv-invoice-terms-field">
+                            <label for="settings-invoice-terms">Terms &amp; Conditions <span class="inv-field-optional">(optional)</span></label>
+                            <div class="inv-invoice-terms-editor">
+                                <div class="inv-invoice-terms-toolbar">
+                                    <button type="button" id="settings-invoice-terms-bold" class="inv-invoice-terms-tool-btn" title="Bold (Ctrl+B)" aria-label="Bold">
+                                        <span class="material-symbols-outlined">format_bold</span>
+                                    </button>
+                                    <span class="inv-invoice-terms-hint">Press Enter for the next numbered line</span>
+                                </div>
+                                <div
+                                    id="settings-invoice-terms"
+                                    class="inv-invoice-terms-input inv-mgmt-input"
+                                    contenteditable="true"
+                                    role="textbox"
+                                    aria-multiline="true"
+                                    data-placeholder="1. Payment due within 30 days&#10;2. Goods once sold will not be taken back"
+                                ></div>
+                            </div>
+                        </div>
+                        <div class="inv-mgmt-field inv-invoice-qr-field">
+                            <label>QR Code <span class="inv-field-optional">(optional)</span></label>
+                            <div class="inv-invoice-qr-card">
+                                <div class="inv-invoice-qr-actions">
+                                    <label class="inv-mgmt-btn" for="settings-invoice-qr">
+                                        <span class="material-symbols-outlined">upload</span>
+                                        Select Image
+                                    </label>
+                                    <input id="settings-invoice-qr" class="inv-hidden" type="file" accept="image/*"/>
+                                    <button type="button" id="settings-invoice-qr-clear" class="inv-mgmt-btn inv-hidden">Remove QR</button>
+                                </div>
+                                <div id="settings-invoice-qr-preview" class="inv-invoice-qr-preview" aria-hidden="true">
+                                    <span class="material-symbols-outlined">qr_code_2</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="inv-mgmt-panel-footer">

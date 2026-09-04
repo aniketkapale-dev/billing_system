@@ -8,6 +8,7 @@ class PurchaseItemSerializer(BaseModelSerializer):
     product_name = serializers.CharField(source="product.name", read_only=True)
     product_sku = serializers.CharField(source="product.sku", read_only=True)
     product_unit = serializers.CharField(source="product.unit.short_name", read_only=True)
+    batch_lines = serializers.SerializerMethodField()
 
     class Meta:
         model = PurchaseItem
@@ -18,16 +19,49 @@ class PurchaseItemSerializer(BaseModelSerializer):
             "product_sku",
             "product_unit",
             "quantity",
+            "list_price",
             "unit_price",
             "line_total",
+            "discount_amount",
+            "tax_amount",
             "cost_amount",
             "profit_amount",
+            "batch_lines",
         )
+
+    def get_batch_lines(self, obj):
+        consumptions = [
+            consumption
+            for consumption in obj.batch_consumptions.all()
+            if not consumption.is_deleted
+        ]
+        if consumptions:
+            lines = []
+            for consumption in consumptions:
+                batch = consumption.inventory_batch
+                lines.append({
+                    "quantity": consumption.quantity_sold,
+                    "batch_number": (batch.batch_number or "").strip(),
+                    "expiry_date": batch.expiry_date,
+                })
+            return lines
+
+        return [{
+            "quantity": obj.quantity,
+            "batch_number": "",
+            "expiry_date": None,
+        }]
 
 
 class PurchaseSerializer(BaseModelSerializer):
     items = PurchaseItemSerializer(many=True, read_only=True)
     business_name = serializers.CharField(source="business.business_name", read_only=True)
+    invoice_terms_conditions = serializers.CharField(
+        source="invoice_setting.terms_conditions",
+        read_only=True,
+        default="",
+    )
+    invoice_qr_image_url = serializers.SerializerMethodField()
     payment_type_name = serializers.CharField(source="payment_type.name", read_only=True, default="")
     customer_mobile = serializers.CharField(source="customer.mobile", read_only=True, default="")
     customer_email = serializers.CharField(source="customer.email", read_only=True, default="")
@@ -53,6 +87,8 @@ class PurchaseSerializer(BaseModelSerializer):
             "company_address",
             "supplier_name",
             "reference_no",
+            "invoice_terms_conditions",
+            "invoice_qr_image_url",
             "purchase_date",
             "notes",
             "billing_address",
@@ -68,11 +104,24 @@ class PurchaseSerializer(BaseModelSerializer):
             "updated_at",
         )
 
+    def get_invoice_qr_image_url(self, obj):
+        setting = getattr(obj, "invoice_setting", None)
+        if not setting or not setting.qr_image:
+            return None
+        request = self.context.get("request")
+        url = setting.qr_image.url
+        if request:
+            return request.build_absolute_uri(url)
+        return url
+
 
 class PurchaseItemWriteSerializer(serializers.Serializer):
     product_id = serializers.IntegerField()
     quantity = serializers.DecimalField(max_digits=12, decimal_places=2)
     unit_price = serializers.DecimalField(max_digits=12, decimal_places=2)
+    list_price = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
+    discount_amount = serializers.DecimalField(max_digits=14, decimal_places=2, required=False, default=0)
+    tax_amount = serializers.DecimalField(max_digits=14, decimal_places=2, required=False, default=0)
 
 
 class PurchaseWriteSerializer(serializers.Serializer):
@@ -96,3 +145,4 @@ class PurchaseHeaderWriteSerializer(serializers.Serializer):
     billing_address = serializers.CharField(required=False, allow_blank=True)
     shipping_address = serializers.CharField(required=False, allow_blank=True)
     payment_type_id = serializers.IntegerField(required=False, allow_null=True)
+    items = PurchaseItemWriteSerializer(many=True, required=False)

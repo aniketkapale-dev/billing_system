@@ -38,6 +38,7 @@ class TaxWriteSerializer(serializers.ModelSerializer):
 
 class InvoiceSettingSerializer(BaseModelSerializer):
     business_name = serializers.CharField(source="business.business_name", read_only=True)
+    qr_image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = InvoiceSetting
@@ -51,6 +52,8 @@ class InvoiceSettingSerializer(BaseModelSerializer):
             "counter",
             "current_counter",
             "end_counter",
+            "terms_conditions",
+            "qr_image_url",
             "is_active",
             "is_deleted",
             "created_at",
@@ -58,13 +61,33 @@ class InvoiceSettingSerializer(BaseModelSerializer):
         )
         read_only_fields = ("business",)
 
+    def get_qr_image_url(self, obj):
+        if not obj.qr_image:
+            return None
+        request = self.context.get("request")
+        url = obj.qr_image.url
+        if request:
+            return request.build_absolute_uri(url)
+        return url
+
 
 class InvoiceSettingWriteSerializer(serializers.ModelSerializer):
     counter = serializers.IntegerField(required=False, min_value=0, default=1)
+    clear_qr = serializers.BooleanField(required=False, write_only=True, default=False)
 
     class Meta:
         model = InvoiceSetting
-        fields = ("year", "prefix", "suffix", "counter", "end_counter", "is_active")
+        fields = (
+            "year",
+            "prefix",
+            "suffix",
+            "counter",
+            "end_counter",
+            "terms_conditions",
+            "qr_image",
+            "clear_qr",
+            "is_active",
+        )
 
     def validate_year(self, value):
         if value < 2000 or value > 2100:

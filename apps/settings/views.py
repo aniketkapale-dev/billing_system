@@ -1,4 +1,5 @@
 from rest_framework import status
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 
 from apps.settings.serializers import (
     InvoiceSettingSerializer,
@@ -40,6 +41,7 @@ class TaxViewSet(BusinessScopedViewSetMixin, BaseViewSet):
 
 
 class InvoiceSettingViewSet(BusinessScopedViewSetMixin, BaseViewSet):
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
     service_class = InvoiceSettingService
     serializer_class = InvoiceSettingSerializer
     write_serializer_class = InvoiceSettingWriteSerializer

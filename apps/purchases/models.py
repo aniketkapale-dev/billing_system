@@ -32,6 +32,14 @@ class Purchase(BaseEntity):
         blank=True,
     )
     reference_no = models.CharField(max_length=50, blank=True, default="")
+    invoice_setting = models.ForeignKey(
+        "settings.InvoiceSetting",
+        on_delete=models.SET_NULL,
+        related_name="purchases",
+        db_column="invoice_setting_id",
+        null=True,
+        blank=True,
+    )
     purchase_date = models.DateField(default=timezone.localdate)
     notes = models.TextField(blank=True, default="")
     billing_address = models.TextField(blank=True, default="")
@@ -72,8 +80,11 @@ class PurchaseItem(BaseEntity):
         db_column="product_id",
     )
     quantity = models.DecimalField(max_digits=12, decimal_places=2)
+    list_price = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0"))
     unit_price = models.DecimalField(max_digits=12, decimal_places=2)
     line_total = models.DecimalField(max_digits=14, decimal_places=2)
+    discount_amount = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
+    tax_amount = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
     cost_amount = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
     profit_amount = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
 

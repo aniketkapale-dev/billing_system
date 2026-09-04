@@ -7,6 +7,8 @@ var InventorySettingsInvoice = (function () {
     var PAGINATION_ID = "settings-invoice-pagination";
     var currentPage = 1;
     var editingId = null;
+    var qrFile = null;
+    var clearQr = false;
 
     function request(path, opts) {
         return InventoryApi.request(API, path, opts);
@@ -81,6 +83,86 @@ var InventorySettingsInvoice = (function () {
             });
     }
 
+    function getTermsEditor() {
+        return document.getElementById("settings-invoice-terms");
+    }
+
+    function getTermsValue() {
+        var editor = getTermsEditor();
+        if (!editor || !window.InventoryTermsHtml) return "";
+        return InventoryTermsHtml.normalizeEditorHtml(editor);
+    }
+
+    function resetTermsEditor() {
+        var editor = getTermsEditor();
+        if (!editor) return;
+        editor.innerHTML = "";
+    }
+
+    function setTermsEditorValue(value) {
+        var editor = getTermsEditor();
+        if (!editor || !window.InventoryTermsHtml) return;
+        InventoryTermsHtml.setEditorContent(editor, value || "");
+    }
+
+    function initTermsEditor() {
+        var editor = getTermsEditor();
+        var boldBtn = document.getElementById("settings-invoice-terms-bold");
+        if (!editor || !window.InventoryTermsHtml || initTermsEditor._wired) return;
+        initTermsEditor._wired = true;
+
+        editor.addEventListener("focus", function () {
+            InventoryTermsHtml.ensureEditorList(editor);
+        });
+
+        editor.addEventListener("keydown", function (e) {
+            if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === "b") {
+                e.preventDefault();
+                InventoryTermsHtml.ensureEditorList(editor);
+                document.execCommand("bold");
+            }
+        });
+
+        editor.addEventListener("paste", function (e) {
+            e.preventDefault();
+            var text = (e.clipboardData || window.clipboardData).getData("text/plain");
+            document.execCommand("insertText", false, text);
+        });
+
+        if (boldBtn) {
+            boldBtn.addEventListener("click", function (e) {
+                e.preventDefault();
+                InventoryTermsHtml.ensureEditorList(editor);
+                editor.focus();
+                document.execCommand("bold");
+            });
+        }
+    }
+
+    function setQrPreview(url) {
+        var preview = document.getElementById("settings-invoice-qr-preview");
+        var clearBtn = document.getElementById("settings-invoice-qr-clear");
+        if (!preview) return;
+
+        if (url) {
+            preview.innerHTML = '<img src="' + InventoryApi.escapeHtml(url) + '" alt="Invoice QR code"/>';
+            preview.setAttribute("aria-hidden", "false");
+            if (clearBtn) clearBtn.classList.remove("inv-hidden");
+        } else {
+            preview.innerHTML = '<span class="material-symbols-outlined">qr_code_2</span>';
+            preview.setAttribute("aria-hidden", "true");
+            if (clearBtn) clearBtn.classList.add("inv-hidden");
+        }
+    }
+
+    function resetQrState() {
+        qrFile = null;
+        clearQr = false;
+        var input = document.getElementById("settings-invoice-qr");
+        if (input) input.value = "";
+        setQrPreview(null);
+    }
+
     function openForm(isEdit) {
         var title = document.getElementById("settings-invoice-form-title");
         if (!title) return;
@@ -92,6 +174,8 @@ var InventorySettingsInvoice = (function () {
             document.getElementById("settings-invoice-suffix").value = "";
             document.getElementById("settings-invoice-start-counter").value = "1";
             document.getElementById("settings-invoice-end-counter").value = "";
+            resetTermsEditor();
+            resetQrState();
             title.textContent = "Add Invoice Setting";
         } else {
             title.textContent = "Edit Invoice Setting";
@@ -103,17 +187,35 @@ var InventorySettingsInvoice = (function () {
 
     function closeForm() {
         editingId = null;
+        resetTermsEditor();
+        resetQrState();
         InventoryPagePanel.showList(LIST_PANEL);
     }
 
     function collectPayload() {
-        return {
+        var payload = {
             year: document.getElementById("settings-invoice-year").value.trim(),
             prefix: document.getElementById("settings-invoice-prefix").value.trim(),
             suffix: document.getElementById("settings-invoice-suffix").value.trim(),
             counter: document.getElementById("settings-invoice-start-counter").value.trim(),
-            end_counter: document.getElementById("settings-invoice-end-counter").value.trim() || null
+            end_counter: document.getElementById("settings-invoice-end-counter").value.trim() || null,
+            terms_conditions: getTermsValue()
         };
+
+        if (qrFile || clearQr) {
+            var formData = new FormData();
+            formData.append("year", payload.year);
+            formData.append("prefix", payload.prefix);
+            formData.append("suffix", payload.suffix);
+            formData.append("counter", payload.counter);
+            if (payload.end_counter) formData.append("end_counter", payload.end_counter);
+            formData.append("terms_conditions", payload.terms_conditions);
+            if (qrFile) formData.append("qr_image", qrFile);
+            if (clearQr) formData.append("clear_qr", "true");
+            return formData;
+        }
+
+        return payload;
     }
 
     function validatePayload(payload) {
@@ -132,14 +234,22 @@ var InventorySettingsInvoice = (function () {
 
     function saveSetting() {
         var payload = collectPayload();
-        var error = validatePayload(payload);
+        var error = validatePayload(payload instanceof FormData ? {
+            year: payload.get("year"),
+            prefix: payload.get("prefix"),
+            suffix: payload.get("suffix"),
+            counter: payload.get("counter"),
+            end_counter: payload.get("end_counter")
+        } : payload);
         if (error) {
             InventoryToast.error(error);
             return;
         }
 
-        payload.year = Number(payload.year);
-        payload.counter = Number(payload.counter);
+        if (!(payload instanceof FormData)) {
+            payload.year = Number(payload.year);
+            payload.counter = Number(payload.counter);
+        }
 
         var btn = document.getElementById("settings-invoice-save-btn");
         InventoryLoader.button(btn, true);
@@ -176,6 +286,12 @@ var InventorySettingsInvoice = (function () {
                     document.getElementById("settings-invoice-suffix").value = body.data.suffix || "";
                     document.getElementById("settings-invoice-start-counter").value = body.data.counter != null ? body.data.counter : "1";
                     document.getElementById("settings-invoice-end-counter").value = body.data.end_counter || "";
+                    setTermsEditorValue(body.data.terms_conditions || "");
+                    qrFile = null;
+                    clearQr = false;
+                    var qrInput = document.getElementById("settings-invoice-qr");
+                    if (qrInput) qrInput.value = "";
+                    setQrPreview(body.data.qr_image_url || null);
                     openForm(true);
                 } else {
                     InventoryToast.error(body.message || "Failed to load invoice settings.");
@@ -230,6 +346,8 @@ var InventorySettingsInvoice = (function () {
             InventoryPagePanel.init();
         }
 
+        initTermsEditor();
+
         if (addBtn) {
             addBtn.addEventListener("click", function () {
                 if (!InventoryBusiness.getActiveId()) {
@@ -241,6 +359,26 @@ var InventorySettingsInvoice = (function () {
         }
 
         if (saveBtn) saveBtn.addEventListener("click", saveSetting);
+
+        var qrInput = document.getElementById("settings-invoice-qr");
+        var qrClearBtn = document.getElementById("settings-invoice-qr-clear");
+        if (qrInput) {
+            qrInput.addEventListener("change", function () {
+                var file = qrInput.files && qrInput.files[0] ? qrInput.files[0] : null;
+                if (!file) return;
+                qrFile = file;
+                clearQr = false;
+                setQrPreview(URL.createObjectURL(file));
+            });
+        }
+        if (qrClearBtn) {
+            qrClearBtn.addEventListener("click", function () {
+                qrFile = null;
+                clearQr = true;
+                if (qrInput) qrInput.value = "";
+                setQrPreview(null);
+            });
+        }
 
         tableBody.addEventListener("click", function (e) {
             var editBtn = e.target.closest("[data-invoice-edit]");

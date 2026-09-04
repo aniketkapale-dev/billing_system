@@ -202,23 +202,10 @@ var InventoryDocumentExport = (function () {
         return html;
     }
 
-    function wrapPartyCol(heading, bodyHtml, extraClass) {
+    function wrapHeaderPanel(bodyHtml, extraClass) {
         return (
-            '<div class="inv-party-col inv-party-col--plain' + (extraClass ? " " + extraClass : "") + '">' +
-            '<h3 class="inv-party-heading">' + escapeHtml(heading) + "</h3>" +
-            '<div class="inv-party-body">' + bodyHtml + "</div>" +
-            "</div>"
-        );
-    }
-
-    function buildHeaderInvoiceDetails(sale, invoiceNo, invoiceDate) {
-        return (
-            '<div class="inv-header-meta">' +
-            buildMetaLine("Invoice No.", invoiceNo, false) +
-            buildMetaLine("PO Number", sale.po_number || sale.po_no || "", true) +
-            buildMetaLine("Invoice Date", invoiceDate, false) +
-            buildMetaLine("Due Date", sale.due_date ? formatDisplayDate(sale.due_date) : "", true) +
-            buildMetaLine("Payment", sale.payment_type_name || "", true) +
+            '<div class="inv-header-panel' + (extraClass ? " " + extraClass : "") + '">' +
+            bodyHtml +
             "</div>"
         );
     }
@@ -227,40 +214,69 @@ var InventoryDocumentExport = (function () {
         return !!(sale.company_name && String(sale.company_name).trim());
     }
 
-    function buildCustomerCompanyBlock(sale) {
-        if (!hasCustomerCompany(sale)) return "";
-
-        var companyAddress = sale.company_address || sale.billing_address || "";
-        var body =
-            buildInlineDetailField("Company Name", sale.company_name, false) +
-            buildInlineDetailField("GST No", sale.customer_gst_number, true) +
-            buildInlineDetailField("Company Address", companyAddress, true);
-
-        return wrapPartyCol("Company", body, "inv-party-col--company");
+    function getCustomerCompanyDisplayName(sale) {
+        var name = hasCustomerCompany(sale)
+            ? sale.company_name
+            : (sale.customer_name || "Customer");
+        name = String(name).trim();
+        return name || "Customer";
     }
 
-    function buildBillToBlock(sale) {
-        var personalAddress = sale.customer_address || "";
-        if (!personalAddress && !hasCustomerCompany(sale)) {
-            personalAddress = sale.billing_address || "";
+    function buildCustomerCompanyColumn(sale) {
+        var companyName = getCustomerCompanyDisplayName(sale);
+        var gstNo = sale.customer_gst_number || "";
+        var companyAddress = hasCustomerCompany(sale)
+            ? (sale.company_address || sale.billing_address || "")
+            : (sale.customer_address || sale.billing_address || "");
+
+        return wrapHeaderPanel(
+            '<div class="inv-header-name-row inv-header-name-row--customer">' +
+            '<span class="inv-header-panel-heading">Billed To:</span>' +
+            '<span class="inv-header-customer-name">' + escapeHtml(companyName) + "</span>" +
+            "</div>" +
+            buildInlineDetailField("GST No", gstNo, false) +
+            buildInlineDetailField("Company Address", companyAddress, false),
+            "inv-header-panel--company"
+        );
+    }
+
+    function buildBusinessColumn(business, businessName) {
+        var body =
+            '<div class="inv-header-name-row inv-header-name-row--business">' +
+            '<span class="inv-header-panel-heading">Billed From:</span>' +
+            '<span class="inv-header-business-name">' + escapeHtml(businessName) + "</span>" +
+            "</div>" +
+            buildInlineDetailField("GST No", business.gst_number, false) +
+            buildInlineDetailField("Address", business.address, false);
+
+        if (business.phone) {
+            body += buildInlineDetailField("Tel. No.", business.phone, true);
+        }
+        if (business.email) {
+            body += buildInlineDetailField("Email", business.email, true);
         }
 
-        var body =
-            buildInlineDetailField("Full Name", sale.customer_name, false) +
-            buildInlineContactRow(sale.customer_mobile, sale.customer_email) +
-            buildInlineDetailField("Address", personalAddress, true);
-
-        return wrapPartyCol("Bill To", body, "inv-party-col--bill");
+        return wrapHeaderPanel(body, "inv-header-panel--business");
     }
 
-    function buildPartiesSection(sale) {
-        var companyBlock = buildCustomerCompanyBlock(sale);
-        var rowClass = companyBlock ? "inv-parties-row" : "inv-parties-row inv-parties-row--no-company";
+    function buildInvoiceDetailsColumn(sale, invoiceNo, invoiceDate) {
+        return wrapHeaderPanel(
+            buildInlineDetailField("Invoice No", invoiceNo, false) +
+            buildInlineDetailField("Invoice Date", invoiceDate, false) +
+            buildInlineDetailField("Bill Date", invoiceDate, false) +
+            buildInlineDetailField("PO Number", sale.po_number || sale.po_no || "", true) +
+            buildInlineDetailField("Due Date", sale.due_date ? formatDisplayDate(sale.due_date) : "", true) +
+            buildInlineDetailField("Payment", sale.payment_type_name || "", true),
+            "inv-header-panel--invoice"
+        );
+    }
 
+    function buildInvoiceHeaderRow(sale, business, businessName, invoiceNo, invoiceDate) {
         return (
-            '<section class="' + rowClass + '">' +
-            companyBlock +
-            buildBillToBlock(sale) +
+            '<section class="inv-header-row">' +
+            buildCustomerCompanyColumn(sale) +
+            buildBusinessColumn(business, businessName) +
+            buildInvoiceDetailsColumn(sale, invoiceNo, invoiceDate) +
             "</section>"
         );
     }
@@ -293,54 +309,189 @@ var InventoryDocumentExport = (function () {
         );
     }
 
+    function buildAuthorizedSignatureSection(sale) {
+        var customerCompany = getCustomerCompanyDisplayName(sale);
+
+        return (
+            '<div class="inv-signature-block">' +
+            '<div class="inv-signature-inner">' +
+            '<p class="inv-signature-company">For ' + escapeHtml(customerCompany) + "</p>" +
+            '<div class="inv-signature-line"></div>' +
+            '<p class="inv-signature-label">Authorized Signature</p>' +
+            "</div></div>"
+        );
+    }
+
+    function buildTermsBodyHtml(sale) {
+        var termsText = (sale.invoice_terms_conditions && String(sale.invoice_terms_conditions).trim())
+            || (sale.notes && String(sale.notes).trim())
+            || "";
+        if (!termsText) return "";
+
+        return window.InventoryTermsHtml
+            ? InventoryTermsHtml.renderForPrint(termsText)
+            : formatMultiline(termsText);
+    }
+
+    function buildTermsAndPaymentFooterSection(sale) {
+        var termsBodyHtml = buildTermsBodyHtml(sale);
+        var qrUrl = sale.invoice_qr_image_url && String(sale.invoice_qr_image_url).trim()
+            ? String(sale.invoice_qr_image_url).trim()
+            : "";
+
+        if (!termsBodyHtml && !qrUrl) return "";
+
+        var termsBlock = termsBodyHtml
+            ? (
+                '<div class="inv-invoice-bottom-terms">' +
+                '<section class="inv-terms">' +
+                "<h3>Terms &amp; Conditions</h3>" +
+                '<div class="inv-terms-body">' + termsBodyHtml + "</div>" +
+                "</section></div>"
+            )
+            : "";
+
+        var qrBlock = qrUrl
+            ? (
+                '<div class="inv-invoice-bottom-qr">' +
+                "<h3>Scan to Pay</h3>" +
+                '<div class="inv-qr-wrap">' +
+                '<img class="inv-qr" src="' + escapeHtml(qrUrl) + '" alt="Payment QR Code"/>' +
+                "</div></div>"
+            )
+            : "";
+
+        var rowClass = termsBlock && qrBlock
+            ? "inv-invoice-bottom-row"
+            : "inv-invoice-bottom-row inv-invoice-bottom-row--single";
+
+        return (
+            '<footer class="inv-invoice-bottom">' +
+            '<div class="' + rowClass + '">' +
+            termsBlock +
+            qrBlock +
+            "</div></footer>"
+        );
+    }
+
+    function buildInvoicePrintRows(sale) {
+        var rows = [];
+        var serial = 0;
+
+        (sale.items || []).forEach(function (line) {
+            var batchLines = line.batch_lines && line.batch_lines.length
+                ? line.batch_lines
+                : [{ quantity: line.quantity, batch_number: "", expiry_date: null }];
+            var lineQty = Number(line.quantity || 0);
+            var lineDiscount = Number(line.discount_amount || 0);
+            var lineTotal = Number(line.line_total || 0);
+            var lineTax = Number(line.tax_amount || 0);
+            var lineNet = Math.max(0, lineTotal - lineTax);
+            var unitPrice = Number(
+                line.list_price != null && line.list_price !== ""
+                    ? line.list_price
+                    : (line.unit_price || 0)
+            );
+
+            batchLines.forEach(function (batchLine) {
+                serial += 1;
+                var batchQty = Number(batchLine.quantity || 0);
+                var ratio = lineQty > 0 ? batchQty / lineQty : 1;
+
+                rows.push({
+                    serial: serial,
+                    product_name: line.product_name,
+                    product_sku: line.product_sku,
+                    quantity: batchQty,
+                    unit: line.product_unit || "pcs",
+                    batch_number: batchLine.batch_number || "",
+                    expiry_date: batchLine.expiry_date,
+                    price: unitPrice,
+                    discount: roundMoney(lineDiscount * ratio),
+                    tax: roundMoney(lineTax * ratio),
+                    amount: roundMoney(lineNet * ratio)
+                });
+            });
+        });
+
+        return rows;
+    }
+
+    function buildInvoiceItemRowsHtml(sale) {
+        var printRows = buildInvoicePrintRows(sale);
+        if (!printRows.length) {
+            return '<tr class="inv-empty-row"><td colspan="10">No products on this invoice</td></tr>';
+        }
+
+        return printRows.map(function (row) {
+            var itemHtml = displayText(row.product_name);
+            if (row.product_sku) {
+                itemHtml += '<div class="inv-item-sku">SKU: ' + displayText(row.product_sku) + "</div>";
+            }
+
+            return (
+                "<tr>" +
+                '<td class="center">' + row.serial + "</td>" +
+                '<td class="item-name">' + itemHtml + "</td>" +
+                '<td class="num">' + displayText(formatQty(row.quantity)) + "</td>" +
+                '<td class="center">' + displayText(row.unit) + "</td>" +
+                '<td class="center">' + displayText(row.batch_number || "—") + "</td>" +
+                '<td class="center">' + formatDisplayDate(row.expiry_date) + "</td>" +
+                '<td class="num">' + formatMoney(row.price) + "</td>" +
+                '<td class="num">' + formatMoney(row.discount) + "</td>" +
+                '<td class="num">' + formatMoney(row.tax) + "</td>" +
+                '<td class="num">' + formatMoney(row.amount) + "</td>" +
+                "</tr>"
+            );
+        }).join("");
+    }
+
     function saleInvoiceStyles() {
         return (
             "@page{size:A4 portrait;margin:10mm 12mm;}" +
             "*{box-sizing:border-box;}" +
             "html,body{margin:0;padding:0;background:#e8e8e8;color:#111;font-family:'Segoe UI',Calibri,'Helvetica Neue',Helvetica,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;-webkit-print-color-adjust:exact;print-color-adjust:exact;}" +
             "body{padding:16px 0;}" +
-            ".sale-invoice-page{width:210mm;min-height:277mm;max-width:210mm;margin:0 auto 16px;padding:10mm 12mm 12mm;background:#fff;border:1px solid #cfcfcf;page-break-after:always;position:relative;font-family:'Segoe UI',Calibri,'Helvetica Neue',Helvetica,sans-serif;font-size:12px;line-height:1.55;color:#111;letter-spacing:.01em;}" +
+            ".sale-invoice-page{width:210mm;min-height:277mm;max-width:210mm;margin:0 auto 16px;padding:10mm 12mm 12mm;background:#fff;border:1px solid #cfcfcf;page-break-after:always;position:relative;font-family:'Segoe UI',Calibri,'Helvetica Neue',Helvetica,sans-serif;font-size:11px;line-height:1.5;color:#111;letter-spacing:.01em;}" +
             ".sale-invoice-page:last-child{page-break-after:auto;margin-bottom:0;}" +
-            ".inv-top{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;margin-bottom:18px;}" +
-            ".inv-company{flex:1;min-width:0;}" +
-            ".inv-company-brand{display:flex;align-items:flex-start;gap:16px;margin-bottom:10px;}" +
-            ".inv-company-logo{width:92px;height:92px;object-fit:contain;flex-shrink:0;display:block;}" +
-            ".inv-company-name{margin:0 0 6px;font-size:24px;font-weight:800;line-height:1.2;color:#000;font-family:Calibri,'Segoe UI',sans-serif;}" +
-            ".inv-company-meta{margin:0;font-size:12px;line-height:1.65;color:#222;font-weight:600;}" +
-            ".inv-title-block{min-width:220px;text-align:right;flex-shrink:0;align-self:flex-start;}" +
-            ".inv-header-meta{display:flex;flex-direction:column;align-items:flex-end;gap:5px;font-size:11.5px;}" +
-            ".inv-header-meta .inv-meta-line{justify-content:flex-end;width:100%;gap:8px;}" +
-            ".inv-header-meta .inv-meta-label{color:#555;font-weight:700;min-width:88px;text-align:right;}" +
-            ".inv-header-meta .inv-meta-value{font-weight:800;text-align:right;}" +
-            ".inv-parties-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:28px;margin-bottom:20px;align-items:start;}" +
-            ".inv-parties-row--no-company{grid-template-columns:1fr;max-width:50%;}" +
-            ".inv-party-col{display:flex;flex-direction:column;min-width:0;}" +
-            ".inv-party-col--plain{padding:0;background:none;border:none;}" +
-            ".inv-party-heading{margin:0 0 10px;padding-bottom:0;border-bottom:none;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#000;line-height:1.2;}" +
-            ".inv-party-body{display:flex;flex-direction:column;gap:8px;flex:1;}" +
-            ".inv-detail-field--inline{line-height:1.55;font-size:11.5px;}" +
-            ".inv-detail-field--inline .inv-detail-label{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#333;}" +
+            ".inv-header-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid #333;margin-bottom:10px;}" +
+            ".inv-header-panel{padding:8px 10px;border-right:1px solid #333;min-width:0;font-size:10px;line-height:1.5;display:flex;flex-direction:column;gap:5px;}" +
+            ".inv-header-panel:last-child{border-right:none;}" +
+            ".inv-header-panel-title{margin:0 0 4px;font-size:11px;font-weight:800;text-align:center;text-transform:uppercase;letter-spacing:.06em;color:#000;}" +
+            ".inv-header-name-row{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;margin-bottom:8px;}" +
+            ".inv-header-panel-heading{margin:0;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#333;flex-shrink:0;}" +
+            ".inv-header-customer-name{margin:0;font-size:17px;font-weight:800;text-transform:uppercase;line-height:1.2;color:#000;letter-spacing:.05em;}" +
+            ".inv-header-business-name{margin:0;font-size:12px;font-weight:800;text-transform:uppercase;line-height:1.25;color:#000;}" +
+            ".inv-detail-field--inline{line-height:1.5;font-size:10px;}" +
+            ".inv-detail-field--inline .inv-detail-label{font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#333;}" +
             ".inv-detail-field--inline .inv-detail-value{font-weight:700;color:#000;word-break:break-word;}" +
-            ".inv-detail-field--inline.inv-detail-field--multiline .inv-detail-value{display:block;margin-top:3px;}" +
-            ".inv-detail-field--split{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px;}" +
+            ".inv-detail-field--inline.inv-detail-field--multiline .inv-detail-value{display:block;margin-top:2px;}" +
+            ".inv-detail-field--split{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;}" +
             ".inv-contact-item{white-space:nowrap;}" +
             ".inv-contact-sep{color:#999;font-weight:400;padding:0 2px;}" +
-            ".inv-meta-block{display:flex;flex-direction:column;align-items:flex-end;gap:6px;font-size:12px;}" +
-            ".inv-meta-line{display:flex;justify-content:flex-end;align-items:baseline;gap:10px;max-width:100%;}" +
+            ".inv-meta-block{display:flex;flex-direction:column;align-items:flex-end;gap:6px;font-size:11px;}" +
+            ".inv-meta-line{display:flex;justify-content:flex-end;align-items:baseline;gap:8px;max-width:100%;}" +
             ".inv-meta-label{font-weight:700;color:#333;white-space:nowrap;}" +
             ".inv-meta-value{font-weight:800;color:#000;text-align:right;}" +
-            ".inv-lines{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:12px;table-layout:fixed;}" +
-            ".inv-lines th,.inv-lines td{border:1px solid #999;padding:7px 9px;vertical-align:top;word-wrap:break-word;}" +
-            ".inv-lines thead th{background:#f5f5f5;font-weight:800;font-size:12px;text-align:left;color:#000;}" +
-            ".inv-lines td.num,.inv-lines th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:700;}" +
-            ".inv-lines td.center,.inv-lines th.center{text-align:center;font-weight:700;}" +
-            ".inv-lines td.item-name{font-weight:800;color:#000;font-size:12px;}" +
-            ".inv-item-sku{font-size:10px;color:#444;font-weight:600;margin-top:3px;}" +
-            ".inv-amount-words{margin:10px 0 16px;padding:0;font-size:12px;line-height:1.6;font-weight:600;}" +
+            ".inv-lines-wrap{width:100%;overflow-x:auto;margin-bottom:10px;}" +
+            ".inv-lines{width:100%;border-collapse:collapse;font-size:9px;table-layout:fixed;}" +
+            ".inv-lines th,.inv-lines td{border:1px solid #999;padding:4px 5px;vertical-align:top;word-wrap:break-word;}" +
+            ".inv-lines thead th{background:#f5f5f5;font-weight:800;font-size:9px;text-align:center;color:#000;}" +
+            ".inv-lines td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:700;}" +
+            ".inv-lines td.center{text-align:center;font-weight:700;}" +
+            ".inv-lines td.item-name{font-weight:800;color:#000;font-size:9px;line-height:1.35;}" +
+            ".inv-item-sku{font-size:8px;color:#444;font-weight:600;margin-top:2px;}" +
+            ".inv-amount-words{margin:10px 0 12px;padding:0;font-size:12px;line-height:1.6;font-weight:600;}" +
             ".inv-amount-words strong{font-weight:800;color:#000;}" +
-            ".inv-footer-grid{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:16px;}" +
+            ".inv-footer-grid{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;margin-bottom:16px;}" +
+            ".inv-signature-block{flex:1;min-width:0;display:flex;align-items:flex-end;}" +
+            ".inv-signature-inner{text-align:center;min-width:220px;max-width:300px;}" +
+            ".inv-signature-company{margin:0 0 48px;font-size:14px;font-weight:800;color:#111;text-transform:uppercase;letter-spacing:.04em;}" +
+            ".inv-signature-line{border-top:1px solid #333;height:0;margin:0 auto 8px;min-width:200px;}" +
+            ".inv-signature-label{margin:0;font-size:11px;font-weight:700;color:#333;letter-spacing:.02em;}" +
+            ".inv-payment-row{margin-bottom:16px;}" +
             ".inv-payment-info{flex:1;min-width:0;max-width:52%;}" +
-            ".inv-payment-info h3,.inv-terms h3{margin:0 0 8px;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#000;}" +
+            ".inv-payment-info h3,.inv-terms h3,.inv-invoice-bottom-qr h3{margin:0 0 8px;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#000;}" +
             ".inv-info-list{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:600;}" +
             ".inv-info-list .inv-meta-line{justify-content:flex-start;}" +
             ".inv-totals-wrap{min-width:250px;flex-shrink:0;margin-left:auto;}" +
@@ -349,8 +500,21 @@ var InventoryDocumentExport = (function () {
             ".inv-totals td:first-child{background:#f5f5f5;font-weight:800;width:55%;}" +
             ".inv-totals td:last-child{text-align:right;font-weight:800;font-variant-numeric:tabular-nums;}" +
             ".inv-totals tr.inv-total-final td{background:#efefef;font-size:13px;font-weight:800;}" +
-            ".inv-terms{margin-top:12px;padding:0;font-size:11px;line-height:1.6;color:#333;font-weight:600;}" +
+            ".inv-invoice-bottom{margin-top:18px;padding-top:14px;border-top:1px solid #bbb;}" +
+            ".inv-invoice-bottom-row{display:flex;align-items:flex-start;gap:24px;}" +
+            ".inv-invoice-bottom-terms{flex:0 0 65%;min-width:0;}" +
+            ".inv-invoice-bottom-qr{flex:0 0 35%;min-width:0;text-align:center;}" +
+            ".inv-invoice-bottom-row--single .inv-invoice-bottom-terms," +
+            ".inv-invoice-bottom-row--single .inv-invoice-bottom-qr{flex:1 1 100%;max-width:100%;}" +
+            ".inv-invoice-bottom-row--single .inv-invoice-bottom-qr{text-align:center;}" +
+            ".inv-terms{margin:0;padding:0;font-size:11px;line-height:1.6;color:#333;font-weight:600;}" +
+            ".inv-terms-body{margin:0;}" +
+            ".inv-terms-body ol,.inv-terms-body ul{margin:0;padding-left:1.35em;}" +
+            ".inv-terms-body li{margin:4px 0;}" +
+            ".inv-terms-body b,.inv-terms-body strong{font-weight:800;color:#000;}" +
             ".inv-terms p{margin:0;white-space:pre-wrap;}" +
+            ".inv-qr-wrap{margin:0 auto;text-align:center;}" +
+            ".inv-qr{width:120px;height:120px;object-fit:contain;display:inline-block;}" +
             ".inv-bottom-note{margin-top:16px;padding:0;text-align:center;font-size:13px;font-weight:800;color:#000;}" +
             ".inv-empty-row td{text-align:center;color:#666;font-style:italic;padding:14px;}" +
             "@media print{" +
@@ -364,84 +528,59 @@ var InventoryDocumentExport = (function () {
         var business = getBusinessDetails();
         var businessName = sale.business_name || business.business_name || business.name || "Business";
         var paymentInfo = getPaymentInfo(business);
-        var logoHtml = business.logo_url
-            ? '<img class="inv-company-logo" src="' + escapeHtml(business.logo_url) + '" alt=""/>'
-            : "";
-
-        var companyLines = [];
-        if (business.address) companyLines.push(formatMultiline(business.address));
-        if (business.gst_number) companyLines.push("GSTIN: " + escapeHtml(business.gst_number));
-        if (business.phone) companyLines.push("Phone: " + escapeHtml(business.phone));
-        if (business.email) companyLines.push("Email: " + escapeHtml(business.email));
 
         var items = sale.items || [];
         var subtotal = 0;
-        var itemRows = items.map(function (line, index) {
-            var lineTotal = Number(line.line_total || 0);
-            subtotal += lineTotal;
-            var itemHtml = displayText(line.product_name);
-            if (line.product_sku) {
-                itemHtml += '<div class="inv-item-sku">SKU: ' + displayText(line.product_sku) + "</div>";
-            }
-            return (
-                "<tr>" +
-                '<td class="center">' + (index + 1) + "</td>" +
-                '<td class="item-name">' + itemHtml + "</td>" +
-                '<td class="center">' + displayText(line.product_unit || "pcs") + "</td>" +
-                '<td class="num">' + displayText(formatQty(line.quantity)) + "</td>" +
-                '<td class="num">' + formatMoney(line.unit_price) + "</td>" +
-                '<td class="num">' + formatMoney(line.line_total) + "</td>" +
-                "</tr>"
-            );
-        }).join("");
+        var totalTax = 0;
+        var totalAmount = 0;
+        items.forEach(function (line) {
+            subtotal += Number(line.line_total || 0);
+            totalTax += Number(line.tax_amount || 0);
+            totalAmount += Math.max(0, Number(line.line_total || 0) - Number(line.tax_amount || 0));
+        });
 
-        if (!itemRows) {
-            itemRows = '<tr class="inv-empty-row"><td colspan="6">No products on this invoice</td></tr>';
-        }
+        var itemRows = buildInvoiceItemRowsHtml(sale);
 
         subtotal = roundMoney(subtotal);
+        totalTax = roundMoney(totalTax);
+        totalAmount = roundMoney(totalAmount);
         var grandTotal = roundMoney(Number(sale.total_amount || subtotal));
         if (!subtotal && grandTotal) subtotal = grandTotal;
 
         var invoiceNo = sale.reference_no || ("SALE-" + sale.id);
         var invoiceDate = formatDisplayDate(sale.purchase_date);
-        var termsHtml = sale.notes && String(sale.notes).trim()
-            ? ('<section class="inv-terms"><h3>Terms &amp; Conditions</h3><p>' + formatMultiline(sale.notes) + "</p></section>")
-            : "";
+        var paymentFooterHtml = buildTermsAndPaymentFooterSection(sale);
 
         return (
             '<section class="sale-invoice-page">' +
-            '<header class="inv-top">' +
-            '<div class="inv-company">' +
-            '<div class="inv-company-brand">' +
-            logoHtml +
-            "<div>" +
-            '<h1 class="inv-company-name">' + escapeHtml(businessName) + "</h1>" +
-            (companyLines.length ? '<p class="inv-company-meta">' + companyLines.join("<br/>") + "</p>" : "") +
-            "</div></div></div>" +
-            '<div class="inv-title-block">' +
-            buildHeaderInvoiceDetails(sale, invoiceNo, invoiceDate) +
-            "</div></header>" +
-            buildPartiesSection(sale) +
-            '<table class="inv-lines"><thead><tr>' +
-            '<th class="center" style="width:5%">#</th>' +
-            '<th style="width:38%">Items</th>' +
-            '<th class="center" style="width:10%">Unit</th>' +
-            '<th class="num" style="width:10%">Qty</th>' +
-            '<th class="num" style="width:17%">Unit Cost</th>' +
-            '<th class="num" style="width:17%">Total</th>' +
-            "</tr></thead><tbody>" + itemRows + "</tbody></table>" +
+            buildInvoiceHeaderRow(sale, business, businessName, invoiceNo, invoiceDate) +
+            '<div class="inv-lines-wrap"><table class="inv-lines"><thead><tr>' +
+            '<th class="center" style="width:4%">Sr.</th>' +
+            '<th class="center" style="width:18%">Product</th>' +
+            '<th class="center" style="width:6%">Qty</th>' +
+            '<th class="center" style="width:6%">Unit</th>' +
+            '<th class="center" style="width:10%">Batch</th>' +
+            '<th class="center" style="width:9%">Exp.</th>' +
+            '<th class="center" style="width:9%">Price</th>' +
+            '<th class="center" style="width:9%">Discount</th>' +
+            '<th class="center" style="width:8%">Tax</th>' +
+            '<th class="center" style="width:10%">Amount</th>' +
+            "</tr></thead><tbody>" + itemRows + "</tbody></table></div>" +
             '<div class="inv-amount-words"><strong>Amount in words:</strong> ' +
             escapeHtml(amountInWordsInr(grandTotal)) + "</div>" +
             '<div class="inv-footer-grid">' +
-            buildPaymentInfoSection(paymentInfo) +
+            buildAuthorizedSignatureSection(sale) +
             '<div class="inv-totals-wrap">' +
             '<table class="inv-totals">' +
-            "<tr><td>Subtotal</td><td>" + formatMoney(subtotal) + "</td></tr>" +
+            "<tr><td>Amount</td><td>" + formatMoney(totalAmount || grandTotal) + "</td></tr>" +
+            "<tr><td>Tax</td><td>" + formatMoney(totalTax) + "</td></tr>" +
             "<tr class=\"inv-total-final\"><td>Total</td><td>" + formatMoney(grandTotal) + "</td></tr>" +
             "<tr class=\"inv-total-final\"><td>Balance Due</td><td>" + formatMoney(grandTotal) + "</td></tr>" +
             "</table></div></div>" +
-            termsHtml +
+            (hasPaymentInfo(paymentInfo)
+                ? '<div class="inv-payment-row">' + buildPaymentInfoSection(paymentInfo) + "</div>"
+                : "") +
+            paymentFooterHtml +
             '<div class="inv-bottom-note">Thank you</div>' +
             "</section>"
         );

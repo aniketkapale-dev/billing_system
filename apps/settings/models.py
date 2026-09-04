@@ -45,6 +45,8 @@ class InvoiceSetting(BaseEntity):
     counter = models.PositiveIntegerField(default=1)
     current_counter = models.PositiveIntegerField(default=1)
     end_counter = models.DateField(null=True, blank=True)
+    terms_conditions = models.TextField(blank=True, default="")
+    qr_image = models.ImageField(upload_to="invoice_qr/", blank=True, null=True)
 
     class Meta:
         db_table = "invoice_settings"

@@ -168,6 +168,33 @@ class BatchInventoryService:
 
         return slices
 
+    def restore_purchase_item_consumptions(self, purchase_item):
+        from apps.invoicing.models import BatchConsumption
+        from apps.inventory.models import MovementType
+
+        consumptions = BatchConsumption.objects.filter(
+            purchase_item=purchase_item,
+            is_deleted=False,
+        ).select_related("inventory_batch")
+
+        for consumption in consumptions:
+            batch = consumption.inventory_batch
+            qty = Decimal(consumption.quantity_sold)
+            batch.available_quantity = Decimal(batch.available_quantity or 0) + qty
+            batch.save(update_fields=["available_quantity", "updated_at"])
+
+            self._log_movement(
+                business_id=batch.business_id,
+                product_id=batch.product_id,
+                inventory_batch=batch,
+                reference_type=self.REF_CUSTOMER_SALE,
+                reference_id=purchase_item.id,
+                movement_type=MovementType.IN,
+                quantity=qty,
+                balance_quantity=batch.available_quantity,
+            )
+            consumption.soft_delete()
+
     def _create_batch(
         self,
         business_id,

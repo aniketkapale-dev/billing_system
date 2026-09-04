@@ -74,32 +74,14 @@ class PurchaseService(BaseService):
 
         setting = InvoiceSettingService().resolve_for_sale(setting)
         data["reference_no"] = setting.format_invoice_number()
+        data["invoice_setting_id"] = setting.id
         setting.current_counter += 1
         setting.save(update_fields=["current_counter", "updated_at"])
         return data
 
-    @transaction.atomic
-    def create_with_items(self, data):
-        user = get_current_user()
-        if not user:
-            raise ValidationException("Authentication required.")
-
-        business_id = data.get("business_id")
-        if not business_id:
-            raise ValidationException("Business is required.")
-
-        items_data = data.pop("items", [])
+    def _prepare_sale_items(self, items_data, business_id):
         if not items_data:
             raise ValidationException("At least one purchase item is required.")
-
-        self._apply_customer(data, business_id)
-        self._apply_invoice_setting(data, business_id)
-
-        if "payment_type_id" in data:
-            data["payment_type_id"] = self._resolve_payment_type_id(
-                business_id,
-                data.get("payment_type_id"),
-            )
 
         total_amount = Decimal("0")
         prepared_items = []
@@ -130,11 +112,17 @@ class PurchaseService(BaseService):
 
             line_total = quantity * unit_price
             total_amount += line_total
+            list_price = item.get("list_price")
+            if list_price is None or list_price == "":
+                list_price = unit_price
             prepared_items.append({
                 "product": product,
                 "quantity": quantity,
+                "list_price": Decimal(str(list_price)),
                 "unit_price": unit_price,
                 "line_total": line_total,
+                "discount_amount": Decimal(str(item.get("discount_amount") or 0)),
+                "tax_amount": Decimal(str(item.get("tax_amount") or 0)),
             })
 
         for product_id, requested_qty in requested_by_product.items():
@@ -146,10 +134,9 @@ class PurchaseService(BaseService):
                     f"Available: {available}, requested: {requested_qty}."
                 )
 
-        data["owner_id"] = user.id
-        data["total_amount"] = total_amount
-        purchase = self.repository.create(**data)
+        return prepared_items, total_amount
 
+    def _attach_sale_items(self, purchase, prepared_items, business_id):
         total_cost = Decimal("0")
         total_profit = Decimal("0")
 
@@ -158,8 +145,11 @@ class PurchaseService(BaseService):
                 purchase=purchase,
                 product=item["product"],
                 quantity=item["quantity"],
+                list_price=item["list_price"],
                 unit_price=item["unit_price"],
                 line_total=item["line_total"],
+                discount_amount=item["discount_amount"],
+                tax_amount=item["tax_amount"],
             )
             slices = self.batch_service.consume_fifo(
                 business_id,
@@ -195,10 +185,18 @@ class PurchaseService(BaseService):
         purchase.total_profit = total_profit
         purchase.save(update_fields=["total_cost", "total_profit", "updated_at"])
 
-        return purchase
+    def _restore_existing_sale_items(self, purchase):
+        business_id = purchase.business_id
+        existing_items = PurchaseItem.objects.filter(
+            purchase=purchase,
+            is_deleted=False,
+        )
+        for item in existing_items:
+            self.batch_service.restore_purchase_item_consumptions(item)
+            self.inventory_service.add_stock(business_id, item.product_id, item.quantity)
+            item.soft_delete()
 
-    def update_header(self, pk, data):
-        purchase = self.repository.get_by_id(pk)
+    def _build_header_updates(self, purchase, data):
         updates = {}
 
         if "customer_id" in data and data.get("customer_id") is not None:
@@ -226,6 +224,63 @@ class PurchaseService(BaseService):
                 purchase.business_id,
                 data.get("payment_type_id"),
             )
+
+        return updates
+
+    @transaction.atomic
+    def create_with_items(self, data):
+        user = get_current_user()
+        if not user:
+            raise ValidationException("Authentication required.")
+
+        business_id = data.get("business_id")
+        if not business_id:
+            raise ValidationException("Business is required.")
+
+        items_data = data.pop("items", [])
+        self._apply_customer(data, business_id)
+        self._apply_invoice_setting(data, business_id)
+
+        if "payment_type_id" in data:
+            data["payment_type_id"] = self._resolve_payment_type_id(
+                business_id,
+                data.get("payment_type_id"),
+            )
+
+        prepared_items, total_amount = self._prepare_sale_items(items_data, business_id)
+
+        data["owner_id"] = user.id
+        data["total_amount"] = total_amount
+        purchase = self.repository.create(**data)
+
+        self._attach_sale_items(purchase, prepared_items, business_id)
+
+        return purchase
+
+    @transaction.atomic
+    def update_with_items(self, pk, data):
+        purchase = self.repository.get_by_id(pk)
+        business_id = purchase.business_id
+        items_data = data.pop("items", None)
+
+        if items_data is None:
+            return self.update_header(pk, data)
+
+        self._restore_existing_sale_items(purchase)
+
+        prepared_items, total_amount = self._prepare_sale_items(items_data, business_id)
+
+        updates = self._build_header_updates(purchase, data)
+        updates["total_amount"] = total_amount
+        if updates:
+            purchase = self.repository.update(purchase, **updates)
+
+        self._attach_sale_items(purchase, prepared_items, business_id)
+        return purchase
+
+    def update_header(self, pk, data):
+        purchase = self.repository.get_by_id(pk)
+        updates = self._build_header_updates(purchase, data)
 
         if not updates:
             return purchase

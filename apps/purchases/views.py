@@ -71,7 +71,12 @@ class PurchaseViewSet(BusinessScopedViewSetMixin, BaseViewSet):
             context={"request": request},
         )
         serializer.is_valid(raise_exception=True)
-        instance = self.get_service().update_header(pk, serializer.validated_data)
+        validated = serializer.validated_data
+        service = self.get_service()
+        if "items" in validated:
+            instance = service.update_with_items(pk, validated)
+        else:
+            instance = service.update_header(pk, validated)
         payload = self.serializer_class(instance, context={"request": request}).data
         return ApiResponse.success(
             data=payload,
