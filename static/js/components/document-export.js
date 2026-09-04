@@ -230,10 +230,7 @@ var InventoryDocumentExport = (function () {
             : (sale.customer_address || sale.billing_address || "");
 
         return wrapHeaderPanel(
-            '<div class="inv-header-name-row inv-header-name-row--customer">' +
-            '<span class="inv-header-panel-heading">Billed To:</span>' +
-            '<span class="inv-header-customer-name">' + escapeHtml(companyName) + "</span>" +
-            "</div>" +
+            '<p class="inv-header-customer-name">' + escapeHtml(companyName) + "</p>" +
             buildInlineDetailField("GST No", gstNo, false) +
             buildInlineDetailField("Company Address", companyAddress, false),
             "inv-header-panel--company"
@@ -242,10 +239,8 @@ var InventoryDocumentExport = (function () {
 
     function buildBusinessColumn(business, businessName) {
         var body =
-            '<div class="inv-header-name-row inv-header-name-row--business">' +
-            '<span class="inv-header-panel-heading">Billed From:</span>' +
-            '<span class="inv-header-business-name">' + escapeHtml(businessName) + "</span>" +
-            "</div>" +
+            '<p class="inv-header-panel-title">GST Invoice</p>' +
+            '<p class="inv-header-business-name">' + escapeHtml(businessName) + "</p>" +
             buildInlineDetailField("GST No", business.gst_number, false) +
             buildInlineDetailField("Address", business.address, false);
 
@@ -261,11 +256,16 @@ var InventoryDocumentExport = (function () {
 
     function buildInvoiceDetailsColumn(sale, invoiceNo, invoiceDate) {
         return wrapHeaderPanel(
+            '<p class="inv-header-panel-title">Original Copy</p>' +
             buildInlineDetailField("Invoice No", invoiceNo, false) +
             buildInlineDetailField("Invoice Date", invoiceDate, false) +
             buildInlineDetailField("Bill Date", invoiceDate, false) +
-            buildInlineDetailField("PO Number", sale.po_number || sale.po_no || "", true) +
+            buildInlineDetailField("Transport", sale.invoice_transport, true) +
+            buildInlineDetailField("No. of Cartons", sale.invoice_cartons, true) +
+            buildInlineDetailField("E-Way Bill No", sale.invoice_eway_bill_no, true) +
             buildInlineDetailField("Due Date", sale.due_date ? formatDisplayDate(sale.due_date) : "", true) +
+            buildInlineDetailField("Terms", sale.invoice_print_terms, true) +
+            buildInlineDetailField("PO Number", sale.po_number || sale.po_no || "", true) +
             buildInlineDetailField("Payment", sale.payment_type_name || "", true),
             "inv-header-panel--invoice"
         );
@@ -455,13 +455,15 @@ var InventoryDocumentExport = (function () {
             ".sale-invoice-page{width:210mm;min-height:277mm;max-width:210mm;margin:0 auto 16px;padding:10mm 12mm 12mm;background:#fff;border:1px solid #cfcfcf;page-break-after:always;position:relative;font-family:'Segoe UI',Calibri,'Helvetica Neue',Helvetica,sans-serif;font-size:11px;line-height:1.5;color:#111;letter-spacing:.01em;}" +
             ".sale-invoice-page:last-child{page-break-after:auto;margin-bottom:0;}" +
             ".inv-header-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid #333;margin-bottom:10px;}" +
-            ".inv-header-panel{padding:8px 10px;border-right:1px solid #333;min-width:0;font-size:10px;line-height:1.5;display:flex;flex-direction:column;gap:5px;}" +
+            ".inv-header-panel{padding:6px 8px;border-right:1px solid #333;min-width:0;font-size:10px;line-height:1.2;display:flex;flex-direction:column;gap:2px;}" +
             ".inv-header-panel:last-child{border-right:none;}" +
-            ".inv-header-panel-title{margin:0 0 4px;font-size:11px;font-weight:800;text-align:center;text-transform:uppercase;letter-spacing:.06em;color:#000;}" +
-            ".inv-header-name-row{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;margin-bottom:8px;}" +
+            ".inv-header-panel .inv-detail-field--inline{line-height:1.2;margin:0;}" +
+            ".inv-header-panel .inv-detail-field--inline.inv-detail-field--multiline .inv-detail-value{display:block;margin-top:1px;line-height:1.2;}" +
+            ".inv-header-panel-title{margin:0 0 2px;font-size:11px;font-weight:800;text-align:center;text-transform:uppercase;letter-spacing:.06em;color:#000;}" +
+            ".inv-header-name-row{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;margin-bottom:2px;}" +
             ".inv-header-panel-heading{margin:0;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#333;flex-shrink:0;}" +
-            ".inv-header-customer-name{margin:0;font-size:17px;font-weight:800;text-transform:uppercase;line-height:1.2;color:#000;letter-spacing:.05em;}" +
-            ".inv-header-business-name{margin:0;font-size:12px;font-weight:800;text-transform:uppercase;line-height:1.25;color:#000;}" +
+            ".inv-header-customer-name{margin:0 0 2px;font-size:12px;font-weight:800;text-transform:uppercase;line-height:1.15;color:#000;letter-spacing:.05em;}" +
+            ".inv-header-business-name{margin:0 0 2px;font-size:10px;font-weight:800;text-transform:uppercase;line-height:1.15;color:#000;}" +
             ".inv-detail-field--inline{line-height:1.5;font-size:10px;}" +
             ".inv-detail-field--inline .inv-detail-label{font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#333;}" +
             ".inv-detail-field--inline .inv-detail-value{font-weight:700;color:#000;word-break:break-word;}" +

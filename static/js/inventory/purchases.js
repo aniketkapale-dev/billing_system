@@ -23,6 +23,78 @@ var InventoryPurchases = (function () {
     var PURCHASES_VIEW_PANEL = "purchases-view-panel";
     var cachedItems = [];
     var bulkSelect = null;
+    var SALE_PRINT_META_KEY = "billingSalePrintMeta";
+
+    function readSalePrintMetaStore() {
+        try {
+            return JSON.parse(localStorage.getItem(SALE_PRINT_META_KEY) || "{}") || {};
+        } catch (e) {
+            return {};
+        }
+    }
+
+    function writeSalePrintMetaStore(store) {
+        localStorage.setItem(SALE_PRINT_META_KEY, JSON.stringify(store || {}));
+    }
+
+    function getSalePrintMetaFromForm() {
+        var transportEl = document.getElementById("purchase-invoice-transport");
+        var cartonsEl = document.getElementById("purchase-invoice-cartons");
+        var ewayEl = document.getElementById("purchase-invoice-eway-bill");
+        var dueDateEl = document.getElementById("purchase-invoice-due-date");
+        var termsEl = document.getElementById("purchase-invoice-terms");
+        return {
+            transport: transportEl ? transportEl.value.trim() : "",
+            cartons: cartonsEl ? cartonsEl.value.trim() : "",
+            eway_bill_no: ewayEl ? ewayEl.value.trim() : "",
+            due_date: dueDateEl ? dueDateEl.value.trim() : "",
+            terms: termsEl ? termsEl.value.trim() : ""
+        };
+    }
+
+    function setSalePrintMetaForm(meta) {
+        meta = meta || {};
+        var transportEl = document.getElementById("purchase-invoice-transport");
+        var cartonsEl = document.getElementById("purchase-invoice-cartons");
+        var ewayEl = document.getElementById("purchase-invoice-eway-bill");
+        var dueDateEl = document.getElementById("purchase-invoice-due-date");
+        var termsEl = document.getElementById("purchase-invoice-terms");
+        if (transportEl) transportEl.value = meta.transport || "";
+        if (cartonsEl) cartonsEl.value = meta.cartons || "";
+        if (ewayEl) ewayEl.value = meta.eway_bill_no || "";
+        if (dueDateEl) dueDateEl.value = meta.due_date || "";
+        if (termsEl) termsEl.value = meta.terms || "";
+    }
+
+    function saveSalePrintMeta(saleId, meta) {
+        if (!saleId) return;
+        var store = readSalePrintMetaStore();
+        store[String(saleId)] = meta || getSalePrintMetaFromForm();
+        writeSalePrintMetaStore(store);
+    }
+
+    function loadSalePrintMeta(saleId) {
+        if (!saleId) return null;
+        var store = readSalePrintMetaStore();
+        return store[String(saleId)] || null;
+    }
+
+    function mergeSalePrintMeta(sale) {
+        if (!sale || !sale.id) return sale;
+        var meta = loadSalePrintMeta(sale.id);
+        if (!meta) return sale;
+        return Object.assign({}, sale, {
+            invoice_transport: meta.transport || "",
+            invoice_cartons: meta.cartons || "",
+            invoice_eway_bill_no: meta.eway_bill_no || "",
+            due_date: meta.due_date || sale.due_date || "",
+            invoice_print_terms: meta.terms || ""
+        });
+    }
+
+    function clearSalePrintMetaForm() {
+        setSalePrintMetaForm({});
+    }
     var columnCtrl = null;
 
     function getColumnCtrl() {
@@ -81,7 +153,7 @@ var InventoryPurchases = (function () {
         return Promise.all(ids.map(function (id) {
             return fetchPurchase(id);
         })).then(function (results) {
-            return results.filter(Boolean);
+            return results.filter(Boolean).map(mergeSalePrintMeta);
         });
     }
 
@@ -1170,6 +1242,7 @@ var InventoryPurchases = (function () {
         });
         document.getElementById("purchase-date").value = purchase.purchase_date || "";
         loadPaymentTypes(purchase.payment_type || "");
+        setSalePrintMetaForm(loadSalePrintMeta(purchase.id));
         populateItemRows(purchase.items || []);
     }
 
@@ -1531,6 +1604,7 @@ var InventoryPurchases = (function () {
         applyCustomerAddressesFromSelection("", false);
         document.getElementById("purchase-payment-type").value = "";
         togglePaymentTypePanel(false);
+        clearSalePrintMetaForm();
         document.getElementById("purchase-items-container").innerHTML = "";
         addItemRow(null, isSilent !== false);
         updateSaleTotals();
@@ -1595,6 +1669,7 @@ var InventoryPurchases = (function () {
             })
                 .then(function (body) {
                     if (body && body.isSuccess) {
+                        saveSalePrintMeta(editingPurchaseId, getSalePrintMetaFromForm());
                         InventoryToast.success(body.message || "Sale updated successfully.");
                         resetForm(true);
                         InventoryPagePanel.showList(PURCHASES_LIST_PANEL);
@@ -1637,6 +1712,9 @@ var InventoryPurchases = (function () {
         })
             .then(function (body) {
                 if (body && body.isSuccess) {
+                    if (body.data && body.data.id) {
+                        saveSalePrintMeta(body.data.id, getSalePrintMetaFromForm());
+                    }
                     InventoryToast.success(body.message || "Sale added successfully. Stock has been updated.");
                     resetForm(true);
                     InventoryPagePanel.showList(PURCHASES_LIST_PANEL);
