@@ -103,6 +103,11 @@ class PurchaseSerializer(BaseModelSerializer):
             "total_amount",
             "total_cost",
             "total_profit",
+            "is_paid",
+            "paid_at",
+            "is_cancelled",
+            "cancelled_at",
+            "cancellation_reason",
             "items",
             "is_active",
             "created_at",
@@ -144,6 +149,7 @@ class PurchaseWriteSerializer(serializers.Serializer):
     billing_address = serializers.CharField(required=False, allow_blank=True)
     shipping_address = serializers.CharField(required=False, allow_blank=True)
     payment_type_id = serializers.IntegerField(required=False, allow_null=True)
+    is_paid = serializers.BooleanField(required=False, default=False)
     items = PurchaseItemWriteSerializer(many=True)
 
 
@@ -155,4 +161,3 @@ class PurchaseHeaderWriteSerializer(serializers.Serializer):
     billing_address = serializers.CharField(required=False, allow_blank=True)
     shipping_address = serializers.CharField(required=False, allow_blank=True)
     payment_type_id = serializers.IntegerField(required=False, allow_null=True)
-    items = PurchaseItemWriteSerializer(many=True, required=False)

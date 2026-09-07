@@ -72,16 +72,40 @@ class PurchaseViewSet(BusinessScopedViewSetMixin, BaseViewSet):
         )
         serializer.is_valid(raise_exception=True)
         validated = serializer.validated_data
-        service = self.get_service()
-        if "items" in validated:
-            instance = service.update_with_items(pk, validated)
-        else:
-            instance = service.update_header(pk, validated)
+        if "items" in request.data:
+            return ApiResponse.error(
+                message="Sale line items cannot be changed after the invoice is created.",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+        instance = self.get_service().update_header(pk, validated)
         payload = self.serializer_class(instance, context={"request": request}).data
         return ApiResponse.success(
             data=payload,
             message="Sale updated successfully.",
         )
+
+    def mark_paid(self, request, pk=None):
+        service = self.get_service()
+        purchase = service.get(pk)
+        already_paid = purchase.is_paid
+        instance = service.mark_as_paid(pk)
+        payload = self.serializer_class(instance, context={"request": request}).data
+        message = "Sale is already marked as paid." if already_paid else "Sale marked as paid."
+        return ApiResponse.success(data=payload, message=message)
+
+    def mark_cancelled(self, request, pk=None):
+        service = self.get_service()
+        purchase = service.get(pk)
+        already_cancelled = purchase.is_cancelled
+        reason = request.data.get("cancellation_reason", "")
+        instance = service.mark_as_cancelled(pk, reason=reason)
+        payload = self.serializer_class(instance, context={"request": request}).data
+        message = (
+            "Invoice is already cancelled."
+            if already_cancelled
+            else "Invoice cancelled. Stock has been restored."
+        )
+        return ApiResponse.success(data=payload, message=message)
 
     def destroy(self, request, pk=None):
         return ApiResponse.error(

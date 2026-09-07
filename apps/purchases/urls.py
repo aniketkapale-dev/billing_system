@@ -9,4 +9,14 @@ urlpatterns = [
         PurchaseViewSet.as_view({"get": "retrieve", "patch": "partial_update"}),
         name="purchase-detail",
     ),
+    path(
+        "<int:pk>/mark-paid/",
+        PurchaseViewSet.as_view({"post": "mark_paid"}),
+        name="purchase-mark-paid",
+    ),
+    path(
+        "<int:pk>/mark-cancelled/",
+        PurchaseViewSet.as_view({"post": "mark_cancelled"}),
+        name="purchase-mark-cancelled",
+    ),
 ]

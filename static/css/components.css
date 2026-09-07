@@ -348,6 +348,54 @@ body.inv-confirm-open { overflow: hidden; }
     background: var(--inv-btn-primary-hover);
 }
 
+.inv-confirm-modal--prompt {
+    width: min(480px, calc(100vw - 32px));
+    text-align: left;
+}
+
+.inv-confirm-modal--prompt .inv-confirm-modal__icon {
+    display: flex;
+}
+
+.inv-confirm-modal--prompt .inv-confirm-modal__title,
+.inv-confirm-modal--prompt .inv-confirm-modal__message {
+    text-align: left;
+}
+
+.inv-confirm-modal__field {
+    margin: 0 0 20px;
+}
+
+.inv-confirm-modal__label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--inv-primary);
+}
+
+.inv-confirm-modal__input {
+    width: 100%;
+    min-height: 88px;
+    padding: 10px 12px;
+    border: var(--inv-border-width) solid var(--inv-input-border);
+    border-radius: var(--inv-radius);
+    font-size: 14px;
+    font-family: inherit;
+    line-height: 1.45;
+    resize: vertical;
+    box-sizing: border-box;
+}
+
+.inv-confirm-modal__input:focus {
+    outline: none;
+    border-color: var(--inv-accent);
+}
+
+.inv-confirm-modal--prompt .inv-confirm-modal__actions {
+    justify-content: flex-end;
+}
+
 /* Tooltip */
 .inv-tooltip {
     position: relative;

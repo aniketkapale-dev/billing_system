@@ -267,6 +267,15 @@ class PurchaseService(BaseService):
                 data.get("payment_type_id"),
             )
 
+        is_paid = bool(data.pop("is_paid", False))
+        if is_paid:
+            from django.utils import timezone
+
+            data["is_paid"] = True
+            data["paid_at"] = timezone.now()
+        else:
+            data["is_paid"] = False
+
         prepared_items, total_amount = self._prepare_sale_items(items_data, business_id)
 
         data["owner_id"] = user.id
@@ -300,9 +309,52 @@ class PurchaseService(BaseService):
 
     def update_header(self, pk, data):
         purchase = self.repository.get_by_id(pk)
+        if purchase.is_cancelled:
+            raise ValidationException("Cancelled invoices cannot be edited.")
         updates = self._build_header_updates(purchase, data)
 
         if not updates:
             return purchase
 
         return self.repository.update(purchase, **updates)
+
+    @transaction.atomic
+    def mark_as_paid(self, pk):
+        purchase = self.repository.get_by_id(pk)
+        if purchase.is_cancelled:
+            raise ValidationException("Cancelled invoices cannot be marked as paid.")
+        if purchase.is_paid:
+            return purchase
+
+        from django.utils import timezone
+
+        purchase.is_paid = True
+        purchase.paid_at = timezone.now()
+        purchase.save(update_fields=["is_paid", "paid_at", "updated_at"])
+        return purchase
+
+    @transaction.atomic
+    def mark_as_cancelled(self, pk, reason=""):
+        purchase = self.repository.get_by_id(pk)
+        if purchase.is_cancelled:
+            return purchase
+
+        reason = (reason or "").strip()
+        if not reason:
+            raise ValidationException("Cancellation reason is required.")
+
+        business_id = purchase.business_id
+        items = PurchaseItem.objects.filter(purchase=purchase, is_deleted=False)
+        for item in items:
+            self.batch_service.restore_purchase_item_consumptions(item)
+            self.inventory_service.add_stock(business_id, item.product_id, item.quantity)
+
+        from django.utils import timezone
+
+        purchase.is_cancelled = True
+        purchase.cancelled_at = timezone.now()
+        purchase.cancellation_reason = reason
+        purchase.save(
+            update_fields=["is_cancelled", "cancelled_at", "cancellation_reason", "updated_at"]
+        )
+        return purchase

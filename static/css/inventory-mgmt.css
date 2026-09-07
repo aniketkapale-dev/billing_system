@@ -1288,6 +1288,10 @@ body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sideb
     flex-direction: column;
     align-items: flex-end;
     gap: 10px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
 }
 
 .inv-stockin-total-row {
@@ -1295,7 +1299,9 @@ body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sideb
     align-items: center;
     justify-content: flex-end;
     gap: 24px;
-    min-width: 320px;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .inv-stockin-total-label {
@@ -1330,6 +1336,7 @@ body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sideb
     font-size: 16px;
 }
 
+
 .inv-stockin-view-items {
     margin-top: 0;
 }
@@ -1343,12 +1350,53 @@ body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sideb
 
 .inv-stockin-items--readonly .inv-item-remove,
 .inv-stockin-items--readonly .inv-item-product-add,
-.inv-sale-items--readonly .inv-item-remove {
+.inv-sale-items--readonly .inv-item-remove,
+.inv-sale-items--readonly #purchase-add-item-btn {
     display: none;
+}
+
+.inv-sale-items--readonly .inv-mgmt-item-row input:not([readonly]),
+.inv-sale-items--readonly .inv-mgmt-item-row select,
+.inv-sale-items--readonly .inv-discount-type-toggle button {
+    pointer-events: none;
+    cursor: not-allowed;
+    opacity: 0.92;
 }
 
 .inv-mgmt-table--purchases {
     min-width: 960px;
+}
+
+.inv-mgmt-table--purchases .inv-col-action,
+.inv-mgmt-table--purchases td.inv-mgmt-cell--action,
+.inv-mgmt-table--purchases th.inv-col-action,
+.inv-mgmt-table--purchases th.inv-mgmt-cell--action {
+    width: 120px;
+    min-width: 120px;
+    max-width: 120px;
+    white-space: normal;
+}
+
+.inv-mgmt-table-wrap > .inv-mgmt-table--purchases > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-action,
+.inv-mgmt-table-wrap > .inv-mgmt-table--purchases > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-mgmt-cell--action {
+    flex: 0 0 120px;
+    min-width: 120px;
+    max-width: 120px;
+    flex-shrink: 0;
+    align-self: flex-end;
+    margin-left: auto;
+    padding: 4px 8px 8px;
+}
+
+.inv-mgmt-table--purchases td.inv-col-action .inv-row-actions,
+.inv-mgmt-table--purchases td.inv-mgmt-cell--action .inv-row-actions {
+    display: inline-flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-content: flex-start;
+    gap: 6px;
+    width: 108px;
+    max-width: 108px;
 }
 
 .inv-inline-add-panel {
@@ -1457,6 +1505,34 @@ body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sideb
     background: var(--inv-error);
     color: var(--inv-white, #fff);
     border-color: var(--inv-error);
+}
+
+.inv-row-action-btn--mark-paid:hover {
+    background: var(--inv-primary-container);
+    border-color: var(--inv-primary-container);
+    color: var(--inv-primary);
+}
+
+.inv-row-action-btn--paid {
+    color: #2e7d32;
+    background: #e8f5e9;
+    border-color: #c8e6c9;
+    cursor: default;
+    opacity: 1;
+}
+
+.inv-row-action-btn--mark-cancelled:hover {
+    background: #ffebee;
+    border-color: #ef5350;
+    color: #c62828;
+}
+
+.inv-row-action-btn--cancelled {
+    color: #c62828;
+    background: #ffebee;
+    border-color: #ffcdd2;
+    cursor: default;
+    opacity: 1;
 }
 
 .inv-row-action-btn--slot {
@@ -1990,6 +2066,124 @@ body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sideb
 
 .inv-mgmt-form-grid--sale-top {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.inv-sale-payment-section {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--inv-outline-variant);
+    display: flex;
+    justify-content: flex-end;
+}
+
+.inv-sale-payment-card {
+    width: 100%;
+    max-width: 520px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: #fafbfc;
+    border: 1px solid #eef0f4;
+}
+
+.inv-sale-payment-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: flex-end;
+    gap: 14px;
+}
+
+.inv-sale-payment-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 0 0 auto;
+}
+
+.inv-sale-payment-label,
+.inv-sale-payment-due label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--inv-primary);
+}
+
+.inv-sale-paid-segment {
+    display: inline-flex;
+    align-items: stretch;
+    border: var(--inv-border-width) solid var(--inv-input-border);
+    border-radius: var(--inv-radius);
+    overflow: hidden;
+    background: #fff;
+}
+
+.inv-sale-paid-segment-btn {
+    min-width: 88px;
+    min-height: 42px;
+    padding: 0 16px;
+    border: 0;
+    background: transparent;
+    color: var(--inv-secondary);
+    font-size: 14px;
+    font-weight: 700;
+    font-family: inherit;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.inv-sale-paid-segment-btn + .inv-sale-paid-segment-btn {
+    border-left: var(--inv-border-width) solid var(--inv-input-border);
+}
+
+.inv-sale-paid-segment-btn.is-active[data-paid="true"] {
+    background: #43a047;
+    color: #fff;
+}
+
+.inv-sale-paid-segment-btn.is-active[data-paid="false"] {
+    background: #e53935;
+    color: #fff;
+}
+
+.inv-sale-paid-segment-btn:not(.is-active):hover {
+    background: rgba(0, 103, 255, 0.06);
+    color: var(--inv-primary);
+}
+
+.inv-sale-paid-segment-btn:focus-visible {
+    outline: 2px solid var(--inv-accent, #c5e84e);
+    outline-offset: -2px;
+}
+
+.inv-sale-payment-due {
+    flex: 1 1 160px;
+    min-width: 160px;
+    max-width: 200px;
+}
+
+.inv-sale-payment-due .inv-mgmt-input {
+    width: 100%;
+}
+
+@media (max-width: 640px) {
+    .inv-sale-payment-section {
+        justify-content: stretch;
+    }
+
+    .inv-sale-payment-card {
+        max-width: none;
+    }
+
+    .inv-sale-payment-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .inv-sale-payment-due {
+        max-width: none;
+    }
 }
 
 .inv-mgmt-form-grid--invoice-setting {

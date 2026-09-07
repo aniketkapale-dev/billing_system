@@ -55,6 +55,11 @@ class Purchase(BaseEntity):
     total_amount = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
     total_cost = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
     total_profit = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
+    is_paid = models.BooleanField(default=False)
+    paid_at = models.DateTimeField(null=True, blank=True)
+    is_cancelled = models.BooleanField(default=False)
+    cancelled_at = models.DateTimeField(null=True, blank=True)
+    cancellation_reason = models.TextField(blank=True, default="")
 
     class Meta:
         db_table = "purchases"

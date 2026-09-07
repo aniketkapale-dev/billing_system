@@ -115,7 +115,7 @@ var InventoryPurchases = (function () {
                     { id: "invoice_no", label: "Invoice No.", sortKey: "reference_no", cell: function (p) { return "<td>" + displayValue(p.reference_no) + "</td>"; } },
                     { id: "customer", label: "Customer", locked: true, sortKey: "customer_name", cell: function (p) { return "<td>" + formatCustomerDisplay(p) + "</td>"; } },
                     { id: "products", label: "Products Sold", cell: function (p) { return '<td class="inv-col-name">' + formatProductsSoldCell(p.items || [], p.id) + "</td>"; } },
-                    { id: "sale_amount", label: "Sale Amount", sortKey: "total_amount", headerClass: "inv-mgmt-cell--num", cell: function (p) { return '<td class="inv-mgmt-cell--num">' + InventoryApi.formatMoney(p.total_amount) + "</td>"; } },
+                    { id: "sale_amount", label: "Bill Amount", sortKey: "total_amount", headerClass: "inv-mgmt-cell--num", cell: function (p) { return '<td class="inv-mgmt-cell--num">' + InventoryApi.formatMoney(p.total_amount) + "</td>"; } },
                     { id: "total_cost", label: "Total Cost", sortKey: "total_cost", headerClass: "inv-mgmt-cell--num", cell: function (p) { return '<td class="inv-mgmt-cell--num">' + InventoryApi.formatMoney(p.total_cost) + "</td>"; } }
                 ],
                 onApply: function () {
@@ -822,16 +822,82 @@ var InventoryPurchases = (function () {
         };
     }
 
+    function getBillAmount() {
+        return calculateSaleTotals().saleAmount;
+    }
+
     function setSaleTotalsDisplay(totalCost, saleAmount) {
         var costEl = document.getElementById("purchase-total-cost");
         var saleEl = document.getElementById("purchase-sale-amount");
         if (costEl) costEl.textContent = InventoryApi.formatMoney(totalCost);
         if (saleEl) saleEl.textContent = InventoryApi.formatMoney(saleAmount);
+        syncPaymentFields();
     }
 
     function updateSaleTotals() {
         var totals = calculateSaleTotals();
         setSaleTotalsDisplay(totals.totalCost, totals.saleAmount);
+    }
+
+    function isPaidSegmentSelected() {
+        var input = document.getElementById("purchase-mark-paid");
+        return !!(input && input.checked);
+    }
+
+    function getPaidAmountValue() {
+        var paidInput = document.getElementById("purchase-paid-amount");
+        if (!paidInput) return 0;
+        var value = Number(paidInput.value);
+        return Number.isFinite(value) ? value : 0;
+    }
+
+    function isPartialPaidAmount() {
+        if (!isPaidSegmentSelected()) return false;
+        var billAmount = getBillAmount();
+        if (billAmount <= 0) return false;
+        return getPaidAmountValue() + 0.0001 < billAmount;
+    }
+
+    function isFullPaymentReceived() {
+        if (!isPaidSegmentSelected()) return false;
+        var paidAmount = getPaidAmountValue();
+        if (paidAmount <= 0) return false;
+        return !isPartialPaidAmount();
+    }
+
+    function shouldShowDueDateField() {
+        if (!isPaidSegmentSelected()) return true;
+        return isPartialPaidAmount();
+    }
+
+    function syncPaidAmountFromBill() {
+        var paidInput = document.getElementById("purchase-paid-amount");
+        if (!paidInput || !isPaidSegmentSelected()) return;
+        if (paidInput.dataset.manual === "1") return;
+        paidInput.value = getBillAmount().toFixed(2);
+    }
+
+    function syncPaymentFields() {
+        var dueWrap = document.getElementById("purchase-due-date-wrap");
+        var paidWrap = document.getElementById("purchase-paid-amount-wrap");
+        var dueInput = document.getElementById("purchase-invoice-due-date");
+        var paidSelected = isPaidSegmentSelected();
+
+        if (paidWrap) paidWrap.classList.toggle("inv-hidden", !paidSelected);
+
+        if (paidSelected) {
+            syncPaidAmountFromBill();
+        } else {
+            var paidInput = document.getElementById("purchase-paid-amount");
+            if (paidInput) {
+                paidInput.value = "";
+                paidInput.dataset.manual = "0";
+            }
+        }
+
+        var showDueDate = shouldShowDueDateField();
+        if (dueWrap) dueWrap.classList.toggle("inv-hidden", !showDueDate);
+        if (!showDueDate && dueInput) dueInput.value = "";
     }
 
     function formatQty(value) {
@@ -1097,14 +1163,78 @@ var InventoryPurchases = (function () {
         if (mode === "edit") {
             if (titleEl) titleEl.textContent = "Edit Sale";
             if (saveBtn) saveBtn.textContent = "Update Sale";
-            ensureSaleItemsEditablePanel();
+            ensureSaleItemsReadonlyPanel();
             toggleInvoiceSettingField(false);
+            toggleMarkPaidField(false);
         } else {
             if (titleEl) titleEl.textContent = "Add Sale";
             if (saveBtn) saveBtn.textContent = "Create Sale";
             ensureSaleItemsEditablePanel();
             toggleInvoiceSettingField(true);
+            toggleMarkPaidField(true);
         }
+    }
+
+    function toggleMarkPaidField(show) {
+        var wrap = document.getElementById("purchase-mark-paid-wrap");
+        var paidWrap = document.getElementById("purchase-paid-amount-wrap");
+        if (wrap) wrap.classList.toggle("inv-hidden", !show);
+        if (!show) {
+            if (paidWrap) paidWrap.classList.add("inv-hidden");
+            var dueWrap = document.getElementById("purchase-due-date-wrap");
+            if (dueWrap) dueWrap.classList.remove("inv-hidden");
+        } else {
+            syncPaymentFields();
+        }
+    }
+
+    function setSalePaidToggle(checked) {
+        var input = document.getElementById("purchase-mark-paid");
+        var paidInput = document.getElementById("purchase-paid-amount");
+        if (!input) return;
+        input.checked = !!checked;
+        if (checked && paidInput) {
+            paidInput.dataset.manual = "0";
+        }
+        syncPaymentFields();
+        syncSalePaidSegmentUI(!!checked);
+    }
+
+    function syncSalePaidSegmentUI(isPaid) {
+        document.querySelectorAll(".inv-sale-paid-segment-btn").forEach(function (btn) {
+            var wantPaid = btn.getAttribute("data-paid") === "true";
+            btn.classList.toggle("is-active", wantPaid === isPaid);
+        });
+    }
+
+    function wireSalePaidToggle() {
+        var input = document.getElementById("purchase-mark-paid");
+        if (!input || input.dataset.wired === "1") return;
+        input.dataset.wired = "1";
+        document.querySelectorAll(".inv-sale-paid-segment-btn").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                setSalePaidToggle(btn.getAttribute("data-paid") === "true");
+            });
+        });
+
+        var paidInput = document.getElementById("purchase-paid-amount");
+        if (paidInput) {
+            paidInput.addEventListener("input", function () {
+                paidInput.dataset.manual = "1";
+                syncPaymentFields();
+            });
+        }
+    }
+
+    function ensureSaleItemsReadonlyPanel() {
+        var itemsPanel = document.querySelector("#purchases-form-panel .inv-mgmt-items-panel");
+        var addItemBtn = document.getElementById("purchase-add-item-btn");
+        var itemsTitle = itemsPanel ? itemsPanel.querySelector("h4") : null;
+
+        if (itemsPanel) itemsPanel.classList.add("inv-sale-items--readonly");
+        if (addItemBtn) addItemBtn.classList.add("inv-hidden");
+        if (itemsTitle) itemsTitle.textContent = "Products on Invoice";
+        setSaleItemsEditable(false);
     }
 
     function getLineProductId(line) {
@@ -1120,31 +1250,46 @@ var InventoryPurchases = (function () {
         if (itemsPanel) itemsPanel.classList.remove("inv-sale-items--readonly");
         if (addItemBtn) addItemBtn.classList.remove("inv-hidden");
         if (itemsTitle) itemsTitle.textContent = "Products to Sell";
+        setSaleItemsEditable(true);
     }
 
-    function enhanceSaleItemRows() {
+    function setSaleItemsEditable(editable) {
         var container = document.getElementById("purchase-items-container");
         if (!container) return;
 
         container.querySelectorAll(".inv-item-product").forEach(function (select) {
+            select.disabled = !editable;
             if (window.InventorySearchableSelect) {
                 InventorySearchableSelect.rebuild(select, function (el) {
-                    el.disabled = false;
+                    el.disabled = !editable;
                 });
-            } else {
-                select.disabled = false;
             }
         });
 
-        container.querySelectorAll(".inv-item-qty, .inv-item-sale-actual").forEach(function (input) {
-            input.readOnly = false;
-            input.disabled = false;
+        container.querySelectorAll(
+            ".inv-item-qty, .inv-item-sale-actual, .inv-item-discount-value, .inv-item-distributor-discount-value"
+        ).forEach(function (input) {
+            input.readOnly = !editable;
+            input.disabled = !editable;
         });
 
-        container.querySelectorAll(".inv-item-remove").forEach(function (btn) {
-            btn.classList.remove("inv-hidden");
-            btn.disabled = false;
+        container.querySelectorAll(
+            ".inv-item-discount-type, .inv-item-distributor-discount-type, .inv-item-remove"
+        ).forEach(function (btn) {
+            btn.disabled = !editable;
         });
+
+        container.querySelectorAll(".inv-item-sale-gst button, .inv-item-sale-gst input").forEach(function (el) {
+            el.disabled = !editable;
+        });
+    }
+
+    function enhanceSaleItemRows() {
+        if (editingPurchaseId) {
+            setSaleItemsEditable(false);
+            return;
+        }
+        setSaleItemsEditable(true);
     }
 
     function buildRowDataFromPurchaseLine(line) {
@@ -1191,10 +1336,14 @@ var InventoryPurchases = (function () {
     function populateItemRows(lines) {
         var container = document.getElementById("purchase-items-container");
         container.innerHTML = "";
-        ensureSaleItemsEditablePanel();
+        if (!editingPurchaseId) {
+            ensureSaleItemsEditablePanel();
+        }
 
         if (!lines || !lines.length) {
-            addItemRow(null, true);
+            if (!editingPurchaseId) {
+                addItemRow(null, true);
+            }
             enhanceSaleItemRows();
             updateSaleTotals();
             return;
@@ -1232,17 +1381,115 @@ var InventoryPurchases = (function () {
         return InventoryApi.escapeHtml(String(value));
     }
 
+    function actionSlot() {
+        return '<span class="inv-row-action-btn inv-row-action-btn--slot" aria-hidden="true"></span>';
+    }
+
     function actionButtons(purchase) {
+        var isCancelled = !!purchase.is_cancelled;
+
+        var editBtn = isCancelled
+            ? actionSlot()
+            : (
+                '<button type="button" class="inv-row-action-btn inv-row-action-btn--edit inv-purchase-edit" data-id="' + purchase.id + '" title="Edit" aria-label="Edit sale">' +
+                '<span class="material-symbols-outlined">edit</span></button>'
+            );
+
+        var paidBtn = isCancelled
+            ? actionSlot()
+            : purchase.is_paid
+                ? (
+                    '<button type="button" class="inv-row-action-btn inv-row-action-btn--paid" disabled ' +
+                    'title="Paid" aria-label="Paid">' +
+                    '<span class="material-symbols-outlined">check_circle</span></button>'
+                )
+                : (
+                    '<button type="button" class="inv-row-action-btn inv-row-action-btn--mark-paid inv-purchase-mark-paid" ' +
+                    'data-id="' + purchase.id + '" title="Mark as paid" aria-label="Mark as paid">' +
+                    '<span class="material-symbols-outlined">payments</span></button>'
+                );
+
+        var cancelBtn = isCancelled
+            ? (
+                '<button type="button" class="inv-row-action-btn inv-row-action-btn--cancelled" disabled ' +
+                'title="Cancelled" aria-label="Cancelled">' +
+                '<span class="material-symbols-outlined">cancel</span></button>'
+            )
+            : (
+                '<button type="button" class="inv-row-action-btn inv-row-action-btn--mark-cancelled inv-purchase-mark-cancelled" ' +
+                'data-id="' + purchase.id + '" title="Cancel invoice" aria-label="Cancel invoice">' +
+                '<span class="material-symbols-outlined">highlight_off</span></button>'
+            );
+
         return (
             '<div class="inv-row-actions">' +
             '<button type="button" class="inv-row-action-btn inv-row-action-btn--view inv-purchase-view" data-id="' + purchase.id + '" title="View" aria-label="View sale">' +
             '<span class="material-symbols-outlined">visibility</span></button>' +
-            '<button type="button" class="inv-row-action-btn inv-row-action-btn--edit inv-purchase-edit" data-id="' + purchase.id + '" title="Edit" aria-label="Edit sale">' +
-            '<span class="material-symbols-outlined">edit</span></button>' +
+            editBtn +
             '<button type="button" class="inv-row-action-btn inv-row-action-btn--view inv-purchase-print" data-id="' + purchase.id + '" title="Print" aria-label="Print sale">' +
             '<span class="material-symbols-outlined">print</span></button>' +
+            paidBtn +
+            cancelBtn +
             "</div>"
         );
+    }
+
+    function markPurchasePaid(id) {
+        if (!id) return;
+        InventoryConfirm.ask({
+            title: "Mark as paid?",
+            message: "This will mark the sale invoice as paid.",
+            confirmText: "Mark as Paid",
+            cancelText: "Cancel",
+            variant: "primary",
+            icon: "payments"
+        }).then(function (confirmed) {
+            if (!confirmed) return;
+            request("/" + id + "/mark-paid/", { method: "POST" })
+                .then(function (body) {
+                    if (body && body.isSuccess) {
+                        InventoryToast.success(body.message || "Sale marked as paid.");
+                        loadPurchases(currentPage);
+                    } else {
+                        InventoryToast.error(body && body.message ? body.message : "Unable to mark sale as paid.");
+                    }
+                })
+                .catch(function () {
+                    InventoryToast.error("Network error. Please try again.");
+                });
+        });
+    }
+
+    function markPurchaseCancelled(id) {
+        if (!id) return;
+        InventoryConfirm.prompt({
+            title: "Cancel this invoice?",
+            message: "The invoice will be marked as cancelled and stock sold on this invoice will be restored.",
+            inputLabel: "Cancellation Reason",
+            inputPlaceholder: "Enter reason for cancelling this invoice",
+            confirmText: "Cancel Invoice",
+            cancelText: "Keep Invoice",
+            variant: "danger",
+            icon: "highlight_off",
+            required: true
+        }).then(function (reason) {
+            if (!reason) return;
+            request("/" + id + "/mark-cancelled/", {
+                method: "POST",
+                body: { cancellation_reason: reason }
+            })
+                .then(function (body) {
+                    if (body && body.isSuccess) {
+                        InventoryToast.success(body.message || "Invoice cancelled.");
+                        loadPurchases(currentPage);
+                    } else {
+                        InventoryToast.error(body && body.message ? body.message : "Unable to cancel invoice.");
+                    }
+                })
+                .catch(function () {
+                    InventoryToast.error("Network error. Please try again.");
+                });
+        });
     }
 
     function formatProductsSoldCell(items, purchaseId) {
@@ -1292,6 +1539,11 @@ var InventoryPurchases = (function () {
                 "</tr>"
             );
         }).join("");
+
+        if (window.InventoryTableCards) {
+            var table = tbody.closest(".inv-mgmt-table");
+            if (table) InventoryTableCards.syncTable(table);
+        }
     }
 
     function fetchPurchase(id) {
@@ -1324,9 +1576,14 @@ var InventoryPurchases = (function () {
         rows.push(
             { label: "Billing Address", value: displayValue(purchase.billing_address) },
             { label: "Shipping Address", value: displayValue(purchase.shipping_address) },
-            { label: "Sale Amount", value: InventoryApi.formatMoney(purchase.total_amount), colStart: 1 },
+            { label: "Invoice Status", value: purchase.is_cancelled ? "Cancelled" : "Active" },
+            { label: "Payment Status", value: purchase.is_paid ? "Paid" : "Unpaid" },
+            { label: "Bill Amount", value: InventoryApi.formatMoney(purchase.total_amount), colStart: 1 },
             { label: "Total Cost", value: InventoryApi.formatMoney(purchase.total_cost) }
         );
+        if (purchase.is_cancelled && purchase.cancellation_reason) {
+            rows.push({ label: "Cancellation Reason", value: displayValue(purchase.cancellation_reason), full: true });
+        }
         if (purchase.notes) {
             rows.push({ label: "Notes", value: displayValue(purchase.notes), full: true });
         }
@@ -1376,6 +1633,10 @@ var InventoryPurchases = (function () {
         fetchPurchase(id)
             .then(function (purchase) {
                 if (!purchase) return;
+                if (purchase.is_cancelled) {
+                    InventoryToast.error("Cancelled invoices cannot be edited.");
+                    return;
+                }
                 editingPurchaseId = purchase.id;
                 setEditingSaleStockFromPurchase(purchase);
                 setFormMode("edit");
@@ -1384,8 +1645,6 @@ var InventoryPurchases = (function () {
                     loadTaxes()
                 ]).then(function () {
                     populateForm(purchase);
-                    ensureSaleItemsEditablePanel();
-                    enhanceSaleItemRows();
                     InventoryPagePanel.showPanel(PURCHASES_LIST_PANEL, PURCHASES_FORM_PANEL);
                     document.getElementById("purchase-customer").focus();
                 });
@@ -1576,6 +1835,12 @@ var InventoryPurchases = (function () {
         document.getElementById("purchase-payment-type").value = "";
         togglePaymentTypePanel(false);
         clearSalePrintMetaForm();
+        var paidInput = document.getElementById("purchase-paid-amount");
+        if (paidInput) {
+            paidInput.value = "";
+            paidInput.dataset.manual = "0";
+        }
+        setSalePaidToggle(false);
         document.getElementById("purchase-items-container").innerHTML = "";
         addItemRow(null, isSilent !== false);
         updateSaleTotals();
@@ -1618,25 +1883,11 @@ var InventoryPurchases = (function () {
         }
 
         if (editingPurchaseId) {
-            var editItems = collectItems();
-            if (!editItems || !editItems.length) {
-                if (editItems !== null) {
-                    InventoryToast.error("Add at least one product the customer is purchasing.");
-                }
-                return;
-            }
-
-            var editRowCount = document.querySelectorAll("#purchase-items-container .inv-mgmt-item-row").length;
-            if (editItems.length !== editRowCount) {
-                InventoryToast.error("Select an available product for each row.");
-                return;
-            }
-
             var btn = document.getElementById("purchase-save-btn");
             InventoryLoader.button(btn, true, "Updating...");
             request("/" + editingPurchaseId + "/", {
                 method: "PATCH",
-                body: Object.assign(getSaleHeaderPayload(false), { items: editItems })
+                body: getSaleHeaderPayload(false)
             })
                 .then(function (body) {
                     if (body && body.isSuccess) {
@@ -1674,12 +1925,35 @@ var InventoryPurchases = (function () {
             return;
         }
 
+        var isPaid = isFullPaymentReceived();
+        if (shouldShowDueDateField()) {
+            var dueDateEl = document.getElementById("purchase-invoice-due-date");
+            if (!dueDateEl || !dueDateEl.value.trim()) {
+                InventoryToast.error("Please enter a due date until the full bill amount is received.");
+                if (dueDateEl) dueDateEl.focus();
+                return;
+            }
+        }
+
+        if (isPaidSegmentSelected()) {
+            var paidAmount = getPaidAmountValue();
+            if (paidAmount <= 0) {
+                InventoryToast.error("Please enter the amount received.");
+                var paidInput = document.getElementById("purchase-paid-amount");
+                if (paidInput) paidInput.focus();
+                return;
+            }
+        }
+
         var btn = document.getElementById("purchase-save-btn");
         InventoryLoader.button(btn, true, "Saving...");
 
         request("", {
             method: "POST",
-            body: Object.assign(getSaleHeaderPayload(true), { items: items })
+            body: Object.assign(getSaleHeaderPayload(true), {
+                items: items,
+                is_paid: isPaid
+            })
         })
             .then(function (body) {
                 if (body && body.isSuccess) {
@@ -1771,6 +2045,8 @@ var InventoryPurchases = (function () {
             addItemRow(null, true);
         });
         document.getElementById("purchase-save-btn").addEventListener("click", savePurchase);
+        wireSalePaidToggle();
+        setSalePaidToggle(false);
 
         var searchEl = document.getElementById("purchases-search");
         var dateFromEl = document.getElementById("purchases-date-from");
@@ -1855,6 +2131,18 @@ var InventoryPurchases = (function () {
                 var printBtn = e.target.closest(".inv-purchase-print");
                 if (printBtn) {
                     exportSalesPrint([printBtn.getAttribute("data-id")]);
+                    return;
+                }
+
+                var paidBtn = e.target.closest(".inv-purchase-mark-paid");
+                if (paidBtn) {
+                    markPurchasePaid(paidBtn.getAttribute("data-id"));
+                    return;
+                }
+
+                var cancelBtn = e.target.closest(".inv-purchase-mark-cancelled");
+                if (cancelBtn) {
+                    markPurchaseCancelled(cancelBtn.getAttribute("data-id"));
                 }
             });
         }

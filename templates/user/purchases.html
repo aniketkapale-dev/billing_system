@@ -114,10 +114,6 @@
                         <label for="purchase-invoice-eway-bill">E-Way Bill No. <span class="inv-field-optional">(optional)</span></label>
                         <input id="purchase-invoice-eway-bill" class="inv-mgmt-input" type="text" placeholder="E-way bill number"/>
                     </div>
-                    <div class="inv-mgmt-field">
-                        <label for="purchase-invoice-due-date">Due Date <span class="inv-field-optional">(optional)</span></label>
-                        <input id="purchase-invoice-due-date" class="inv-mgmt-input" type="date"/>
-                    </div>
                     <div class="inv-mgmt-field inv-mgmt-field--full">
                         <label for="purchase-invoice-terms">Terms <span class="inv-field-optional">(optional)</span></label>
                         <textarea id="purchase-invoice-terms" class="inv-mgmt-textarea" rows="3" placeholder="Payment or delivery terms for this invoice"></textarea>
@@ -133,7 +129,7 @@
                     </div>
                     <div id="purchase-items-container"></div>
                     <div id="purchase-totals" class="inv-stockin-totals">
-                        <div class="inv-stockin-total-row">
+                        <div id="purchase-total-cost-row" class="inv-stockin-total-row inv-hidden">
                             <div class="inv-stockin-total-label">
                                 <span>Total Cost</span>
                                 <small>Total purchase cost of items sold</small>
@@ -142,10 +138,32 @@
                         </div>
                         <div class="inv-stockin-total-row inv-stockin-total-row--grand">
                             <div class="inv-stockin-total-label">
-                                <span>Sale Amount</span>
-                                <small>Total amount received from the sale</small>
+                                <span>Bill Amount</span>
                             </div>
                             <strong id="purchase-sale-amount" class="inv-stockin-total-value">0.00</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="inv-sale-payment-section">
+                    <div class="inv-sale-payment-card">
+                        <div class="inv-sale-payment-row">
+                            <div id="purchase-mark-paid-wrap" class="inv-sale-payment-group inv-hidden">
+                                <span class="inv-sale-payment-label">Payment</span>
+                                <div class="inv-sale-paid-segment" role="group" aria-label="Payment status">
+                                    <button type="button" class="inv-sale-paid-segment-btn" data-paid="true">Paid</button>
+                                    <button type="button" class="inv-sale-paid-segment-btn is-active" data-paid="false">Unpaid</button>
+                                </div>
+                                <input type="checkbox" id="purchase-mark-paid" class="inv-hidden" tabindex="-1" aria-hidden="true"/>
+                            </div>
+                            <div id="purchase-due-date-wrap" class="inv-sale-payment-due inv-hidden">
+                                <label for="purchase-invoice-due-date">Due Date</label>
+                                <input id="purchase-invoice-due-date" class="inv-mgmt-input" type="date"/>
+                            </div>
+                            <div id="purchase-paid-amount-wrap" class="inv-sale-payment-due inv-hidden">
+                                <label for="purchase-paid-amount">Amount Received</label>
+                                <input id="purchase-paid-amount" class="inv-mgmt-input" type="number" step="0.01" min="0" placeholder="0.00"/>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -181,14 +199,14 @@
 {% endblock %}
 
 {% block page_scripts %}
-<link href="{% static 'css/inventory-mgmt.css' %}?v=20260307-mrp-field" rel="stylesheet"/>
+<link href="{% static 'css/inventory-mgmt.css' %}?v=20260307-paid-hover" rel="stylesheet"/>
 <script src="{% static 'js/core/api.js' %}"></script>
 <script src="{% static 'js/components/modal.js' %}"></script>
 <script src="{% static 'js/components/page-panel.js' %}"></script>
 <script src="{% static 'js/components/multi-select.js' %}"></script>
 <script src="{% static 'js/components/tax-select.js' %}"></script>
 <script src="{% static 'js/inventory/customers.js' %}"></script>
-<script src="{% static 'js/inventory/purchases.js' %}?v=20260307-mrp-free"></script>
+<script src="{% static 'js/inventory/purchases.js' %}?v=20260307-paid-hover"></script>
 <script>
 InventoryPagePanel.init();
 InventoryCustomers.init();

@@ -106,8 +106,104 @@ var InventoryConfirm = (function () {
         });
     }
 
+    function prompt(options) {
+        options = options || {};
+
+        var title = options.title || "Please provide details";
+        var message = options.message || "";
+        var confirmText = options.confirmText || "Confirm";
+        var cancelText = options.cancelText || "Cancel";
+        var variant = options.variant || "danger";
+        var icon = options.icon || (variant === "danger" ? "warning" : "help");
+        var inputLabel = options.inputLabel || "Reason";
+        var inputPlaceholder = options.inputPlaceholder || "";
+        var required = options.required !== false;
+
+        return new Promise(function (resolve) {
+            removeExisting();
+
+            var settledRef = { settled: false };
+
+            var backdrop = document.createElement("div");
+            backdrop.id = BACKDROP_ID;
+            backdrop.className = "inv-confirm-backdrop";
+
+            var modal = document.createElement("div");
+            modal.id = MODAL_ID;
+            modal.className = "inv-confirm-modal inv-confirm-modal--prompt";
+            modal.setAttribute("role", "dialog");
+            modal.setAttribute("aria-modal", "true");
+            modal.setAttribute("aria-labelledby", "inv-confirm-title");
+
+            modal.innerHTML =
+                '<div class="inv-confirm-modal__icon inv-confirm-modal__icon--' + variant + '">' +
+                    '<span class="material-symbols-outlined">' + escapeHtml(icon) + "</span>" +
+                "</div>" +
+                '<h3 id="inv-confirm-title" class="inv-confirm-modal__title">' + escapeHtml(title) + "</h3>" +
+                (message
+                    ? '<p class="inv-confirm-modal__message">' + escapeHtml(message) + "</p>"
+                    : "") +
+                '<div class="inv-confirm-modal__field">' +
+                    '<label for="inv-confirm-input" class="inv-confirm-modal__label">' + escapeHtml(inputLabel) + "</label>" +
+                    '<textarea id="inv-confirm-input" class="inv-confirm-modal__input" rows="3" placeholder="' +
+                        escapeHtml(inputPlaceholder) + '"></textarea>' +
+                "</div>" +
+                '<div class="inv-confirm-modal__actions">' +
+                    '<button type="button" class="inv-confirm-btn inv-confirm-btn--cancel" data-act="cancel">' +
+                        escapeHtml(cancelText) +
+                    "</button>" +
+                    '<button type="button" class="inv-confirm-btn inv-confirm-btn--' + variant + '" data-act="ok">' +
+                        escapeHtml(confirmText) +
+                    "</button>" +
+                "</div>";
+
+            document.body.appendChild(backdrop);
+            document.body.appendChild(modal);
+            document.body.classList.add("inv-confirm-open");
+
+            var inputEl = modal.querySelector("#inv-confirm-input");
+
+            function submitValue() {
+                var value = inputEl ? inputEl.value.trim() : "";
+                if (required && !value) {
+                    if (inputEl) inputEl.focus();
+                    return;
+                }
+                closeDialog(settledRef, resolve, value || null);
+            }
+
+            modal.querySelector('[data-act="ok"]').addEventListener("click", submitValue);
+
+            modal.querySelector('[data-act="cancel"]').addEventListener("click", function () {
+                closeDialog(settledRef, resolve, null);
+            });
+
+            backdrop.addEventListener("click", function () {
+                closeDialog(settledRef, resolve, null);
+            });
+
+            window.addEventListener("keydown", function onKeydown(e) {
+                if (e.key === "Escape") {
+                    window.removeEventListener("keydown", onKeydown);
+                    closeDialog(settledRef, resolve, null);
+                }
+            });
+
+            if (inputEl) {
+                inputEl.addEventListener("keydown", function (e) {
+                    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                        e.preventDefault();
+                        submitValue();
+                    }
+                });
+                inputEl.focus();
+            }
+        });
+    }
+
     return {
         ask: ask,
-        delete: deleteConfirm
+        delete: deleteConfirm,
+        prompt: prompt
     };
 })();
