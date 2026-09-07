@@ -79,6 +79,16 @@ class PurchaseService(BaseService):
         setting.save(update_fields=["current_counter", "updated_at"])
         return data
 
+    @staticmethod
+    def _normalize_sale_tax_ids(raw):
+        ids = []
+        for tax_id in raw or []:
+            try:
+                ids.append(int(tax_id))
+            except (TypeError, ValueError):
+                continue
+        return ids
+
     def _prepare_sale_items(self, items_data, business_id):
         if not items_data:
             raise ValidationException("At least one purchase item is required.")
@@ -122,6 +132,11 @@ class PurchaseService(BaseService):
                 "unit_price": unit_price,
                 "line_total": line_total,
                 "discount_amount": Decimal(str(item.get("discount_amount") or 0)),
+                "discount_type": str(item.get("discount_type") or "percent"),
+                "discount_value": Decimal(str(item.get("discount_value") or 0)),
+                "distributor_discount_type": str(item.get("distributor_discount_type") or "percent"),
+                "distributor_discount_value": Decimal(str(item.get("distributor_discount_value") or 0)),
+                "sale_tax_ids": self._normalize_sale_tax_ids(item.get("sale_tax_ids")),
                 "tax_amount": Decimal(str(item.get("tax_amount") or 0)),
             })
 
@@ -149,6 +164,11 @@ class PurchaseService(BaseService):
                 unit_price=item["unit_price"],
                 line_total=item["line_total"],
                 discount_amount=item["discount_amount"],
+                discount_type=item["discount_type"],
+                discount_value=item["discount_value"],
+                distributor_discount_type=item["distributor_discount_type"],
+                distributor_discount_value=item["distributor_discount_value"],
+                sale_tax_ids=item["sale_tax_ids"],
                 tax_amount=item["tax_amount"],
             )
             slices = self.batch_service.consume_fifo(

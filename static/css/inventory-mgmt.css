@@ -2390,8 +2390,8 @@ body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sideb
 }
 
 .inv-mgmt-item-row.inv-mgmt-item-row--sale {
-    grid-template-columns: minmax(140px, 1.35fr) minmax(56px, 0.65fr) minmax(96px, 0.9fr) minmax(72px, 0.8fr) minmax(150px, 1.25fr) minmax(78px, 0.82fr) minmax(150px, 1.25fr) minmax(88px, 0.88fr) minmax(78px, 0.82fr) minmax(78px, 0.82fr) 40px;
-    min-width: 1480px;
+    grid-template-columns: minmax(140px, 1.35fr) minmax(56px, 0.65fr) minmax(72px, 0.8fr) minmax(150px, 1.25fr) minmax(78px, 0.82fr) minmax(150px, 1.25fr) minmax(88px, 0.88fr) minmax(78px, 0.82fr) minmax(78px, 0.82fr) 40px;
+    min-width: 1380px;
 }
 
 @media (max-width: 900px) {

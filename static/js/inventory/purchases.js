@@ -767,18 +767,8 @@ var InventoryPurchases = (function () {
 
     function updateRowPricing(row, skipTotals) {
         if (!row) return;
-        var product = getProduct(row.querySelector(".inv-item-product").value);
-        var priceWithTaxEl = row.querySelector(".inv-item-price-with-tax");
         var finalEl = row.querySelector(".inv-item-final-price");
         var totalEl = row.querySelector(".inv-item-total");
-
-        if (priceWithTaxEl) {
-            if (product) {
-                priceWithTaxEl.value = InventoryApi.formatMoney(getProductBuyDetails(product).buyPrice);
-            } else {
-                priceWithTaxEl.value = InventoryApi.formatMoney(0);
-            }
-        }
 
         var newSaleEl = row.querySelector(".inv-item-new-sale-price");
         var newSalePrice = getRowNewSalePrice(row);
@@ -957,47 +947,6 @@ var InventoryPurchases = (function () {
         return "";
     }
 
-    function updateRowSalePriceLimits(row, product) {
-        var saleActualInput = row.querySelector(".inv-item-sale-actual");
-        if (!saleActualInput) return;
-
-        var mrp = getProductMrp(product);
-        var label = saleActualInput.closest(".inv-mgmt-field");
-        label = label ? label.querySelector("label") : null;
-
-        if (mrp > 0) {
-            saleActualInput.max = mrp;
-            saleActualInput.setAttribute("title", "Maximum sell price: " + InventoryApi.formatMoney(mrp));
-            row.dataset.productMrp = String(mrp);
-            if (label) {
-                label.innerHTML = 'Sell Price <span class="inv-field-optional">(max MRP ' +
-                    InventoryApi.escapeHtml(InventoryApi.formatMoney(mrp)) + ")</span>";
-            }
-        } else {
-            saleActualInput.removeAttribute("max");
-            saleActualInput.removeAttribute("title");
-            delete row.dataset.productMrp;
-            if (label) label.textContent = "Sell Price";
-        }
-    }
-
-    function enforceRowSalePriceLimit(row, showWarning) {
-        var saleActualInput = row.querySelector(".inv-item-sale-actual");
-        if (!saleActualInput) return true;
-
-        var mrp = Number(row.dataset.productMrp || 0);
-        if (mrp <= 0) return true;
-
-        var val = Number(saleActualInput.value || 0);
-        if (isNaN(val) || val <= mrp) return true;
-
-        saleActualInput.value = mrp;
-        if (showWarning) {
-            InventoryToast.warning("Sell price cannot exceed MRP (" + InventoryApi.formatMoney(mrp) + ").");
-        }
-        return false;
-    }
-
     function updateRowQtyLimits(row, product) {
         var qtyInput = row.querySelector(".inv-item-qty");
         if (!qtyInput) return;
@@ -1033,7 +982,6 @@ var InventoryPurchases = (function () {
         var saleActualInput = row.querySelector(".inv-item-sale-actual");
         if (!product) {
             updateRowQtyLimits(row, null);
-            updateRowSalePriceLimits(row, null);
             if (saleActualInput) saleActualInput.value = "";
             setRowTaxSelection(row, [], true);
             clearRowDiscount(row);
@@ -1042,12 +990,13 @@ var InventoryPurchases = (function () {
         }
 
         updateRowQtyLimits(row, product);
-        updateRowSalePriceLimits(row, product);
 
-        if (product.tax) {
-            setRowTaxSelection(row, [String(product.tax)], true);
-        } else {
-            setRowTaxSelection(row, [], true);
+        if (!options.preserveSalePricing) {
+            if (product.tax) {
+                setRowTaxSelection(row, [String(product.tax)], true);
+            } else {
+                setRowTaxSelection(row, [], true);
+            }
         }
 
         if (saleActualInput && options.updatePrice !== false) {
@@ -1055,7 +1004,6 @@ var InventoryPurchases = (function () {
             if (shouldSetPrice) {
                 saleActualInput.value = defaultSalePrice(product);
             }
-            enforceRowSalePriceLimit(row, false);
         }
         updateRowPricing(row);
     }
@@ -1071,8 +1019,7 @@ var InventoryPurchases = (function () {
         row.innerHTML =
             '<div class="inv-mgmt-field"><label>Available Product</label><select class="inv-mgmt-select inv-item-product" required>' + productOptions(data.product_id, row) + "</select></div>" +
             '<div class="inv-mgmt-field"><label>Quantity</label><input class="inv-mgmt-input inv-item-qty" type="number" min="0.01" step="0.01" value="' + (data.quantity || 1) + '" required/></div>' +
-            '<div class="inv-mgmt-field"><label>Actual Price with Tax (per product)</label><input class="inv-mgmt-input inv-item-price-with-tax" type="text" readonly value="0.00"/></div>' +
-            '<div class="inv-mgmt-field"><label>Sell Price</label><input class="inv-mgmt-input inv-item-sale-actual" type="number" min="0" step="0.01" placeholder="0.00" value="' + (data.sale_actual_price != null && data.sale_actual_price !== "" ? data.sale_actual_price : "") + '" required/></div>' +
+            '<div class="inv-mgmt-field"><label>MRP Price</label><input class="inv-mgmt-input inv-item-sale-actual" type="number" min="0" step="0.01" placeholder="0.00" value="' + (data.sale_actual_price != null && data.sale_actual_price !== "" ? data.sale_actual_price : "") + '" required/></div>' +
             discountFieldHtml({
                 label: "Discount",
                 discount_type: data.discount_type,
@@ -1108,11 +1055,9 @@ var InventoryPurchases = (function () {
             refreshAllProductSelects();
         });
         row.querySelector(".inv-item-sale-actual").addEventListener("input", function () {
-            enforceRowSalePriceLimit(row, true);
             updateRowPricing(row);
         });
         row.querySelector(".inv-item-sale-actual").addEventListener("change", function () {
-            enforceRowSalePriceLimit(row, true);
             updateRowPricing(row);
         });
         wireRowDiscountTypeToggle(row);
@@ -1136,7 +1081,8 @@ var InventoryPurchases = (function () {
 
         if (data.product_id) {
             applyProductToRow(row, getProduct(data.product_id), {
-                updatePrice: data.sale_actual_price == null || data.sale_actual_price === ""
+                updatePrice: data.sale_actual_price == null || data.sale_actual_price === "",
+                preserveSalePricing: !!data.preserveSalePricing
             });
         } else {
             updateRowPricing(row);
@@ -1201,6 +1147,47 @@ var InventoryPurchases = (function () {
         });
     }
 
+    function buildRowDataFromPurchaseLine(line) {
+        var productId = getLineProductId(line);
+        var product = getProduct(productId);
+        var qty = Number(line.quantity || 1) || 1;
+        var listPrice = line.list_price != null && line.list_price !== ""
+            ? Number(line.list_price)
+            : Number(line.unit_price || 0);
+        var discountValue = line.discount_value != null && line.discount_value !== ""
+            ? line.discount_value
+            : "";
+        var distributorDiscountValue = line.distributor_discount_value != null && line.distributor_discount_value !== ""
+            ? line.distributor_discount_value
+            : "";
+        var saleTaxIds = Array.isArray(line.sale_tax_ids)
+            ? line.sale_tax_ids.map(function (id) { return String(id); })
+            : [];
+
+        var discountType = line.discount_type || "percent";
+
+        if ((discountValue === "" || Number(discountValue) === 0) && Number(line.discount_amount || 0) > 0) {
+            discountType = "amount";
+            discountValue = roundMoney(Number(line.discount_amount) / qty);
+        }
+
+        if (!saleTaxIds.length && Number(line.tax_amount || 0) > 0 && product && product.tax) {
+            saleTaxIds = [String(product.tax)];
+        }
+
+        return {
+            product_id: productId,
+            quantity: line.quantity,
+            sale_actual_price: listPrice,
+            discount_type: discountType,
+            discount_value: discountValue,
+            distributor_discount_type: line.distributor_discount_type || "percent",
+            distributor_discount_value: distributorDiscountValue,
+            sale_tax_ids: saleTaxIds,
+            preserveSalePricing: true
+        };
+    }
+
     function populateItemRows(lines) {
         var container = document.getElementById("purchase-items-container");
         container.innerHTML = "";
@@ -1214,20 +1201,7 @@ var InventoryPurchases = (function () {
         }
 
         lines.forEach(function (line) {
-            var row = createItemRow({
-                product_id: getLineProductId(line),
-                quantity: line.quantity,
-                sale_actual_price: line.unit_price
-            });
-            container.appendChild(row);
-            var select = row.querySelector(".inv-item-product");
-            var productId = getLineProductId(line);
-            if (select && productId) {
-                select.value = String(productId);
-                applyProductToRow(row, getProduct(productId), {
-                    updatePrice: false
-                });
-            }
+            container.appendChild(createItemRow(buildRowDataFromPurchaseLine(line)));
         });
         refreshAllProductSelects();
         enhanceSaleItemRows();
@@ -1528,17 +1502,7 @@ var InventoryPurchases = (function () {
             }
 
             if (!saleActualEl || saleActualEl.value === "") {
-                InventoryToast.error("Enter a sell price for " + product.name + ".");
-                return null;
-            }
-
-            var saleBase = Number(saleActualEl.value || 0);
-            var mrp = getProductMrp(product);
-            if (mrp > 0 && saleBase > mrp) {
-                InventoryToast.error(
-                    product.name + ": sell price cannot exceed MRP (" + InventoryApi.formatMoney(mrp) + ")."
-                );
-                saleActualEl.focus();
+                InventoryToast.error("Enter an MRP price for " + product.name + ".");
                 return null;
             }
 
@@ -1574,6 +1538,13 @@ var InventoryPurchases = (function () {
                 quantity: quantity,
                 unit_price: unitPrice,
                 list_price: getRowSellPrice(row),
+                discount_type: getRowDiscountType(row),
+                discount_value: getRowDiscountValue(row),
+                distributor_discount_type: getRowDiscountType(row, ".inv-item-distributor-discount-type-toggle"),
+                distributor_discount_value: getRowDiscountValue(row, ".inv-item-distributor-discount-value"),
+                sale_tax_ids: getRowTaxRate(row) > 0
+                    ? InventoryTaxSelect.getSelected(row.querySelector(".inv-item-sale-gst")).map(function (id) { return Number(id); })
+                    : [],
                 discount_amount: getRowDiscountAmount(row, quantity),
                 tax_amount: getRowTaxAmount(row, quantity)
             });

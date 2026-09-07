@@ -9,7 +9,7 @@
     <meta http-equiv="Expires" content="0"/>
     <title>{% block title %}Billing System - Superadmin{% endblock %}</title>
     {% include "partials/inventory_theme.html" %}
-    <link href="{% static 'css/dashboard.css' %}" rel="stylesheet"/>
+    <link href="{% static 'css/dashboard.css' %}?v=20260307-sidebar-hover" rel="stylesheet"/>
     <link href="{% static 'css/inventory-mgmt.css' %}" rel="stylesheet"/>
 </head>
 <body class="inv-auth-pending inv-dashboard-body inv-dashboard-body--superadmin inv-sidebar-collapsed">
@@ -131,7 +131,7 @@
 <script src="{% static 'js/layout/owner-profile.js' %}"></script>
 <script src="{% static 'js/components/column-customize.js' %}"></script>
 <script src="{% static 'js/components/table-cards.js' %}"></script>
-<script src="{% static 'js/layout/sidebar.js' %}"></script>
+<script src="{% static 'js/layout/sidebar.js' %}?v=20260307-sidebar-hover"></script>
 <script src="{% static 'js/auth/auth.js' %}"></script>
 <script>InventoryAuth.guardSuperAdmin();</script>
 {% block page_scripts %}{% endblock %}

@@ -23,6 +23,11 @@ class PurchaseItemSerializer(BaseModelSerializer):
             "unit_price",
             "line_total",
             "discount_amount",
+            "discount_type",
+            "discount_value",
+            "distributor_discount_type",
+            "distributor_discount_value",
+            "sale_tax_ids",
             "tax_amount",
             "cost_amount",
             "profit_amount",
@@ -121,6 +126,11 @@ class PurchaseItemWriteSerializer(serializers.Serializer):
     unit_price = serializers.DecimalField(max_digits=12, decimal_places=2)
     list_price = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
     discount_amount = serializers.DecimalField(max_digits=14, decimal_places=2, required=False, default=0)
+    discount_type = serializers.ChoiceField(choices=["percent", "amount"], required=False, default="percent")
+    discount_value = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, default=0)
+    distributor_discount_type = serializers.ChoiceField(choices=["percent", "amount"], required=False, default="percent")
+    distributor_discount_value = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, default=0)
+    sale_tax_ids = serializers.ListField(child=serializers.IntegerField(), required=False, default=list)
     tax_amount = serializers.DecimalField(max_digits=14, decimal_places=2, required=False, default=0)
 
 

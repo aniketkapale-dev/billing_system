@@ -174,8 +174,9 @@ var InventoryDocumentExport = (function () {
             : (isMultiline ? formatMultiline(value) : displayText(value));
         var multilineClass = isMultiline ? " inv-detail-field--multiline" : "";
         return (
-            '<div class="inv-detail-field inv-detail-field--inline' + multilineClass + '">' +
-            '<span class="inv-detail-label">' + escapeHtml(String(label).toUpperCase()) + ":</span> " +
+            '<div class="inv-detail-field inv-detail-field--table' + multilineClass + '">' +
+            '<span class="inv-detail-label">' + escapeHtml(String(label).toUpperCase()) + "</span>" +
+            '<span class="inv-detail-colon">:</span>' +
             '<span class="inv-detail-value">' + display + "</span>" +
             "</div>"
         );
@@ -222,6 +223,13 @@ var InventoryDocumentExport = (function () {
         return name || "Customer";
     }
 
+    function buildHeaderAddressLines(value) {
+        if (value === null || value === undefined || String(value).trim() === "") {
+            return "";
+        }
+        return '<div class="inv-header-address-lines">' + formatMultiline(value) + "</div>";
+    }
+
     function buildCustomerCompanyColumn(sale) {
         var companyName = getCustomerCompanyDisplayName(sale);
         var gstNo = sale.customer_gst_number || "";
@@ -231,8 +239,8 @@ var InventoryDocumentExport = (function () {
 
         return wrapHeaderPanel(
             '<p class="inv-header-customer-name">' + escapeHtml(companyName) + "</p>" +
-            buildInlineDetailField("GST No", gstNo, false) +
-            buildInlineDetailField("Company Address", companyAddress, false),
+            buildHeaderAddressLines(companyAddress) +
+            buildInlineDetailField("GST No", gstNo, false),
             "inv-header-panel--company"
         );
     }
@@ -374,6 +382,90 @@ var InventoryDocumentExport = (function () {
         );
     }
 
+    function applyLineDiscount(basePrice, discountValue, discountType) {
+        var base = Number(basePrice || 0);
+        if (isNaN(base) || base < 0) base = 0;
+        var discount = Number(discountValue || 0);
+        if (isNaN(discount) || discount <= 0) return roundMoney(base);
+
+        if (discountType === "percent") {
+            var pct = Math.min(discount, 100);
+            return roundMoney(Math.max(0, base * (1 - pct / 100)));
+        }
+        return roundMoney(Math.max(0, base - discount));
+    }
+
+    function getLineDiscountAmounts(line) {
+        var qty = Number(line.quantity || 0);
+        if (qty <= 0) {
+            return {
+                simplePerUnit: 0,
+                distributorPerUnit: 0,
+                simplePercent: 0,
+                distributorPercent: 0,
+                afterSimple: 0,
+                afterDistributor: 0
+            };
+        }
+
+        var sellPrice = Number(
+            line.list_price != null && line.list_price !== ""
+                ? line.list_price
+                : (line.unit_price || 0)
+        );
+        var discountType = line.discount_type === "amount" ? "amount" : "percent";
+        var discountValue = Number(line.discount_value || 0);
+        var distributorType = line.distributor_discount_type === "amount" ? "amount" : "percent";
+        var distributorValue = Number(line.distributor_discount_value || 0);
+        var afterSimple = applyLineDiscount(sellPrice, discountValue, discountType);
+        var afterDistributor = applyLineDiscount(afterSimple, distributorValue, distributorType);
+        var simplePerUnit = roundMoney(Math.max(0, sellPrice - afterSimple));
+        var distributorPerUnit = roundMoney(Math.max(0, afterSimple - afterDistributor));
+
+        if (simplePerUnit === 0 && distributorPerUnit === 0 && Number(line.discount_amount || 0) > 0) {
+            simplePerUnit = roundMoney(Number(line.discount_amount) / qty);
+            if (sellPrice > 0) {
+                afterSimple = roundMoney(Math.max(0, sellPrice - simplePerUnit));
+                afterDistributor = afterSimple;
+            }
+        }
+
+        var simplePercent = discountType === "percent"
+            ? Math.min(discountValue, 100)
+            : (sellPrice > 0 ? roundMoney((simplePerUnit / sellPrice) * 100) : 0);
+        var distributorPercent = distributorType === "percent"
+            ? Math.min(distributorValue, 100)
+            : (afterSimple > 0 ? roundMoney((distributorPerUnit / afterSimple) * 100) : 0);
+
+        return {
+            simplePerUnit: simplePerUnit,
+            distributorPerUnit: distributorPerUnit,
+            simplePercent: simplePercent,
+            distributorPercent: distributorPercent,
+            afterSimple: afterSimple,
+            afterDistributor: afterDistributor
+        };
+    }
+
+    function getLineTaxPercent(line, discounts) {
+        discounts = discounts || getLineDiscountAmounts(line);
+        var taxableBase = Number(discounts.afterDistributor || 0);
+        if (taxableBase <= 0) return 0;
+
+        var qty = Number(line.quantity || 0);
+        if (qty <= 0) return 0;
+
+        var taxPerUnit = roundMoney(Number(line.tax_amount || 0) / qty);
+        return roundMoney((taxPerUnit / taxableBase) * 100);
+    }
+
+    function formatPercent(value) {
+        var num = Number(value || 0);
+        if (isNaN(num) || num <= 0) return "—";
+        var formatted = num.toFixed(2).replace(/\.?0+$/, "");
+        return formatted + "%";
+    }
+
     function buildInvoicePrintRows(sale) {
         var rows = [];
         var serial = 0;
@@ -383,10 +475,10 @@ var InventoryDocumentExport = (function () {
                 ? line.batch_lines
                 : [{ quantity: line.quantity, batch_number: "", expiry_date: null }];
             var lineQty = Number(line.quantity || 0);
-            var lineDiscount = Number(line.discount_amount || 0);
             var lineTotal = Number(line.line_total || 0);
             var lineTax = Number(line.tax_amount || 0);
             var lineNet = Math.max(0, lineTotal - lineTax);
+            var discounts = getLineDiscountAmounts(line);
             var unitPrice = Number(
                 line.list_price != null && line.list_price !== ""
                     ? line.list_price
@@ -407,8 +499,12 @@ var InventoryDocumentExport = (function () {
                     batch_number: batchLine.batch_number || "",
                     expiry_date: batchLine.expiry_date,
                     price: unitPrice,
-                    discount: roundMoney(lineDiscount * ratio),
+                    simple_discount: roundMoney(discounts.simplePerUnit * batchQty),
+                    simple_discount_percent: discounts.simplePercent,
+                    distributor_discount: roundMoney(discounts.distributorPerUnit * batchQty),
+                    distributor_discount_percent: discounts.distributorPercent,
                     tax: roundMoney(lineTax * ratio),
+                    tax_percent: getLineTaxPercent(line, discounts),
                     amount: roundMoney(lineNet * ratio)
                 });
             });
@@ -417,10 +513,30 @@ var InventoryDocumentExport = (function () {
         return rows;
     }
 
+    function buildInvoiceLinesColgroup() {
+        return (
+            "<colgroup>" +
+            '<col class="inv-col-sr"/>' +
+            '<col class="inv-col-product"/>' +
+            '<col class="inv-col-qty"/>' +
+            '<col class="inv-col-unit"/>' +
+            '<col class="inv-col-exp"/>' +
+            '<col class="inv-col-price"/>' +
+            '<col class="inv-col-simple-amt"/>' +
+            '<col class="inv-col-simple-pct"/>' +
+            '<col class="inv-col-dist-amt"/>' +
+            '<col class="inv-col-dist-pct"/>' +
+            '<col class="inv-col-tax-amt"/>' +
+            '<col class="inv-col-tax-pct"/>' +
+            '<col class="inv-col-amount"/>' +
+            "</colgroup>"
+        );
+    }
+
     function buildInvoiceItemRowsHtml(sale) {
         var printRows = buildInvoicePrintRows(sale);
         if (!printRows.length) {
-            return '<tr class="inv-empty-row"><td colspan="10">No products on this invoice</td></tr>';
+            return '<tr class="inv-empty-row"><td colspan="13">No products on this invoice</td></tr>';
         }
 
         return printRows.map(function (row) {
@@ -431,16 +547,19 @@ var InventoryDocumentExport = (function () {
 
             return (
                 "<tr>" +
-                '<td class="center">' + row.serial + "</td>" +
-                '<td class="item-name">' + itemHtml + "</td>" +
-                '<td class="num">' + displayText(formatQty(row.quantity)) + "</td>" +
-                '<td class="center">' + displayText(row.unit) + "</td>" +
-                '<td class="center">' + displayText(row.batch_number || "—") + "</td>" +
-                '<td class="center">' + formatDisplayDate(row.expiry_date) + "</td>" +
-                '<td class="num">' + formatMoney(row.price) + "</td>" +
-                '<td class="num">' + formatMoney(row.discount) + "</td>" +
-                '<td class="num">' + formatMoney(row.tax) + "</td>" +
-                '<td class="num">' + formatMoney(row.amount) + "</td>" +
+                '<td class="center inv-col-sr">' + row.serial + "</td>" +
+                '<td class="item-name inv-col-product">' + itemHtml + "</td>" +
+                '<td class="num inv-col-qty">' + displayText(formatQty(row.quantity)) + "</td>" +
+                '<td class="center inv-col-unit">' + displayText(row.unit) + "</td>" +
+                '<td class="center inv-col-exp">' + formatDisplayDate(row.expiry_date) + "</td>" +
+                '<td class="num inv-col-price">' + formatMoney(row.price) + "</td>" +
+                '<td class="num inv-col-simple-amt">' + formatMoney(row.simple_discount) + "</td>" +
+                '<td class="center inv-col-simple-pct">' + displayText(formatPercent(row.simple_discount_percent)) + "</td>" +
+                '<td class="num inv-col-dist-amt">' + formatMoney(row.distributor_discount) + "</td>" +
+                '<td class="center inv-col-dist-pct">' + displayText(formatPercent(row.distributor_discount_percent)) + "</td>" +
+                '<td class="num inv-col-tax-amt">' + formatMoney(row.tax) + "</td>" +
+                '<td class="center inv-col-tax-pct">' + displayText(formatPercent(row.tax_percent)) + "</td>" +
+                '<td class="num inv-col-amount">' + formatMoney(row.amount) + "</td>" +
                 "</tr>"
             );
         }).join("");
@@ -457,12 +576,18 @@ var InventoryDocumentExport = (function () {
             ".inv-header-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid #333;margin-bottom:10px;}" +
             ".inv-header-panel{padding:6px 8px;border-right:1px solid #333;min-width:0;font-size:10px;line-height:1.2;display:flex;flex-direction:column;gap:2px;}" +
             ".inv-header-panel:last-child{border-right:none;}" +
-            ".inv-header-panel .inv-detail-field--inline{line-height:1.2;margin:0;}" +
-            ".inv-header-panel .inv-detail-field--inline.inv-detail-field--multiline .inv-detail-value{display:block;margin-top:1px;line-height:1.2;}" +
+            ".inv-header-panel .inv-detail-field--table{display:grid;grid-template-columns:var(--inv-header-label-width,92px) 8px minmax(0,1fr);column-gap:2px;align-items:start;line-height:1.2;margin:0;}" +
+            ".inv-header-panel--company{--inv-header-label-width:98px;}" +
+            ".inv-header-panel--business{--inv-header-label-width:72px;}" +
+            ".inv-header-panel--invoice{--inv-header-label-width:98px;}" +
+            ".inv-header-panel .inv-detail-label{text-align:left;font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#333;word-break:break-word;}" +
+            ".inv-header-panel .inv-detail-colon{text-align:center;font-weight:800;color:#333;}" +
+            ".inv-header-panel .inv-detail-value{font-weight:700;color:#000;word-break:break-word;min-width:0;}" +
             ".inv-header-panel-title{margin:0 0 2px;font-size:11px;font-weight:800;text-align:center;text-transform:uppercase;letter-spacing:.06em;color:#000;}" +
             ".inv-header-name-row{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;margin-bottom:2px;}" +
             ".inv-header-panel-heading{margin:0;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#333;flex-shrink:0;}" +
             ".inv-header-customer-name{margin:0 0 2px;font-size:12px;font-weight:800;text-transform:uppercase;line-height:1.15;color:#000;letter-spacing:.05em;}" +
+            ".inv-header-address-lines{margin:0 0 2px;font-size:10px;font-weight:600;line-height:1.2;color:#000;}" +
             ".inv-header-business-name{margin:0 0 2px;font-size:10px;font-weight:800;text-transform:uppercase;line-height:1.15;color:#000;}" +
             ".inv-detail-field--inline{line-height:1.5;font-size:10px;}" +
             ".inv-detail-field--inline .inv-detail-label{font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#333;}" +
@@ -476,7 +601,24 @@ var InventoryDocumentExport = (function () {
             ".inv-meta-label{font-weight:700;color:#333;white-space:nowrap;}" +
             ".inv-meta-value{font-weight:800;color:#000;text-align:right;}" +
             ".inv-lines-wrap{width:100%;overflow-x:auto;margin-bottom:10px;}" +
-            ".inv-lines{width:100%;border-collapse:collapse;font-size:9px;table-layout:fixed;}" +
+            ".inv-lines{width:100%;border-collapse:collapse;font-size:8px;table-layout:fixed;}" +
+            ".inv-lines col.inv-col-sr{width:4%;}" +
+            ".inv-lines col.inv-col-product{width:24%;}" +
+            ".inv-lines col.inv-col-qty{width:4%;}" +
+            ".inv-lines col.inv-col-unit{width:4%;}" +
+            ".inv-lines col.inv-col-exp{width:6%;}" +
+            ".inv-lines col.inv-col-price{width:6.5%;}" +
+            ".inv-lines col.inv-col-simple-amt{width:6.5%;}" +
+            ".inv-lines col.inv-col-simple-pct{width:5%;}" +
+            ".inv-lines col.inv-col-dist-amt{width:6.5%;}" +
+            ".inv-lines col.inv-col-dist-pct{width:5%;}" +
+            ".inv-lines col.inv-col-tax-amt{width:6%;}" +
+            ".inv-lines col.inv-col-tax-pct{width:4.5%;}" +
+            ".inv-lines col.inv-col-amount{width:7.5%;}" +
+            ".inv-lines th.inv-col-sr,.inv-lines td.inv-col-sr{text-align:center;}" +
+            ".inv-lines th.inv-col-product,.inv-lines td.inv-col-product{word-wrap:break-word;overflow-wrap:anywhere;}" +
+            ".inv-lines-page-header-cell{padding:0 0 8px 0;border:none;vertical-align:top;background:#fff;}" +
+            ".inv-lines thead tr.inv-lines-page-header td{border:none;}" +
             ".inv-lines th,.inv-lines td{border:1px solid #999;padding:4px 5px;vertical-align:top;word-wrap:break-word;}" +
             ".inv-lines thead th{background:#f5f5f5;font-weight:800;font-size:9px;text-align:center;color:#000;}" +
             ".inv-lines td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:700;}" +
@@ -520,10 +662,35 @@ var InventoryDocumentExport = (function () {
             ".inv-bottom-note{margin-top:16px;padding:0;text-align:center;font-size:13px;font-weight:800;color:#000;}" +
             ".inv-empty-row td{text-align:center;color:#666;font-style:italic;padding:14px;}" +
             "@media print{" +
+            "@page{size:A4 portrait;margin:0;}" +
             "html,body{background:#fff;padding:0;}" +
-            ".sale-invoice-page{border:none;margin:0;box-shadow:none;width:auto;min-height:auto;max-width:none;padding:0;}" +
+            ".sale-invoice-page{border:none;margin:0;box-shadow:none;width:auto;min-height:auto;max-width:none;padding:10mm 12mm 12mm;}" +
+            ".inv-lines thead{display:table-header-group;}" +
+            ".inv-lines tfoot{display:table-footer-group;}" +
+            ".inv-lines tbody tr{page-break-inside:avoid;break-inside:avoid;}" +
+            ".inv-lines-page-header-cell{background:#fff;}" +
             "}"
         );
+    }
+
+    function computeInvoiceRoundTotals(totalAmount, totalTax, fallbackTotal) {
+        var preRoundTotal = roundMoney(Number(totalAmount || 0) + Number(totalTax || 0));
+        if (!preRoundTotal && fallbackTotal) {
+            preRoundTotal = roundMoney(fallbackTotal);
+        }
+        var roundedGrandTotal = Math.round(preRoundTotal);
+        var roundOff = roundMoney(roundedGrandTotal - preRoundTotal);
+        return {
+            preRoundTotal: preRoundTotal,
+            roundOff: roundOff,
+            grandTotal: roundedGrandTotal
+        };
+    }
+
+    function formatRoundOff(value) {
+        var num = roundMoney(value);
+        if (num > 0) return "+" + formatMoney(num);
+        return formatMoney(num);
     }
 
     function buildSaleInvoiceHtml(sale) {
@@ -546,38 +713,50 @@ var InventoryDocumentExport = (function () {
         subtotal = roundMoney(subtotal);
         totalTax = roundMoney(totalTax);
         totalAmount = roundMoney(totalAmount);
-        var grandTotal = roundMoney(Number(sale.total_amount || subtotal));
-        if (!subtotal && grandTotal) subtotal = grandTotal;
+        var saleTotal = roundMoney(Number(sale.total_amount || subtotal));
+        if (!subtotal && saleTotal) subtotal = saleTotal;
+        var roundTotals = computeInvoiceRoundTotals(totalAmount, totalTax, saleTotal);
 
         var invoiceNo = sale.reference_no || ("SALE-" + sale.id);
         var invoiceDate = formatDisplayDate(sale.purchase_date);
         var paymentFooterHtml = buildTermsAndPaymentFooterSection(sale);
 
+        var headerRowHtml = buildInvoiceHeaderRow(sale, business, businessName, invoiceNo, invoiceDate);
+
         return (
             '<section class="sale-invoice-page">' +
-            buildInvoiceHeaderRow(sale, business, businessName, invoiceNo, invoiceDate) +
-            '<div class="inv-lines-wrap"><table class="inv-lines"><thead><tr>' +
-            '<th class="center" style="width:4%">Sr.</th>' +
-            '<th class="center" style="width:18%">Product</th>' +
-            '<th class="center" style="width:6%">Qty</th>' +
-            '<th class="center" style="width:6%">Unit</th>' +
-            '<th class="center" style="width:10%">Batch</th>' +
-            '<th class="center" style="width:9%">Exp.</th>' +
-            '<th class="center" style="width:9%">Price</th>' +
-            '<th class="center" style="width:9%">Discount</th>' +
-            '<th class="center" style="width:8%">Tax</th>' +
-            '<th class="center" style="width:10%">Amount</th>' +
+            '<div class="inv-lines-wrap"><table class="inv-lines">' +
+            buildInvoiceLinesColgroup() +
+            "<thead>" +
+            '<tr class="inv-lines-page-header"><td colspan="13" class="inv-lines-page-header-cell">' +
+            headerRowHtml +
+            "</td></tr>" +
+            "<tr>" +
+            '<th class="center inv-col-sr">Sr.</th>' +
+            '<th class="center inv-col-product">Product</th>' +
+            '<th class="center inv-col-qty">Qty</th>' +
+            '<th class="center inv-col-unit">Unit</th>' +
+            '<th class="center inv-col-exp">Exp.</th>' +
+            '<th class="center inv-col-price">Price (₹)</th>' +
+            '<th class="center inv-col-simple-amt">Simple<br/>Discount (₹)</th>' +
+            '<th class="center inv-col-simple-pct">Simple<br/>Discount (%)</th>' +
+            '<th class="center inv-col-dist-amt">Distributor<br/>Discount (₹)</th>' +
+            '<th class="center inv-col-dist-pct">Distributor<br/>Discount (%)</th>' +
+            '<th class="center inv-col-tax-amt">Tax (₹)</th>' +
+            '<th class="center inv-col-tax-pct">Tax (%)</th>' +
+            '<th class="center inv-col-amount">Amount (₹)</th>' +
             "</tr></thead><tbody>" + itemRows + "</tbody></table></div>" +
             '<div class="inv-amount-words"><strong>Amount in words:</strong> ' +
-            escapeHtml(amountInWordsInr(grandTotal)) + "</div>" +
+            escapeHtml(amountInWordsInr(roundTotals.grandTotal)) + "</div>" +
             '<div class="inv-footer-grid">' +
             buildAuthorizedSignatureSection(sale) +
             '<div class="inv-totals-wrap">' +
             '<table class="inv-totals">' +
-            "<tr><td>Amount</td><td>" + formatMoney(totalAmount || grandTotal) + "</td></tr>" +
-            "<tr><td>Tax</td><td>" + formatMoney(totalTax) + "</td></tr>" +
-            "<tr class=\"inv-total-final\"><td>Total</td><td>" + formatMoney(grandTotal) + "</td></tr>" +
-            "<tr class=\"inv-total-final\"><td>Balance Due</td><td>" + formatMoney(grandTotal) + "</td></tr>" +
+            "<tr><td>Amount (₹)</td><td>" + formatMoney(totalAmount || roundTotals.preRoundTotal) + "</td></tr>" +
+            "<tr><td>Tax (₹)</td><td>" + formatMoney(totalTax) + "</td></tr>" +
+            "<tr><td>Total (₹)</td><td>" + formatMoney(roundTotals.preRoundTotal) + "</td></tr>" +
+            "<tr><td>Round Off (₹)</td><td>" + formatRoundOff(roundTotals.roundOff) + "</td></tr>" +
+            "<tr class=\"inv-total-final\"><td>Grand Total (₹)</td><td>" + formatMoney(roundTotals.grandTotal) + "</td></tr>" +
             "</table></div></div>" +
             (hasPaymentInfo(paymentInfo)
                 ? '<div class="inv-payment-row">' + buildPaymentInfoSection(paymentInfo) + "</div>"
@@ -594,15 +773,12 @@ var InventoryDocumentExport = (function () {
 
     function buildSalesDocumentHtml(sales) {
         var list = sales || [];
-        var title = list.length === 1
-            ? "Sale Invoice" + (list[0].reference_no ? " - " + list[0].reference_no : "")
-            : "Sales Invoices";
         var sections = list.map(function (sale) {
             return buildSaleInvoiceHtml(sale);
         }).join("");
 
         return (
-            "<!DOCTYPE html><html><head><meta charset=\"utf-8\"/><title>" + escapeHtml(title) + "</title>" +
+            "<!DOCTYPE html><html><head><meta charset=\"utf-8\"/><title></title>" +
             "<style>" + saleInvoiceStyles() + "</style></head><body>" +
             sections +
             "</body></html>"

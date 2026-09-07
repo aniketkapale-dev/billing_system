@@ -4,6 +4,30 @@
 var InventorySidebar = (function () {
     "use strict";
 
+    var HOVER_OPEN_DELAY_MS = 180;
+    var HOVER_CLOSE_DELAY_MS = 400;
+
+    function clearGroupTimers(group) {
+        clearTimeout(group._openTimer);
+        clearTimeout(group._closeTimer);
+        group._openTimer = null;
+        group._closeTimer = null;
+    }
+
+    function shouldKeepGroupOpen(group) {
+        if (isCollapsedRail()) return false;
+        if (group.classList.contains("inv-nav-group--has-active-child")) return true;
+        return group.dataset.clickOpen === "1";
+    }
+
+    function scheduleCloseGroup(group) {
+        clearTimeout(group._closeTimer);
+        group._closeTimer = setTimeout(function () {
+            group._closeTimer = null;
+            if (shouldKeepGroupOpen(group)) return;
+            setGroupOpen(group, false);
+        }, HOVER_CLOSE_DELAY_MS);
+    }
     function isCollapsedRail() {
         var body = document.body;
         return body.classList.contains("inv-sidebar-collapsed") &&
@@ -38,7 +62,8 @@ var InventorySidebar = (function () {
             if (group === except) return;
             if (!isCollapsedRail() && group.classList.contains("inv-nav-group--has-active-child")) return;
             if (!isCollapsedRail() && group.dataset.clickOpen === "1") return;
-            setGroupOpen(group, false);
+            clearGroupTimers(group);
+            scheduleCloseGroup(group);
         });
     }
 
@@ -54,21 +79,21 @@ var InventorySidebar = (function () {
 
             group.addEventListener("mouseenter", function () {
                 if (!group.querySelector(".inv-nav-sub")) return;
-                closeOtherGroups(group);
-                setGroupOpen(group, true);
+                clearGroupTimers(group);
+                group._openTimer = setTimeout(function () {
+                    group._openTimer = null;
+                    closeOtherGroups(group);
+                    setGroupOpen(group, true);
+                }, HOVER_OPEN_DELAY_MS);
             });
 
             group.addEventListener("mouseleave", function () {
-                if (isCollapsedRail()) {
-                    setGroupOpen(group, false);
-                    return;
-                }
-                if (group.classList.contains("inv-nav-group--has-active-child")) return;
-                if (group.dataset.clickOpen === "1") return;
-                setGroupOpen(group, false);
+                clearGroupTimers(group);
+                scheduleCloseGroup(group);
             });
 
             toggle.addEventListener("click", function () {
+                clearGroupTimers(group);
                 var isOpen = !group.classList.contains("inv-nav-group--open");
                 setGroupOpen(group, isOpen);
                 group.dataset.clickOpen = isOpen ? "1" : "0";
