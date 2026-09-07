@@ -1,4 +1,7 @@
+from django.db import transaction
+
 from apps.users.repositories import UserRepository
+from apps.users.purge_service import purge_business_owner_user
 from core.base_service import BaseService
 from core.validators import (
     ensure_unique,
@@ -42,3 +45,7 @@ class UserService(BaseService):
             from django.contrib.auth.hashers import make_password
 
             data["password"] = make_password(raw)
+
+    @transaction.atomic
+    def hard_delete_business_owner(self, pk):
+        purge_business_owner_user(pk)

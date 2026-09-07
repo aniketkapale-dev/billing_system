@@ -25,3 +25,7 @@ class UserViewSet(BaseViewSet):
         instance = self.get_service().get(pk, include_deleted=True)
         data = UserDetailSerializer(instance, context={"request": request}).data
         return ApiResponse.success(data=data, message="User details fetched")
+
+    def destroy(self, request, pk=None):
+        self.get_service().hard_delete_business_owner(pk)
+        return ApiResponse.success(message="User and all related data deleted permanently")

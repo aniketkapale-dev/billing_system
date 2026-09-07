@@ -47,7 +47,7 @@ class AuthService:
         email = (email or "").strip()
         if email:
             email = validate_email_format(email).lower()
-            if User.objects.filter(email__iexact=email).exists():
+            if User.all_objects.filter(email__iexact=email).exists():
                 raise ValidationException("An account with this email already exists.")
         else:
             email = None
@@ -55,7 +55,7 @@ class AuthService:
         mobile_number = validate_mobile_number(mobile_number)
         self._validate_password(password)
 
-        if User.objects.filter(mobile_number=mobile_number).exists():
+        if User.all_objects.filter(mobile_number=mobile_number).exists():
             raise ValidationException("An account with this mobile number already exists.")
 
         user = User.objects.create(
