@@ -573,7 +573,7 @@ var InventoryDocumentExport = (function () {
             "body{padding:16px 0;}" +
             ".sale-invoice-page{width:210mm;min-height:277mm;max-width:210mm;margin:0 auto 16px;padding:10mm 12mm 12mm;background:#fff;border:1px solid #cfcfcf;page-break-after:always;position:relative;font-family:'Segoe UI',Calibri,'Helvetica Neue',Helvetica,sans-serif;font-size:11px;line-height:1.5;color:#111;letter-spacing:.01em;}" +
             ".sale-invoice-page:last-child{page-break-after:auto;margin-bottom:0;}" +
-            ".inv-header-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid #333;margin-bottom:10px;}" +
+            ".inv-header-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%;max-width:100%;box-sizing:border-box;border:1px solid #333;margin:0 0 10px 0;}" +
             ".inv-header-panel{padding:6px 8px;border-right:1px solid #333;min-width:0;font-size:10px;line-height:1.2;display:flex;flex-direction:column;gap:2px;}" +
             ".inv-header-panel:last-child{border-right:none;}" +
             ".inv-header-panel .inv-detail-field--table{display:grid;grid-template-columns:var(--inv-header-label-width,92px) 8px minmax(0,1fr);column-gap:2px;align-items:start;line-height:1.2;margin:0;}" +
@@ -600,10 +600,10 @@ var InventoryDocumentExport = (function () {
             ".inv-meta-line{display:flex;justify-content:flex-end;align-items:baseline;gap:8px;max-width:100%;}" +
             ".inv-meta-label{font-weight:700;color:#333;white-space:nowrap;}" +
             ".inv-meta-value{font-weight:800;color:#000;text-align:right;}" +
-            ".inv-lines-wrap{width:100%;overflow-x:auto;margin-bottom:10px;}" +
-            ".inv-lines{width:100%;border-collapse:collapse;font-size:8px;table-layout:fixed;}" +
+            ".inv-lines-wrap{width:100%;max-width:100%;overflow-x:visible;margin-bottom:10px;}" +
+            ".inv-lines{width:100%;max-width:100%;border-collapse:collapse;font-size:8px;table-layout:fixed;}" +
             ".inv-lines col.inv-col-sr{width:4%;}" +
-            ".inv-lines col.inv-col-product{width:24%;}" +
+            ".inv-lines col.inv-col-product{width:30%;}" +
             ".inv-lines col.inv-col-qty{width:4%;}" +
             ".inv-lines col.inv-col-unit{width:4%;}" +
             ".inv-lines col.inv-col-exp{width:6%;}" +
@@ -614,13 +614,13 @@ var InventoryDocumentExport = (function () {
             ".inv-lines col.inv-col-dist-pct{width:5%;}" +
             ".inv-lines col.inv-col-tax-amt{width:6%;}" +
             ".inv-lines col.inv-col-tax-pct{width:4.5%;}" +
-            ".inv-lines col.inv-col-amount{width:7.5%;}" +
+            ".inv-lines col.inv-col-amount{width:12%;}" +
             ".inv-lines th.inv-col-sr,.inv-lines td.inv-col-sr{text-align:center;}" +
             ".inv-lines th.inv-col-product,.inv-lines td.inv-col-product{word-wrap:break-word;overflow-wrap:anywhere;}" +
-            ".inv-lines-page-header-cell{padding:0 0 8px 0;border:none;vertical-align:top;background:#fff;}" +
-            ".inv-lines thead tr.inv-lines-page-header td{border:none;}" +
-            ".inv-lines th,.inv-lines td{border:1px solid #999;padding:4px 5px;vertical-align:top;word-wrap:break-word;}" +
-            ".inv-lines thead th{background:#f5f5f5;font-weight:800;font-size:9px;text-align:center;color:#000;}" +
+            ".inv-lines-page-header-cell{padding:0 0 8px 0;border:none;vertical-align:top;background:#fff;width:100%;}" +
+            ".inv-lines thead tr.inv-lines-page-header td{border:none;padding:0;}" +
+            ".inv-lines th,.inv-lines td{border:1px solid #333;padding:4px 5px;vertical-align:top;word-wrap:break-word;overflow-wrap:anywhere;}" +
+            ".inv-lines thead th{background:#f5f5f5;font-weight:800;font-size:8px;line-height:1.2;text-align:center;color:#000;}" +
             ".inv-lines td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:700;}" +
             ".inv-lines td.center{text-align:center;font-weight:700;}" +
             ".inv-lines td.item-name{font-weight:800;color:#000;font-size:9px;line-height:1.35;}" +

@@ -3,6 +3,7 @@ var InventoryStock = (function () {
 
     var SUMMARY_API = "/api/inventory";
     var BATCH_API = "/api/invoicing/batches";
+    var CATALOG_API = "/api/catalog";
     var PAGE_SIZE = (window.InventoryConstants && InventoryConstants.PAGE_SIZE) || 10;
     var searchTimer = null;
     var batchSearchTimer = null;
@@ -10,6 +11,7 @@ var InventoryStock = (function () {
     var currentSearch = "";
     var batchPage = 1;
     var batchSearch = "";
+    var units = [];
     var currentSummaryOrdering = "product__name";
     var currentBatchOrdering = "created_at";
     var activeTab = "summary";
@@ -186,6 +188,92 @@ var InventoryStock = (function () {
         return batchColumnCtrl;
     }
 
+    function catalogRequest(resource, path, opts) {
+        path = path == null ? "" : String(path);
+        var segment = String(resource).replace(/^\/+|\/+$/g, "");
+        var urlPath;
+        if (path.charAt(0) === "?") {
+            urlPath = "/" + segment + "/" + path;
+        } else if (!path) {
+            urlPath = "/" + segment + "/";
+        } else {
+            urlPath = "/" + segment + "/" + path.replace(/^\//, "");
+        }
+        return InventoryApi.request(CATALOG_API, urlPath, opts);
+    }
+
+    function fillSelect(selectId, items, placeholder, labelFn) {
+        var select = document.getElementById(selectId);
+        if (!select) return;
+        var current = select.value;
+        select.innerHTML = '<option value="">' + placeholder + "</option>";
+        items.forEach(function (item) {
+            var option = document.createElement("option");
+            option.value = item.id;
+            option.textContent = labelFn(item);
+            select.appendChild(option);
+        });
+        if (current) select.value = current;
+    }
+
+    function renderUnitFilterSelects() {
+        fillSelect("inventory-unit-filter", units, "All units", function (item) {
+            return item.name + " (" + item.short_name + ")";
+        });
+        fillSelect("batch-unit-filter", units, "All units", function (item) {
+            return item.name + " (" + item.short_name + ")";
+        });
+
+        if (window.InventorySearchableSelect) {
+            var summaryFilter = document.getElementById("inventory-unit-filter");
+            var batchFilter = document.getElementById("batch-unit-filter");
+            if (summaryFilter) InventorySearchableSelect.rebuild(summaryFilter);
+            if (batchFilter) InventorySearchableSelect.rebuild(batchFilter);
+        }
+    }
+
+    function loadUnits() {
+        return catalogRequest("units", "?page_size=100").then(function (body) {
+            units = body && body.isSuccess ? (body.data.items || []) : [];
+            renderUnitFilterSelects();
+            return units;
+        });
+    }
+
+    function getSummaryUnitFilter() {
+        var el = document.getElementById("inventory-unit-filter");
+        return el && el.value ? el.value : "";
+    }
+
+    function getBatchUnitFilter() {
+        var el = document.getElementById("batch-unit-filter");
+        return el && el.value ? el.value : "";
+    }
+
+    function clearSummaryFilters() {
+        var searchEl = document.getElementById("inventory-search");
+        var unitFilter = document.getElementById("inventory-unit-filter");
+        if (searchEl) searchEl.value = "";
+        if (unitFilter) unitFilter.value = "";
+        if (window.InventorySearchableSelect && unitFilter) {
+            InventorySearchableSelect.refresh(unitFilter);
+        }
+        loadSummary("", 1);
+    }
+
+    function clearBatchFilters() {
+        var searchEl = document.getElementById("batch-search");
+        var unitFilter = document.getElementById("batch-unit-filter");
+        var inStockEl = document.getElementById("batch-in-stock-only");
+        if (searchEl) searchEl.value = "";
+        if (unitFilter) unitFilter.value = "";
+        if (inStockEl) inStockEl.checked = true;
+        if (window.InventorySearchableSelect && unitFilter) {
+            InventorySearchableSelect.refresh(unitFilter);
+        }
+        loadBatches("", 1);
+    }
+
     function summaryRequest(path, opts) {
         return InventoryApi.request(SUMMARY_API, path, opts);
     }
@@ -253,21 +341,13 @@ var InventoryStock = (function () {
         if (!container || !purchasesWrap) return;
 
         var rows = [
-            { label: "Product", value: displayValue(stock.product_name) },
+            { label: "Product", value: displayValue(stock.product_name), emphasis: true },
             { label: "SKU", value: displayValue(stock.product_sku) },
             { label: "Unit", value: displayValue(stock.product_unit || "pcs") },
-            { label: "In Stock", value: displayValue(stock.quantity) }
+            { label: "In Stock", value: displayValue(stock.quantity), num: true }
         ];
 
-        container.innerHTML = rows.map(function (row) {
-            var cls = row.full ? " inv-product-view-item--full" : "";
-            return (
-                '<div class="inv-product-view-item' + cls + '">' +
-                '<span class="inv-product-view-label">' + row.label + "</span>" +
-                '<div class="inv-product-view-value">' + row.value + "</div>" +
-                "</div>"
-            );
-        }).join("");
+        container.innerHTML = InventoryApi.renderViewGrid(rows);
 
         var sources = stock.purchase_sources || [];
         if (!sources.length) {
@@ -359,7 +439,10 @@ var InventoryStock = (function () {
         currentPage = page || 1;
         InventoryLoader.show();
 
-        return summaryRequest(buildQuery(currentSearch, currentPage, { ordering: currentSummaryOrdering }, "inventory-pagination"))
+        return summaryRequest(buildQuery(currentSearch, currentPage, {
+            ordering: currentSummaryOrdering,
+            unit_id: getSummaryUnitFilter()
+        }, "inventory-pagination"))
             .then(function (body) {
                 if (body && body.isSuccess && body.data) {
                     renderSummaryRows(body.data.items || []);
@@ -389,7 +472,10 @@ var InventoryStock = (function () {
         batchSearch = search || "";
         batchPage = page || 1;
         var inStockEl = document.getElementById("batch-in-stock-only");
-        var extra = { ordering: currentBatchOrdering };
+        var extra = {
+            ordering: currentBatchOrdering,
+            unit_id: getBatchUnitFilter()
+        };
         if (inStockEl && inStockEl.checked) {
             extra.in_stock = "true";
         }
@@ -451,7 +537,9 @@ var InventoryStock = (function () {
 
         function boot() {
             if (!InventoryBusiness.getActiveId()) return;
-            switchTab(activeTab);
+            loadUnits().then(function () {
+                switchTab(activeTab);
+            });
         }
 
         InventoryBusiness.whenReady(boot);
@@ -476,6 +564,18 @@ var InventoryStock = (function () {
             });
         }
 
+        var unitFilterEl = document.getElementById("inventory-unit-filter");
+        if (unitFilterEl) {
+            unitFilterEl.addEventListener("change", function () {
+                loadSummary(currentSearch, 1);
+            });
+        }
+
+        var clearSummaryBtn = document.getElementById("inventory-clear-filters");
+        if (clearSummaryBtn) {
+            clearSummaryBtn.addEventListener("click", clearSummaryFilters);
+        }
+
         if (batchSearchEl) {
             batchSearchEl.addEventListener("input", function () {
                 window.clearTimeout(batchSearchTimer);
@@ -489,6 +589,18 @@ var InventoryStock = (function () {
             inStockEl.addEventListener("change", function () {
                 loadBatches(batchSearch, 1);
             });
+        }
+
+        var batchUnitFilterEl = document.getElementById("batch-unit-filter");
+        if (batchUnitFilterEl) {
+            batchUnitFilterEl.addEventListener("change", function () {
+                loadBatches(batchSearch, 1);
+            });
+        }
+
+        var clearBatchBtn = document.getElementById("batch-clear-filters");
+        if (clearBatchBtn) {
+            clearBatchBtn.addEventListener("click", clearBatchFilters);
         }
 
         var summaryBody = document.getElementById("inventory-table-body");

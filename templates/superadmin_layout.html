@@ -10,7 +10,7 @@
     <title>{% block title %}Billing System - Superadmin{% endblock %}</title>
     {% include "partials/inventory_theme.html" %}
     <link href="{% static 'css/dashboard.css' %}?v=20260307-sidebar-hover" rel="stylesheet"/>
-    <link href="{% static 'css/inventory-mgmt.css' %}" rel="stylesheet"/>
+    <link href="{% static 'css/inventory-mgmt.css' %}?v=20260308-table-type-stockin" rel="stylesheet"/>
 </head>
 <body class="inv-auth-pending inv-dashboard-body inv-dashboard-body--superadmin inv-sidebar-collapsed">
 {% include "partials/inventory_ui.html" %}
@@ -127,7 +127,8 @@
 <script src="{% static 'js/components/toast.js' %}"></script>
 <script src="{% static 'js/components/loader.js' %}"></script>
 <script src="{% static 'js/components/confirm.js' %}"></script>
-<script src="{% static 'js/core/pagination.js' %}"></script>
+<script src="{% static 'js/core/pagination.js' %}?v=20260308-pagination-native"></script>
+<script src="{% static 'js/core/api.js' %}?v=20260308-session-expiry"></script>
 <script src="{% static 'js/layout/owner-profile.js' %}"></script>
 <script src="{% static 'js/components/column-customize.js' %}"></script>
 <script src="{% static 'js/components/table-cards.js' %}"></script>

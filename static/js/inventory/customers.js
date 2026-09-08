@@ -365,7 +365,7 @@ var InventoryCustomers = (function () {
         if (!container) return;
 
         var rows = [
-            { label: "Full Name", value: displayValue(customer.name) },
+            { label: "Full Name", value: displayValue(customer.name), emphasis: true },
             { label: "Mobile", value: displayValue(customer.mobile) },
             { label: "Email", value: displayValue(customer.email) },
             { label: "Address", value: displayValue(customer.address), full: true }
@@ -385,15 +385,7 @@ var InventoryCustomers = (function () {
             { label: "Last Updated", value: displayValue(formatDate(customer.updated_at)) }
         );
 
-        container.innerHTML = rows.map(function (row) {
-            var cls = row.full ? " inv-product-view-item--full" : "";
-            return (
-                '<div class="inv-product-view-item' + cls + '">' +
-                '<span class="inv-product-view-label">' + row.label + "</span>" +
-                '<div class="inv-product-view-value">' + row.value + "</div>" +
-                "</div>"
-            );
-        }).join("");
+        container.innerHTML = InventoryApi.renderViewGrid(rows);
     }
 
     function openViewPanel(id) {

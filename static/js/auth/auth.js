@@ -59,6 +59,9 @@ var InventoryAuth = (function () {
             if (tokens.refresh) localStorage.setItem(KEYS.REFRESH, tokens.refresh);
         }
         if (user) localStorage.setItem(KEYS.USER, JSON.stringify(user));
+        if (typeof InventoryApi !== "undefined" && InventoryApi.scheduleSessionExpiry) {
+            InventoryApi.scheduleSessionExpiry();
+        }
     }
 
     function clear() {
@@ -68,7 +71,11 @@ var InventoryAuth = (function () {
     }
 
     function goLogin() {
-        clear();
+        if (typeof InventoryApi !== "undefined" && InventoryApi.clearSession) {
+            InventoryApi.clearSession();
+        } else {
+            clear();
+        }
         window.location.replace(ROUTES.LOGIN);
     }
 
@@ -227,6 +234,12 @@ var InventoryAuth = (function () {
     }
 
     function apiGet(path, withAuth) {
+        if (withAuth && typeof InventoryApi !== "undefined" && InventoryApi.authFetch) {
+            return InventoryApi.authFetch(API + path, { method: "GET" }).then(function (res) {
+                return res.json();
+            });
+        }
+
         var headers = {};
         if (withAuth) {
             var token = getToken();
@@ -242,6 +255,22 @@ var InventoryAuth = (function () {
     }
 
     function apiPost(path, body, withAuth) {
+        if (withAuth && typeof InventoryApi !== "undefined" && InventoryApi.authFetch) {
+            return InventoryApi.authFetch(API + path, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body)
+            }).then(function (res) {
+                return res.json().then(function (data) {
+                    return {
+                        ok: res.ok,
+                        status: res.status,
+                        body: data
+                    };
+                });
+            });
+        }
+
         var headers = { "Content-Type": "application/json" };
         if (withAuth) {
             var token = getToken();
@@ -328,6 +357,9 @@ var InventoryAuth = (function () {
             document.body.classList.remove("inv-auth-pending");
             paintProfile(body.data);
             wireLogout();
+            if (typeof InventoryApi !== "undefined" && InventoryApi.scheduleSessionExpiry) {
+                InventoryApi.scheduleSessionExpiry();
+            }
             return true;
         }).catch(function () {
             goLogin();
@@ -363,6 +395,9 @@ var InventoryAuth = (function () {
             document.body.classList.remove("inv-auth-pending");
             paintProfile(body.data);
             wireLogout();
+            if (typeof InventoryApi !== "undefined" && InventoryApi.scheduleSessionExpiry) {
+                InventoryApi.scheduleSessionExpiry();
+            }
             return true;
         }).catch(function () {
             goLogin();

@@ -422,6 +422,9 @@ var InventoryProducts = (function () {
         return catalogRequest("categories", "?page_size=100").then(function (body) {
             categories = body && body.isSuccess ? (body.data.items || []) : [];
             renderCategorySelect(selectedId);
+            if (document.getElementById("products-category-filter")) {
+                renderProductFilterSelects();
+            }
             return categories;
         });
     }
@@ -618,6 +621,9 @@ var InventoryProducts = (function () {
         return catalogRequest("units", "?page_size=100").then(function (body) {
             units = body && body.isSuccess ? (body.data.items || []) : [];
             renderUnitSelect(selectedId);
+            if (document.getElementById("products-unit-filter")) {
+                renderProductFilterSelects();
+            }
             return units;
         });
     }
@@ -731,6 +737,22 @@ var InventoryProducts = (function () {
             });
     }
 
+    function renderProductFilterSelects() {
+        fillSelect("products-category-filter", categories, "All categories", function (item) {
+            return item.name;
+        });
+        fillSelect("products-unit-filter", units, "All units", function (item) {
+            return item.name + " (" + item.short_name + ")";
+        });
+
+        if (window.InventorySearchableSelect) {
+            var categoryFilter = document.getElementById("products-category-filter");
+            var unitFilter = document.getElementById("products-unit-filter");
+            if (categoryFilter) InventorySearchableSelect.rebuild(categoryFilter);
+            if (unitFilter) InventorySearchableSelect.rebuild(unitFilter);
+        }
+    }
+
     function loadCatalogOptions() {
         if (!InventoryBusiness.getActiveId()) {
             return Promise.resolve();
@@ -741,7 +763,9 @@ var InventoryProducts = (function () {
             loadCategories(),
             loadBrands(),
             loadManufacturers(),
-        ]);
+        ]).then(function () {
+            renderProductFilterSelects();
+        });
     }
 
     function renderRows(items) {
@@ -774,7 +798,31 @@ var InventoryProducts = (function () {
         params.set("page_size", String(InventoryPagination.getPageSize("products-pagination")));
         if (search) params.set("search", search);
         if (currentOrdering) params.set("ordering", currentOrdering);
+
+        var categoryFilter = document.getElementById("products-category-filter");
+        var unitFilter = document.getElementById("products-unit-filter");
+        if (categoryFilter && categoryFilter.value) {
+            params.set("category_id", categoryFilter.value);
+        }
+        if (unitFilter && unitFilter.value) {
+            params.set("unit_id", unitFilter.value);
+        }
+
         return "?" + params.toString();
+    }
+
+    function clearProductFilters() {
+        var searchEl = document.getElementById("products-search");
+        var categoryFilter = document.getElementById("products-category-filter");
+        var unitFilter = document.getElementById("products-unit-filter");
+        if (searchEl) searchEl.value = "";
+        if (categoryFilter) categoryFilter.value = "";
+        if (unitFilter) unitFilter.value = "";
+        if (window.InventorySearchableSelect) {
+            if (categoryFilter) InventorySearchableSelect.refresh(categoryFilter);
+            if (unitFilter) InventorySearchableSelect.refresh(unitFilter);
+        }
+        loadProducts("", 1);
     }
 
     function loadProducts(search, page) {
@@ -901,28 +949,20 @@ var InventoryProducts = (function () {
         if (!container) return;
 
         var rows = [
-            { label: "Product Name", value: displayValue(product.name) },
+            { label: "Product Name", value: displayValue(product.name), emphasis: true },
             { label: "SKU", value: displayValue(product.sku) },
             { label: "Barcode", value: displayValue(product.barcode) },
             { label: "Category", value: displayValue(product.category_name) },
             { label: "Brand", value: displayValue(product.brand_name) },
             { label: "Manufacturer", value: displayValue(product.manufacturer_name) },
-            { label: "Actual Price with Tax (per product)", value: cellMoney(product.purchase_price || product.actual_price) },
-            { label: "MRP", value: cellMoney(product.mrp) },
+            { label: "Actual Price with Tax (per product)", value: cellMoney(product.purchase_price || product.actual_price), num: true },
+            { label: "MRP", value: cellMoney(product.mrp), num: true },
             { label: "Unit", value: displayValue(product.unit_short_name || product.unit_name) },
-            { label: "Quantity", value: displayValue(formatQty(product.quantity)) },
+            { label: "Quantity", value: displayValue(formatQty(product.quantity)), num: true },
             { label: "Description", value: displayValue(product.description), full: true }
         ];
 
-        container.innerHTML = rows.map(function (row) {
-            var cls = row.full ? " inv-product-view-item--full" : "";
-            return (
-                '<div class="inv-product-view-item' + cls + '">' +
-                '<span class="inv-product-view-label">' + row.label + "</span>" +
-                '<div class="inv-product-view-value">' + row.value + "</div>" +
-                "</div>"
-            );
-        }).join("");
+        container.innerHTML = InventoryApi.renderViewGrid(rows);
     }
 
     function fetchNextSku() {
@@ -1190,6 +1230,24 @@ var InventoryProducts = (function () {
                     loadProducts(searchEl.value.trim(), 1);
                 }, 300);
             });
+        }
+
+        var categoryFilterEl = document.getElementById("products-category-filter");
+        var unitFilterEl = document.getElementById("products-unit-filter");
+        var clearFiltersBtn = document.getElementById("products-clear-filters");
+
+        if (categoryFilterEl) {
+            categoryFilterEl.addEventListener("change", function () {
+                loadProducts(currentSearch, 1);
+            });
+        }
+        if (unitFilterEl) {
+            unitFilterEl.addEventListener("change", function () {
+                loadProducts(currentSearch, 1);
+            });
+        }
+        if (clearFiltersBtn) {
+            clearFiltersBtn.addEventListener("click", clearProductFilters);
         }
 
         if (saveBtn) saveBtn.addEventListener("click", saveProduct);

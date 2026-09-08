@@ -27,6 +27,7 @@ var InventoryPagination = (function () {
         var select = document.createElement("select");
         select.id = containerId + "-page-size";
         select.className = "inv-pagination-size-select";
+        select.setAttribute("data-native-select", "true");
         select.setAttribute("aria-label", "Select number of records per page");
 
         PAGE_SIZE_OPTIONS.forEach(function (size) {
@@ -49,18 +50,54 @@ var InventoryPagination = (function () {
             }
         });
 
+        var control = document.createElement("div");
+        control.className = "inv-pagination-size-control";
+        control.appendChild(select);
+
         wrap.appendChild(label);
-        wrap.appendChild(select);
+        wrap.appendChild(control);
         return wrap;
     }
 
-    function createPageInfo(pagination) {
-        var info = document.createElement("div");
-        info.className = "inv-pagination-page-info";
-        var current = pagination && pagination.page ? pagination.page : 1;
-        var total = pagination && pagination.total_pages ? pagination.total_pages : 1;
-        info.textContent = "Page " + current + " of " + total;
-        return info;
+    function getRecordRange(pagination, containerId) {
+        if (!pagination) {
+            return { start: 0, end: 0, total: 0 };
+        }
+
+        var total = Number(pagination.count);
+        if (!Number.isFinite(total) || total < 0) {
+            total = 0;
+        }
+
+        if (total === 0) {
+            return { start: 0, end: 0, total: 0 };
+        }
+
+        var page = Number(pagination.page) || 1;
+        var pageSize = Number(pagination.page_size) || getPageSize(containerId) || PAGE_SIZE_OPTIONS[0];
+        var start = (page - 1) * pageSize + 1;
+        var end = Math.min(page * pageSize, total);
+
+        return { start: start, end: end, total: total };
+    }
+
+    function formatRecordSummary(pagination, containerId) {
+        var range = getRecordRange(pagination, containerId);
+        if (range.total === 0) {
+            return "Showing 0 of 0";
+        }
+        if (range.start === range.end) {
+            return "Showing " + range.start + " of " + range.total;
+        }
+        return "Showing " + range.start + "\u2013" + range.end + " of " + range.total;
+    }
+
+    function createRecordSummary(pagination, containerId) {
+        var summary = document.createElement("div");
+        summary.className = "inv-pagination-summary";
+        summary.setAttribute("aria-live", "polite");
+        summary.textContent = formatRecordSummary(pagination, containerId);
+        return summary;
     }
 
     function render(containerId, pagination, onChange, options) {
@@ -70,11 +107,14 @@ var InventoryPagination = (function () {
         options = options || {};
         root.innerHTML = "";
 
-        root.appendChild(createPageSizeSelect(containerId, onChange, options));
+        var left = document.createElement("div");
+        left.className = "inv-pagination-left";
+        left.appendChild(createPageSizeSelect(containerId, onChange, options));
+        left.appendChild(createRecordSummary(pagination, containerId));
+        root.appendChild(left);
 
         var right = document.createElement("div");
         right.className = "inv-pagination-right";
-        right.appendChild(createPageInfo(pagination));
 
         var total = pagination && pagination.total_pages ? pagination.total_pages : 1;
 

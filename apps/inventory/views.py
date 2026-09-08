@@ -28,6 +28,9 @@ class InventoryStockViewSet(BusinessScopedViewSetMixin, BaseViewSet):
         in_stock = self.request.query_params.get("in_stock")
         if in_stock != "false":
             queryset = queryset.filter(quantity__gt=0)
+        unit_id = self.request.query_params.get("unit_id")
+        if unit_id:
+            queryset = queryset.filter(product__unit_id=unit_id)
         return queryset
 
     def profit_summary(self, request):

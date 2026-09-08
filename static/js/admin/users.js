@@ -5,32 +5,16 @@ var InventoryUsers = (function () {
     "use strict";
 
     var API = "/api/users";
-    var TOKEN_KEY = "vrms_access_token";
     var PAGE_SIZE = (window.InventoryConstants && InventoryConstants.PAGE_SIZE) || 10;
     var searchTimer = null;
     var currentPage = 1;
     var currentSearch = "";
 
-    function getToken() {
-        return localStorage.getItem(TOKEN_KEY);
-    }
-
-    function authHeaders() {
-        var headers = { "Content-Type": "application/json" };
-        var token = getToken();
-        if (token) headers["Authorization"] = "Bearer " + token;
-        return headers;
-    }
-
     function request(path, opts) {
         opts = opts || {};
-        return fetch(InventoryApi.buildUrl(API, path), {
+        return InventoryApi.request(API, path, {
             method: opts.method || "GET",
-            headers: authHeaders(),
-            body: opts.body ? JSON.stringify(opts.body) : undefined,
-            cache: "no-store"
-        }).then(function (res) {
-            return res.json();
+            body: opts.body
         });
     }
 
@@ -199,20 +183,19 @@ var InventoryUsers = (function () {
                 '<img src="' + escapeHtml(user.profile_image_url) + '" alt="" class="inv-user-detail-avatar">';
         }
 
-        container.innerHTML = [
-            renderDetailField("Full Name", user.full_name),
-            renderDetailField("Email", user.email),
-            renderDetailField("Mobile", user.mobile_number),
-            renderDetailField("Role", roles),
-            renderDetailField(
-                "Status",
-                '<span class="inv-status-badge ' + statusClass + '">' + statusText + "</span>",
-                { html: true }
-            ),
-            renderDetailField("Registered", formatDate(user.created_at)),
-            renderDetailField("Approved", formatDate(user.approved_at)),
-            renderDetailField("Profile Photo", profileHtml, { html: true })
-        ].join("");
+        container.innerHTML = InventoryApi.renderViewGrid([
+            { label: "Full Name", value: displayValue(user.full_name) },
+            { label: "Email", value: displayValue(user.email) },
+            { label: "Mobile", value: displayValue(user.mobile_number) },
+            { label: "Role", value: displayValue(roles) },
+            {
+                label: "Status",
+                value: '<span class="inv-status-badge ' + statusClass + '">' + statusText + "</span>"
+            },
+            { label: "Registered", value: displayValue(formatDate(user.created_at)) },
+            { label: "Approved", value: displayValue(formatDate(user.approved_at)) },
+            { label: "Profile Photo", value: profileHtml }
+        ]);
 
         var businesses = user.businesses || [];
         if (!businesses.length) {
@@ -270,14 +253,7 @@ var InventoryUsers = (function () {
     }
 
     function deleteUser(userId, btn) {
-        return fetch(InventoryApi.buildUrl(API, "/" + userId + "/"), {
-            method: "DELETE",
-            headers: authHeaders(),
-            cache: "no-store"
-        })
-            .then(function (res) {
-                return res.json();
-            })
+        return InventoryApi.request(API, "/" + userId + "/", { method: "DELETE" })
             .then(function (body) {
                 if (body && body.isSuccess) {
                     InventoryToast.success("User deleted successfully.");

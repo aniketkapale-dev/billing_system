@@ -19,8 +19,12 @@
     </div>
 
     <div class="inv-mgmt-card" id="inventory-summary-panel">
-        <div class="inv-mgmt-toolbar">
+        <div class="inv-mgmt-toolbar inv-mgmt-toolbar--filters">
             <input type="search" id="inventory-search" class="inv-mgmt-search" placeholder="Search stock..."/>
+            <select id="inventory-unit-filter" class="inv-mgmt-select inv-mgmt-filter-select" aria-label="Unit">
+                <option value="">All units</option>
+            </select>
+            <button type="button" id="inventory-clear-filters" class="inv-mgmt-btn">Clear</button>
         </div>
         <div class="inv-mgmt-table-wrap">
             <table class="inv-mgmt-table inv-mgmt-table--inventory">
@@ -36,12 +40,16 @@
     </div>
 
     <div class="inv-mgmt-card inv-hidden" id="inventory-batches-panel">
-        <div class="inv-mgmt-toolbar">
+        <div class="inv-mgmt-toolbar inv-mgmt-toolbar--filters">
             <input type="search" id="batch-search" class="inv-mgmt-search" placeholder="Search batches..."/>
+            <select id="batch-unit-filter" class="inv-mgmt-select inv-mgmt-filter-select" aria-label="Unit">
+                <option value="">All units</option>
+            </select>
             <label class="inv-mgmt-checkbox-label">
                 <input type="checkbox" id="batch-in-stock-only" checked/>
                 In stock only
             </label>
+            <button type="button" id="batch-clear-filters" class="inv-mgmt-btn">Clear</button>
         </div>
         <div class="inv-mgmt-table-wrap">
             <table class="inv-mgmt-table inv-mgmt-table--batches">
@@ -57,20 +65,20 @@
     </div>
     </div>
 
-    <div id="inventory-view-panel" class="inv-mgmt-page-panel inv-hidden">
-        <div class="inv-mgmt-panel-header">
-            <h2 id="inventory-view-title" class="inv-dashboard-greeting">Stock Details</h2>
+    <div id="inventory-view-panel" class="inv-mgmt-page-panel inv-detail-view-panel inv-hidden">
+        <div class="inv-mgmt-panel-header inv-detail-view-header">
+            <h2 id="inventory-view-title" class="inv-dashboard-greeting inv-detail-view-title">Stock Details</h2>
             <button type="button" class="inv-mgmt-btn inv-page-back-btn" data-page-back="inventory-list-panel">
                 <span class="material-symbols-outlined">arrow_back</span>
                 Back to List
             </button>
         </div>
-        <div class="inv-mgmt-card inv-mgmt-panel-card">
-            <div class="inv-mgmt-panel-body">
-                <div id="inventory-view-body" class="inv-product-view-grid"></div>
-                <div id="inventory-view-purchases-wrap" class="inv-stockin-view-items"></div>
+        <div class="inv-mgmt-card inv-mgmt-panel-card inv-detail-view-card">
+            <div class="inv-mgmt-panel-body inv-detail-view-body">
+                <div id="inventory-view-body" class="inv-detail-view-grid inv-product-view-grid"></div>
+                <div id="inventory-view-purchases-wrap" class="inv-detail-view-items inv-stockin-view-items"></div>
             </div>
-            <div class="inv-mgmt-panel-footer">
+            <div class="inv-mgmt-panel-footer inv-detail-view-footer">
                 <button type="button" class="inv-mgmt-btn inv-mgmt-btn--primary" data-page-back="inventory-list-panel">Close</button>
             </div>
         </div>
@@ -79,10 +87,8 @@
 {% endblock %}
 
 {% block page_scripts %}
-<link href="{% static 'css/inventory-mgmt.css' %}" rel="stylesheet"/>
-<script src="{% static 'js/core/api.js' %}"></script>
 <script src="{% static 'js/components/page-panel.js' %}"></script>
-<script src="{% static 'js/inventory/stock.js' %}"></script>
+<script src="{% static 'js/inventory/stock.js' %}?v=20260308-stock-unit-filter"></script>
 <script>
 InventoryPagePanel.init();
 InventoryStock.init();

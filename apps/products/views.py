@@ -28,6 +28,16 @@ class ProductViewSet(BusinessScopedViewSetMixin, BaseViewSet):
     def get_permissions(self):
         return [IsAuthenticatedUser(), HasRole()]
 
+    def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
+        category_id = self.request.query_params.get("category_id")
+        unit_id = self.request.query_params.get("unit_id")
+        if category_id:
+            queryset = queryset.filter(category_id=category_id)
+        if unit_id:
+            queryset = queryset.filter(unit_id=unit_id)
+        return queryset
+
     def create(self, request):
         serializer = self.get_write_serializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)

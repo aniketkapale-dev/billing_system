@@ -10,7 +10,7 @@
     <title>{% block title %}Billing System - Dashboard{% endblock %}</title>
     {% include "partials/inventory_theme.html" %}
     <link href="{% static 'css/dashboard.css' %}?v=20260307-sidebar-hover" rel="stylesheet"/>
-    <link href="{% static 'css/inventory-mgmt.css' %}" rel="stylesheet"/>
+    <link href="{% static 'css/inventory-mgmt.css' %}?v=20260308-pending-bill-color" rel="stylesheet"/>
 </head>
 <body class="inv-auth-pending inv-dashboard-body inv-sidebar-collapsed">
 {% include "partials/inventory_ui.html" %}
@@ -395,18 +395,18 @@
 <script src="{% static 'js/components/toast.js' %}"></script>
 <script src="{% static 'js/components/loader.js' %}"></script>
 <script src="{% static 'js/components/confirm.js' %}"></script>
-<script src="{% static 'js/core/pagination.js' %}"></script>
+<script src="{% static 'js/core/pagination.js' %}?v=20260308-pagination-native"></script>
 <script src="{% static 'js/components/page-panel.js' %}"></script>
 <script src="{% static 'js/components/modal.js' %}"></script>
-<script src="{% static 'js/core/api.js' %}"></script>
+<script src="{% static 'js/core/api.js' %}?v=20260308-session-expiry"></script>
 <script src="{% static 'js/layout/business.js' %}"></script>
 <script src="{% static 'js/layout/nav-access.js' %}"></script>
 <script src="{% static 'js/components/bulk-select.js' %}"></script>
 <script src="{% static 'js/components/terms-html.js' %}"></script>
-<script src="{% static 'js/components/document-export.js' %}?v=20260307-print-header"></script>
+<script src="{% static 'js/components/document-export.js' %}?v=20260308-header-table-align"></script>
 <script src="{% static 'js/components/column-customize.js' %}"></script>
-<script src="{% static 'js/components/searchable-select.js' %}"></script>
-<script src="{% static 'js/components/table-cards.js' %}"></script>
+<script src="{% static 'js/components/searchable-select.js' %}?v=20260308-search-select-ui"></script>
+<script src="{% static 'js/components/table-cards.js' %}?v=20260308-action-hover"></script>
 <script src="{% static 'js/layout/sidebar.js' %}?v=20260307-sidebar-hover"></script>
 <script src="{% static 'js/layout/quick-access.js' %}"></script>
 <script src="{% static 'js/layout/owner-profile.js' %}"></script>

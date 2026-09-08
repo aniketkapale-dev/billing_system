@@ -38,20 +38,20 @@
         </div>
     </div>
 
-    <div id="users-view-panel" class="inv-mgmt-page-panel inv-hidden">
-        <div class="inv-mgmt-panel-header">
-            <h2 id="user-detail-title" class="inv-dashboard-greeting">User Details</h2>
+    <div id="users-view-panel" class="inv-mgmt-page-panel inv-detail-view-panel inv-hidden">
+        <div class="inv-mgmt-panel-header inv-detail-view-header">
+            <h2 id="user-detail-title" class="inv-dashboard-greeting inv-detail-view-title">User Details</h2>
             <button type="button" class="inv-mgmt-btn inv-page-back-btn" data-page-back="users-list-panel">
                 <span class="material-symbols-outlined">arrow_back</span>
                 Back to List
             </button>
         </div>
-        <div class="inv-mgmt-card inv-mgmt-panel-card">
-            <div class="inv-mgmt-panel-body">
-                <div id="user-detail-body" class="inv-product-view-grid"></div>
-                <div id="user-detail-businesses-wrap" class="inv-user-detail-businesses"></div>
+        <div class="inv-mgmt-card inv-mgmt-panel-card inv-detail-view-card">
+            <div class="inv-mgmt-panel-body inv-detail-view-body">
+                <div id="user-detail-body" class="inv-detail-view-grid inv-product-view-grid"></div>
+                <div id="user-detail-businesses-wrap" class="inv-detail-view-items inv-user-detail-businesses"></div>
             </div>
-            <div class="inv-mgmt-panel-footer">
+            <div class="inv-mgmt-panel-footer inv-detail-view-footer">
                 <button type="button" class="inv-mgmt-btn inv-mgmt-btn--primary" data-page-back="users-list-panel">Close</button>
             </div>
         </div>
@@ -61,7 +61,7 @@
 
 {% block page_scripts %}
 <link href="{% static 'css/users.css' %}" rel="stylesheet"/>
-<script src="{% static 'js/core/api.js' %}"></script>
+<script src="{% static 'js/core/api.js' %}?v=20260308-session-expiry"></script>
 <script src="{% static 'js/components/page-panel.js' %}"></script>
 <script src="{% static 'js/admin/users.js' %}"></script>
 <script>

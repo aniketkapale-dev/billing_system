@@ -141,4 +141,7 @@ class InventoryBatchViewSet(BusinessScopedViewSetMixin, BaseViewSet):
         product_id = self.request.query_params.get("product_id")
         if product_id:
             queryset = queryset.filter(product_id=product_id)
+        unit_id = self.request.query_params.get("unit_id")
+        if unit_id:
+            queryset = queryset.filter(product__unit_id=unit_id)
         return queryset

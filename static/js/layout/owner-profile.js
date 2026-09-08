@@ -27,6 +27,18 @@ var InventoryOwnerProfile = (function () {
     }
 
     function apiRequest(method, path, body) {
+        if (typeof InventoryApi !== "undefined" && InventoryApi.authFetch) {
+            return InventoryApi.authFetch(API + path, {
+                method: method,
+                headers: { "Content-Type": "application/json" },
+                body: body ? JSON.stringify(body) : undefined
+            }).then(function (res) {
+                return res.json().then(function (data) {
+                    return { ok: res.ok, body: data };
+                });
+            });
+        }
+
         return fetch(API + path, {
             method: method,
             headers: authHeaders(),

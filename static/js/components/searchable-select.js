@@ -6,7 +6,7 @@ var InventorySearchableSelect = (function () {
     "use strict";
 
     var WRAP_CLASS = "inv-search-select";
-    var SELECTOR = "select.inv-mgmt-select, select.inv-pagination-size-select";
+    var SELECTOR = "select.inv-mgmt-select:not(.inv-pagination-size-select)";
     var wiredDocument = false;
     var domObserver = null;
 
@@ -54,6 +54,7 @@ var InventorySearchableSelect = (function () {
             visibleCount += 1;
             var value = option.value;
             var classes = ["inv-search-select-option"];
+            if (!value) classes.push("is-placeholder-option");
             if (value === select.value) classes.push("is-selected");
             if (highlightValue != null && String(value) === String(highlightValue)) {
                 classes.push("is-highlighted");
@@ -197,7 +198,9 @@ var InventorySearchableSelect = (function () {
         var menu = document.createElement("div");
         menu.className = "inv-search-select-menu inv-hidden";
         menu.innerHTML =
-            '<input type="search" class="inv-search-select-input inv-mgmt-search" placeholder="Search..." autocomplete="off" aria-label="Search options"/>' +
+            '<div class="inv-search-select-search">' +
+            '<input type="search" class="inv-search-select-input" placeholder="Search..." autocomplete="off" aria-label="Search options"/>' +
+            "</div>" +
             '<ul class="inv-search-select-list" role="listbox"></ul>';
 
         wrap.appendChild(trigger);
@@ -274,6 +277,7 @@ var InventorySearchableSelect = (function () {
     function enhance(select) {
         if (!select || select.tagName !== "SELECT") return;
         if (select.classList.contains("inv-search-select-native")) return;
+        if (select.classList.contains("inv-pagination-size-select")) return;
         if (!select.matches(SELECTOR)) return;
 
         wireDocument();

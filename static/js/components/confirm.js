@@ -118,6 +118,16 @@ var InventoryConfirm = (function () {
         var inputLabel = options.inputLabel || "Reason";
         var inputPlaceholder = options.inputPlaceholder || "";
         var required = options.required !== false;
+        var showDate = !!options.showDate;
+        var dateLabel = options.dateLabel || "Date";
+        var dateRequired = options.dateRequired !== false;
+        var minDate = options.minDate || "";
+        var dateErrorMessage = options.dateErrorMessage ||
+            "Selected date cannot be before the invoice date.";
+        var defaultDate = options.defaultDate || new Date().toISOString().slice(0, 10);
+        if (minDate && defaultDate < minDate) {
+            defaultDate = minDate;
+        }
 
         return new Promise(function (resolve) {
             removeExisting();
@@ -135,6 +145,19 @@ var InventoryConfirm = (function () {
             modal.setAttribute("aria-modal", "true");
             modal.setAttribute("aria-labelledby", "inv-confirm-title");
 
+            var dateFieldHtml = showDate
+                ? (
+                    '<div class="inv-confirm-modal__field">' +
+                        '<label for="inv-confirm-date" class="inv-confirm-modal__label">' + escapeHtml(dateLabel) + "</label>" +
+                        '<input id="inv-confirm-date" class="inv-confirm-modal__date" type="date" value="' +
+                            escapeHtml(defaultDate) + '"' +
+                            (minDate ? ' min="' + escapeHtml(minDate) + '"' : "") +
+                            "/>" +
+                        '<p id="inv-confirm-date-error" class="inv-confirm-modal__error inv-hidden"></p>' +
+                    "</div>"
+                )
+                : "";
+
             modal.innerHTML =
                 '<div class="inv-confirm-modal__icon inv-confirm-modal__icon--' + variant + '">' +
                     '<span class="material-symbols-outlined">' + escapeHtml(icon) + "</span>" +
@@ -143,6 +166,7 @@ var InventoryConfirm = (function () {
                 (message
                     ? '<p class="inv-confirm-modal__message">' + escapeHtml(message) + "</p>"
                     : "") +
+                dateFieldHtml +
                 '<div class="inv-confirm-modal__field">' +
                     '<label for="inv-confirm-input" class="inv-confirm-modal__label">' + escapeHtml(inputLabel) + "</label>" +
                     '<textarea id="inv-confirm-input" class="inv-confirm-modal__input" rows="3" placeholder="' +
@@ -162,11 +186,43 @@ var InventoryConfirm = (function () {
             document.body.classList.add("inv-confirm-open");
 
             var inputEl = modal.querySelector("#inv-confirm-input");
+            var dateEl = modal.querySelector("#inv-confirm-date");
+            var dateErrorEl = modal.querySelector("#inv-confirm-date-error");
+
+            function showDateError(message) {
+                if (!dateErrorEl) return;
+                dateErrorEl.textContent = message || dateErrorMessage;
+                dateErrorEl.classList.remove("inv-hidden");
+            }
+
+            function clearDateError() {
+                if (!dateErrorEl) return;
+                dateErrorEl.textContent = "";
+                dateErrorEl.classList.add("inv-hidden");
+            }
 
             function submitValue() {
                 var value = inputEl ? inputEl.value.trim() : "";
                 if (required && !value) {
                     if (inputEl) inputEl.focus();
+                    return;
+                }
+                var dateValue = dateEl ? dateEl.value.trim() : "";
+                if (showDate && dateRequired && !dateValue) {
+                    if (dateEl) dateEl.focus();
+                    return;
+                }
+                if (showDate && minDate && dateValue && dateValue < minDate) {
+                    showDateError(dateErrorMessage);
+                    if (dateEl) dateEl.focus();
+                    return;
+                }
+                clearDateError();
+                if (showDate) {
+                    closeDialog(settledRef, resolve, {
+                        reason: value,
+                        cancellation_date: dateValue || defaultDate
+                    });
                     return;
                 }
                 closeDialog(settledRef, resolve, value || null);
@@ -196,6 +252,12 @@ var InventoryConfirm = (function () {
                         submitValue();
                     }
                 });
+            }
+
+            if (dateEl) {
+                dateEl.addEventListener("input", clearDateError);
+                dateEl.focus();
+            } else if (inputEl) {
                 inputEl.focus();
             }
         });

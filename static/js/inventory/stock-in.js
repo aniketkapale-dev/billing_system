@@ -608,12 +608,12 @@ var InventoryStockIn = (function () {
         if (!container || !itemsWrap) return;
 
         var rows = [
-            { label: "Invoice Number", value: displayValue(invoice.invoice_number) },
+            { label: "Invoice Number", value: displayValue(invoice.invoice_number), emphasis: true },
             { label: "Purchase Date", value: displayValue(formatDate(invoice.invoice_date)) },
-            { label: "Total Quantity", value: displayValue(formatQty(invoice.total_quantity)) },
-            { label: "Subtotal", value: InventoryApi.formatMoney(invoice.subtotal) },
-            { label: "Grand Total", value: InventoryApi.formatMoney(invoice.grand_total) },
-            { label: "Remarks", value: displayValue(invoice.remarks), full: true }
+            { label: "Total Quantity", value: displayValue(formatQty(invoice.total_quantity)), num: true },
+            { label: "Subtotal", value: InventoryApi.formatMoney(invoice.subtotal), num: true },
+            { label: "Grand Total", value: InventoryApi.formatMoney(invoice.grand_total), num: true, emphasis: true },
+            { label: "Remarks", value: displayValue(invoice.remarks) }
         ];
 
         if (invoice.attachment_url) {
@@ -628,15 +628,7 @@ var InventoryStockIn = (function () {
             });
         }
 
-        container.innerHTML = rows.map(function (row) {
-            var cls = row.full ? " inv-product-view-item--full" : "";
-            return (
-                '<div class="inv-product-view-item' + cls + '">' +
-                '<span class="inv-product-view-label">' + row.label + "</span>" +
-                '<div class="inv-product-view-value">' + row.value + "</div>" +
-                "</div>"
-            );
-        }).join("");
+        container.innerHTML = InventoryApi.renderViewGrid(rows);
 
         var lines = invoice.items || [];
         if (!lines.length) {

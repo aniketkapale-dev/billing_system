@@ -17,6 +17,7 @@ var InventoryPurchases = (function () {
     var customers = [];
     var invoiceSettings = [];
     var editingPurchaseId = null;
+    var editingPurchaseIsDraft = false;
     var editingSaleStockByProduct = {};
     var PURCHASES_LIST_PANEL = "purchases-list-panel";
     var PURCHASES_FORM_PANEL = "purchases-form-panel";
@@ -48,7 +49,8 @@ var InventoryPurchases = (function () {
             cartons: cartonsEl ? cartonsEl.value.trim() : "",
             eway_bill_no: ewayEl ? ewayEl.value.trim() : "",
             due_date: dueDateEl ? dueDateEl.value.trim() : "",
-            terms: termsEl ? termsEl.value.trim() : ""
+            terms: termsEl ? termsEl.value.trim() : "",
+            is_paid: isFullPaymentReceived()
         };
     }
 
@@ -88,6 +90,7 @@ var InventoryPurchases = (function () {
             invoice_cartons: meta.cartons || "",
             invoice_eway_bill_no: meta.eway_bill_no || "",
             due_date: meta.due_date || sale.due_date || "",
+            is_paid: meta.is_paid === true || sale.is_paid === true,
             invoice_print_terms: meta.terms || ""
         });
     }
@@ -112,10 +115,12 @@ var InventoryPurchases = (function () {
                 },
                 columns: [
                     { id: "date", label: "Date", locked: true, cell: function (p) { return "<td>" + InventoryApi.escapeHtml(p.purchase_date) + "</td>"; } },
-                    { id: "invoice_no", label: "Invoice No.", sortKey: "reference_no", cell: function (p) { return "<td>" + displayValue(p.reference_no) + "</td>"; } },
+                    { id: "invoice_no", label: "Invoice No.", sortKey: "reference_no", cell: function (p) { return "<td>" + formatInvoiceNoCell(p) + "</td>"; } },
                     { id: "customer", label: "Customer", locked: true, sortKey: "customer_name", cell: function (p) { return "<td>" + formatCustomerDisplay(p) + "</td>"; } },
                     { id: "products", label: "Products Sold", cell: function (p) { return '<td class="inv-col-name">' + formatProductsSoldCell(p.items || [], p.id) + "</td>"; } },
                     { id: "sale_amount", label: "Bill Amount", sortKey: "total_amount", headerClass: "inv-mgmt-cell--num", cell: function (p) { return '<td class="inv-mgmt-cell--num">' + InventoryApi.formatMoney(p.total_amount) + "</td>"; } },
+                    { id: "total_paid", label: "Total Paid", headerClass: "inv-mgmt-cell--num", cell: function (p) { return '<td class="inv-mgmt-cell--num">' + InventoryApi.formatMoney(p.total_paid) + "</td>"; } },
+                    { id: "pending_bill", label: "Pending Bill", headerClass: "inv-mgmt-cell--num", cell: function (p) { return formatPendingBillCell(p); } },
                     { id: "total_cost", label: "Total Cost", sortKey: "total_cost", headerClass: "inv-mgmt-cell--num", cell: function (p) { return '<td class="inv-mgmt-cell--num">' + InventoryApi.formatMoney(p.total_cost) + "</td>"; } }
                 ],
                 onApply: function () {
@@ -487,10 +492,12 @@ var InventoryPurchases = (function () {
     function loadProducts(opts) {
         opts = opts || {};
         var includeProductIds = (opts.includeProductIds || []).map(String);
+        var includeAll = !!opts.includeAll || isDraftFlow();
         return InventoryApi.request(PRODUCTS_API, "?page_size=100")
             .then(function (body) {
                 if (body && body.isSuccess && body.data) {
                     products = (body.data.items || []).filter(function (product) {
+                        if (includeAll) return true;
                         if (includeProductIds.indexOf(String(product.id)) !== -1) return true;
                         return Number(product.quantity || 0) > 0;
                     });
@@ -932,6 +939,9 @@ var InventoryPurchases = (function () {
     }
 
     function hasAvailableProducts(excludeRow) {
+        if (isDraftFlow()) {
+            return products.length > 0;
+        }
         var allocated = getAllocatedByProduct(excludeRow);
         return products.some(function (product) {
             var remaining = Number(product.quantity || 0) + getEditingStockBonus(product.id) -
@@ -959,7 +969,7 @@ var InventoryPurchases = (function () {
             var remaining = Number(product.quantity || 0) + getEditingStockBonus(product.id) -
                 (allocated[product.id] || 0);
             var isSelected = String(product.id) === String(selectedId);
-            if (remaining <= 0 && !isSelected) {
+            if (!isDraftFlow() && remaining <= 0 && !isSelected) {
                 return;
             }
             var selected = isSelected ? " selected" : "";
@@ -1159,16 +1169,33 @@ var InventoryPurchases = (function () {
     function setFormMode(mode) {
         var titleEl = document.getElementById("purchase-form-title");
         var saveBtn = document.getElementById("purchase-save-btn");
+        var draftBtn = document.getElementById("purchase-save-draft-btn");
+        var finalizeBtn = document.getElementById("purchase-finalize-btn");
+
+        if (mode === "draft") {
+            if (titleEl) titleEl.textContent = "Edit Draft Sale";
+            if (saveBtn) saveBtn.textContent = "Update Draft";
+            if (draftBtn) draftBtn.classList.add("inv-hidden");
+            if (finalizeBtn) finalizeBtn.classList.remove("inv-hidden");
+            ensureSaleItemsEditablePanel();
+            toggleInvoiceSettingField(false);
+            toggleMarkPaidField(true);
+            return;
+        }
 
         if (mode === "edit") {
             if (titleEl) titleEl.textContent = "Edit Sale";
             if (saveBtn) saveBtn.textContent = "Update Sale";
+            if (draftBtn) draftBtn.classList.add("inv-hidden");
+            if (finalizeBtn) finalizeBtn.classList.add("inv-hidden");
             ensureSaleItemsReadonlyPanel();
             toggleInvoiceSettingField(false);
             toggleMarkPaidField(false);
         } else {
             if (titleEl) titleEl.textContent = "Add Sale";
             if (saveBtn) saveBtn.textContent = "Create Sale";
+            if (draftBtn) draftBtn.classList.remove("inv-hidden");
+            if (finalizeBtn) finalizeBtn.classList.add("inv-hidden");
             ensureSaleItemsEditablePanel();
             toggleInvoiceSettingField(true);
             toggleMarkPaidField(true);
@@ -1182,7 +1209,7 @@ var InventoryPurchases = (function () {
         if (!show) {
             if (paidWrap) paidWrap.classList.add("inv-hidden");
             var dueWrap = document.getElementById("purchase-due-date-wrap");
-            if (dueWrap) dueWrap.classList.remove("inv-hidden");
+            if (dueWrap) dueWrap.classList.add("inv-hidden");
         } else {
             syncPaymentFields();
         }
@@ -1285,7 +1312,7 @@ var InventoryPurchases = (function () {
     }
 
     function enhanceSaleItemRows() {
-        if (editingPurchaseId) {
+        if (editingPurchaseId && !editingPurchaseIsDraft) {
             setSaleItemsEditable(false);
             return;
         }
@@ -1336,12 +1363,12 @@ var InventoryPurchases = (function () {
     function populateItemRows(lines) {
         var container = document.getElementById("purchase-items-container");
         container.innerHTML = "";
-        if (!editingPurchaseId) {
+        if (!editingPurchaseId || editingPurchaseIsDraft) {
             ensureSaleItemsEditablePanel();
         }
 
         if (!lines || !lines.length) {
-            if (!editingPurchaseId) {
+            if (!editingPurchaseId || editingPurchaseIsDraft) {
                 addItemRow(null, true);
             }
             enhanceSaleItemRows();
@@ -1366,6 +1393,10 @@ var InventoryPurchases = (function () {
         document.getElementById("purchase-date").value = purchase.purchase_date || "";
         loadPaymentTypes(purchase.payment_type || "");
         setSalePrintMetaForm(loadSalePrintMeta(purchase.id));
+        if (purchase.is_draft) {
+            var draftMeta = loadSalePrintMeta(purchase.id) || {};
+            setSalePaidToggle(draftMeta.is_paid === true);
+        }
         populateItemRows(purchase.items || []);
     }
 
@@ -1376,9 +1407,66 @@ var InventoryPurchases = (function () {
         return formatted;
     }
 
+    function isDraftFlow() {
+        return !!editingPurchaseIsDraft;
+    }
+
+    function formatSaleStatusBadge(purchase) {
+        if (!purchase) return "";
+        if (purchase.is_cancelled) {
+            return '<span class="inv-sale-status-badge inv-sale-status-badge--cancelled">Cancelled</span>';
+        }
+        if (purchase.is_draft) {
+            return '<span class="inv-sale-status-badge inv-sale-status-badge--draft">Draft</span>';
+        }
+        if (purchase.is_paid) {
+            return '<span class="inv-sale-status-badge inv-sale-status-badge--paid">Paid</span>';
+        }
+        return '<span class="inv-sale-status-badge inv-sale-status-badge--pending">Pending</span>';
+    }
+
+    function formatInvoiceNoCell(purchase) {
+        var ref = displayValue(purchase.reference_no);
+        var badge = formatSaleStatusBadge(purchase);
+        if (!badge) return ref;
+        return ref + ' <span class="inv-sale-status-wrap">' + badge + "</span>";
+    }
+
     function displayValue(value) {
         if (value === null || value === undefined || String(value).trim() === "") return "—";
         return InventoryApi.escapeHtml(String(value));
+    }
+
+    function getPendingBillAmount(purchase) {
+        if (purchase && purchase.is_draft) return 0;
+        if (purchase && purchase.pending_bill != null) {
+            return Number(purchase.pending_bill) || 0;
+        }
+        if (!purchase || purchase.is_cancelled || purchase.is_paid) return 0;
+        return Number(purchase.total_amount) || 0;
+    }
+
+    function getPendingBillToneClass(amount) {
+        return Number(amount) > 0 ? "inv-pending-bill--due" : "inv-pending-bill--clear";
+    }
+
+    function formatPendingBillCell(purchase) {
+        var amount = getPendingBillAmount(purchase);
+        return (
+            '<td class="inv-mgmt-cell--num">' +
+            '<span class="' + getPendingBillToneClass(amount) + '">' +
+            InventoryApi.formatMoney(amount) +
+            "</span></td>"
+        );
+    }
+
+    function formatPendingBillValue(purchase) {
+        var amount = getPendingBillAmount(purchase);
+        return (
+            '<span class="' + getPendingBillToneClass(amount) + '">' +
+            InventoryApi.formatMoney(amount) +
+            "</span>"
+        );
     }
 
     function actionSlot() {
@@ -1387,6 +1475,7 @@ var InventoryPurchases = (function () {
 
     function actionButtons(purchase) {
         var isCancelled = !!purchase.is_cancelled;
+        var isDraft = !!purchase.is_draft;
 
         var editBtn = isCancelled
             ? actionSlot()
@@ -1395,7 +1484,15 @@ var InventoryPurchases = (function () {
                 '<span class="material-symbols-outlined">edit</span></button>'
             );
 
-        var paidBtn = isCancelled
+        var finalizeBtn = (!isCancelled && isDraft)
+            ? (
+                '<button type="button" class="inv-row-action-btn inv-row-action-btn--finalize inv-purchase-finalize" ' +
+                'data-id="' + purchase.id + '" title="Finalize sale" aria-label="Finalize sale">' +
+                '<span class="material-symbols-outlined">task_alt</span></button>'
+            )
+            : actionSlot();
+
+        var paidBtn = (isCancelled || isDraft)
             ? actionSlot()
             : purchase.is_paid
                 ? (
@@ -1409,6 +1506,8 @@ var InventoryPurchases = (function () {
                     '<span class="material-symbols-outlined">payments</span></button>'
                 );
 
+        var cancelBtnLabel = isDraft ? "Delete draft" : "Delete sale";
+
         var cancelBtn = isCancelled
             ? (
                 '<button type="button" class="inv-row-action-btn inv-row-action-btn--cancelled" disabled ' +
@@ -1417,7 +1516,7 @@ var InventoryPurchases = (function () {
             )
             : (
                 '<button type="button" class="inv-row-action-btn inv-row-action-btn--mark-cancelled inv-purchase-mark-cancelled" ' +
-                'data-id="' + purchase.id + '" title="Cancel invoice" aria-label="Cancel invoice">' +
+                'data-id="' + purchase.id + '" title="' + cancelBtnLabel + '" aria-label="' + cancelBtnLabel + '">' +
                 '<span class="material-symbols-outlined">highlight_off</span></button>'
             );
 
@@ -1426,7 +1525,8 @@ var InventoryPurchases = (function () {
             '<button type="button" class="inv-row-action-btn inv-row-action-btn--view inv-purchase-view" data-id="' + purchase.id + '" title="View" aria-label="View sale">' +
             '<span class="material-symbols-outlined">visibility</span></button>' +
             editBtn +
-            '<button type="button" class="inv-row-action-btn inv-row-action-btn--view inv-purchase-print" data-id="' + purchase.id + '" title="Print" aria-label="Print sale">' +
+            finalizeBtn +
+            '<button type="button" class="inv-row-action-btn inv-row-action-btn--print inv-purchase-print" data-id="' + purchase.id + '" title="Print" aria-label="Print sale">' +
             '<span class="material-symbols-outlined">print</span></button>' +
             paidBtn +
             cancelBtn +
@@ -1460,11 +1560,51 @@ var InventoryPurchases = (function () {
         });
     }
 
+    function findCachedPurchase(id) {
+        for (var i = 0; i < cachedItems.length; i++) {
+            if (String(cachedItems[i].id) === String(id)) return cachedItems[i];
+        }
+        return null;
+    }
+
     function markPurchaseCancelled(id) {
         if (!id) return;
+        var purchase = findCachedPurchase(id);
+        if (purchase && purchase.is_draft) {
+            InventoryConfirm.ask({
+                title: "Delete draft sale?",
+                message: "This draft will be removed and its invoice number will be released for reuse.",
+                confirmText: "Delete Draft",
+                cancelText: "Keep Draft",
+                variant: "danger",
+                icon: "delete"
+            }).then(function (confirmed) {
+                if (!confirmed) return;
+                request("/" + id + "/mark-cancelled/", { method: "POST", body: {} })
+                    .then(function (body) {
+                        if (body && body.isSuccess) {
+                            InventoryToast.success(body.message || "Draft sale deleted.");
+                            loadPurchases(currentPage);
+                        } else {
+                            InventoryToast.error(body && body.message ? body.message : "Unable to delete draft sale.");
+                        }
+                    })
+                    .catch(function () {
+                        InventoryToast.error("Network error. Please try again.");
+                    });
+            });
+            return;
+        }
+
+        var minDate = purchase && purchase.purchase_date ? purchase.purchase_date : "";
         InventoryConfirm.prompt({
             title: "Cancel this invoice?",
             message: "The invoice will be marked as cancelled and stock sold on this invoice will be restored.",
+            showDate: true,
+            dateLabel: "Cancellation Date",
+            dateRequired: true,
+            minDate: minDate,
+            dateErrorMessage: "Cancellation date cannot be before the invoice date.",
             inputLabel: "Cancellation Reason",
             inputPlaceholder: "Enter reason for cancelling this invoice",
             confirmText: "Cancel Invoice",
@@ -1472,11 +1612,17 @@ var InventoryPurchases = (function () {
             variant: "danger",
             icon: "highlight_off",
             required: true
-        }).then(function (reason) {
+        }).then(function (result) {
+            if (!result) return;
+            var reason = result.reason || "";
+            var cancellationDate = result.cancellation_date || "";
             if (!reason) return;
             request("/" + id + "/mark-cancelled/", {
                 method: "POST",
-                body: { cancellation_reason: reason }
+                body: {
+                    cancellation_reason: reason,
+                    cancellation_date: cancellationDate
+                }
             })
                 .then(function (body) {
                     if (body && body.isSuccess) {
@@ -1556,7 +1702,38 @@ var InventoryPurchases = (function () {
         });
     }
 
+    function formatViewDateValue(value) {
+        if (value === null || value === undefined || String(value).trim() === "") return "";
+        var str = String(value).trim();
+        if (str.length >= 10) return str.slice(0, 10);
+        return str;
+    }
+
+    function formatPaymentScheduleViewField(purchase) {
+        purchase = mergeSalePrintMeta(purchase || {});
+
+        if (purchase.is_draft) {
+            return {
+                label: "Due Date",
+                value: displayValue(formatViewDateValue(purchase.due_date))
+            };
+        }
+
+        if (purchase.is_paid) {
+            return {
+                label: "Payment Date",
+                value: displayValue(formatViewDateValue(purchase.paid_at))
+            };
+        }
+
+        return {
+            label: "Due Date",
+            value: displayValue(formatViewDateValue(purchase.due_date))
+        };
+    }
+
     function renderViewDetails(purchase) {
+        purchase = mergeSalePrintMeta(purchase || {});
         var container = document.getElementById("purchase-view-body");
         var itemsWrap = document.getElementById("purchase-view-items-wrap");
         if (!container || !itemsWrap) return;
@@ -1568,36 +1745,41 @@ var InventoryPurchases = (function () {
 
         if (purchase.reference_no) {
             rows.push({ label: "Invoice No.", value: displayValue(purchase.reference_no) });
-            rows.push({ label: "Payment Type", value: displayValue(purchase.payment_type_name) });
-        } else {
-            rows.push({ label: "Payment Type", value: displayValue(purchase.payment_type_name) });
         }
+
+        rows.push(formatPaymentScheduleViewField(purchase));
 
         rows.push(
             { label: "Billing Address", value: displayValue(purchase.billing_address) },
             { label: "Shipping Address", value: displayValue(purchase.shipping_address) },
-            { label: "Invoice Status", value: purchase.is_cancelled ? "Cancelled" : "Active" },
-            { label: "Payment Status", value: purchase.is_paid ? "Paid" : "Unpaid" },
-            { label: "Bill Amount", value: InventoryApi.formatMoney(purchase.total_amount), colStart: 1 },
-            { label: "Total Cost", value: InventoryApi.formatMoney(purchase.total_cost) }
+            { label: "Invoice Status", value: purchase.is_cancelled ? "Cancelled" : (purchase.is_draft ? "Draft" : "Active") },
+            { label: "Payment Status", value: purchase.is_draft ? "—" : (purchase.is_paid ? "Paid" : "Unpaid") },
+            { label: "Payment Type", value: displayValue(purchase.payment_type_name) },
+            { label: "Bill Amount", value: InventoryApi.formatMoney(purchase.total_amount), colStart: 1, num: true, emphasis: true },
+            { label: "Total Paid", value: InventoryApi.formatMoney(purchase.total_paid), num: true },
+            { label: "Pending Bill", value: formatPendingBillValue(purchase), num: true },
+            { label: "Total Cost", value: InventoryApi.formatMoney(purchase.total_cost), num: true }
         );
-        if (purchase.is_cancelled && purchase.cancellation_reason) {
-            rows.push({ label: "Cancellation Reason", value: displayValue(purchase.cancellation_reason), full: true });
+        if (purchase.is_cancelled) {
+            var cancelDate = purchase.cancellation_date;
+            if (!cancelDate && purchase.cancelled_at) {
+                cancelDate = String(purchase.cancelled_at).slice(0, 10);
+            }
+            rows.push({
+                label: "Cancellation Date",
+                value: displayValue(cancelDate)
+            });
+            rows.push({
+                label: "Cancellation Reason",
+                value: displayValue(purchase.cancellation_reason),
+                full: true
+            });
         }
         if (purchase.notes) {
             rows.push({ label: "Notes", value: displayValue(purchase.notes), full: true });
         }
 
-        container.innerHTML = rows.map(function (row) {
-            var cls = row.full ? " inv-product-view-item--full" : "";
-            if (row.colStart === 1) cls += " inv-product-view-item--col-1";
-            return (
-                '<div class="inv-product-view-item' + cls + '">' +
-                '<span class="inv-product-view-label">' + row.label + "</span>" +
-                '<div class="inv-product-view-value">' + row.value + "</div>" +
-                "</div>"
-            );
-        }).join("");
+        container.innerHTML = InventoryApi.renderViewGrid(rows);
 
         var lines = purchase.items || [];
         if (!lines.length) {
@@ -1638,10 +1820,14 @@ var InventoryPurchases = (function () {
                     return;
                 }
                 editingPurchaseId = purchase.id;
+                editingPurchaseIsDraft = !!purchase.is_draft;
                 setEditingSaleStockFromPurchase(purchase);
-                setFormMode("edit");
+                setFormMode(purchase.is_draft ? "draft" : "edit");
                 return Promise.all([
-                    loadProducts({ includeProductIds: getIncludedEditProductIds() }),
+                    loadProducts({
+                        includeAll: purchase.is_draft,
+                        includeProductIds: getIncludedEditProductIds()
+                    }),
                     loadTaxes()
                 ]).then(function () {
                     populateForm(purchase);
@@ -1683,10 +1869,14 @@ var InventoryPurchases = (function () {
         params.set("page_size", String(InventoryPagination.getPageSize("purchases-pagination")));
 
         var searchEl = document.getElementById("purchases-search");
+        var invoiceStatusFilterEl = document.getElementById("purchases-invoice-status-filter");
         var dateFromEl = document.getElementById("purchases-date-from");
         var dateToEl = document.getElementById("purchases-date-to");
         if (searchEl && searchEl.value.trim()) {
             params.set("search", searchEl.value.trim());
+        }
+        if (invoiceStatusFilterEl && invoiceStatusFilterEl.value) {
+            params.set("invoice_status", invoiceStatusFilterEl.value);
         }
         if (dateFromEl && dateFromEl.value) {
             params.set("date_from", dateFromEl.value);
@@ -1703,12 +1893,29 @@ var InventoryPurchases = (function () {
 
     function clearFilters() {
         var searchEl = document.getElementById("purchases-search");
+        var invoiceStatusFilterEl = document.getElementById("purchases-invoice-status-filter");
         var dateFromEl = document.getElementById("purchases-date-from");
         var dateToEl = document.getElementById("purchases-date-to");
         if (searchEl) searchEl.value = "";
+        if (invoiceStatusFilterEl) invoiceStatusFilterEl.value = "";
         if (dateFromEl) dateFromEl.value = "";
         if (dateToEl) dateToEl.value = "";
         loadPurchases(1);
+    }
+
+    function applyFiltersFromUrl() {
+        var params = new URLSearchParams(window.location.search);
+        var invoiceStatus = params.get("invoice_status");
+        if (!invoiceStatus) return;
+
+        var normalized = invoiceStatus.toLowerCase();
+        var allowed = { paid: true, pending: true, draft: true, cancelled: true };
+        if (!allowed[normalized]) return;
+
+        var invoiceStatusFilterEl = document.getElementById("purchases-invoice-status-filter");
+        if (invoiceStatusFilterEl) {
+            invoiceStatusFilterEl.value = normalized;
+        }
     }
 
     function loadPurchases(page) {
@@ -1826,6 +2033,7 @@ var InventoryPurchases = (function () {
 
     function resetForm(isSilent) {
         editingPurchaseId = null;
+        editingPurchaseIsDraft = false;
         editingSaleStockByProduct = {};
         setFormMode("add");
         loadInvoiceSettings("");
@@ -1865,13 +2073,53 @@ var InventoryPurchases = (function () {
         return payload;
     }
 
-    function savePurchase() {
+    function validateSaleItemsForSave() {
+        var items = collectItems();
+        if (!items || !items.length) {
+            if (items !== null) {
+                InventoryToast.error("Add at least one product the customer is purchasing.");
+            }
+            return null;
+        }
+
+        var rowCount = document.querySelectorAll("#purchase-items-container .inv-mgmt-item-row").length;
+        if (items.length !== rowCount) {
+            InventoryToast.error("Select an available product for each row.");
+            return null;
+        }
+        return items;
+    }
+
+    function validatePaymentFieldsForFinalize() {
+        var isPaid = isFullPaymentReceived();
+        if (shouldShowDueDateField()) {
+            var dueDateEl = document.getElementById("purchase-invoice-due-date");
+            if (!dueDateEl || !dueDateEl.value.trim()) {
+                InventoryToast.error("Please enter a due date until the full bill amount is received.");
+                if (dueDateEl) dueDateEl.focus();
+                return null;
+            }
+        }
+
+        if (isPaidSegmentSelected()) {
+            var paidAmount = getPaidAmountValue();
+            if (paidAmount <= 0) {
+                InventoryToast.error("Please enter the amount received.");
+                var paidInput = document.getElementById("purchase-paid-amount");
+                if (paidInput) paidInput.focus();
+                return null;
+            }
+        }
+        return isPaid;
+    }
+
+    function validateSaleHeaderForCreate() {
         var invoiceSettingEl = document.getElementById("purchase-invoice-setting");
         if (!editingPurchaseId && invoiceSettingEl && !invoiceSettingEl.closest(".inv-hidden")) {
             if (!invoiceSettingEl.value) {
                 InventoryToast.error("Please select an invoice.");
                 invoiceSettingEl.focus();
-                return;
+                return false;
             }
         }
 
@@ -1879,6 +2127,378 @@ var InventoryPurchases = (function () {
         if (!customerId) {
             InventoryToast.error("Please select a customer.");
             document.getElementById("purchase-customer").focus();
+            return false;
+        }
+        return true;
+    }
+
+    function savePurchaseDraft() {
+        if (!validateSaleHeaderForCreate()) return;
+
+        var items = validateSaleItemsForSave();
+        if (!items) return;
+
+        var btn = document.getElementById("purchase-save-draft-btn");
+        InventoryLoader.button(btn, true, "Saving...");
+
+        request("", {
+            method: "POST",
+            body: Object.assign(getSaleHeaderPayload(true), {
+                items: items,
+                is_draft: true,
+                is_paid: false
+            })
+        })
+            .then(function (body) {
+                if (body && body.isSuccess) {
+                    if (body.data && body.data.id) {
+                        saveSalePrintMeta(body.data.id, getSalePrintMetaFromForm());
+                    }
+                    InventoryToast.success(body.message || "Sale saved as draft.");
+                    resetForm(true);
+                    InventoryPagePanel.showList(PURCHASES_LIST_PANEL);
+                    loadPurchases(1);
+                } else {
+                    var err = body.message || "Unable to save draft sale.";
+                    if (body.errors && body.errors.length) err = body.errors.join(" • ");
+                    InventoryToast.error(err);
+                }
+            })
+            .catch(function () {
+                InventoryToast.error("Network error. Please try again.");
+            })
+            .finally(function () {
+                InventoryLoader.button(btn, false);
+            });
+    }
+
+    function readPaymentIntentFromForm() {
+        var dueDateEl = document.getElementById("purchase-invoice-due-date");
+        var isPaid = isFullPaymentReceived();
+        return {
+            is_paid: !!isPaid,
+            due_date: dueDateEl ? dueDateEl.value.trim() : ""
+        };
+    }
+
+    function resolveDraftPaymentInfo(purchase, overrides) {
+        purchase = mergeSalePrintMeta(purchase || {});
+        overrides = overrides || {};
+
+        if (overrides.is_paid !== undefined) {
+            return {
+                is_paid: !!overrides.is_paid,
+                due_date: overrides.is_paid ? "" : (overrides.due_date || "")
+            };
+        }
+
+        if (purchase.is_paid) {
+            return { is_paid: true, due_date: "" };
+        }
+
+        var meta = loadSalePrintMeta(purchase.id) || {};
+        if (meta.is_paid === true) {
+            return { is_paid: true, due_date: "" };
+        }
+
+        return {
+            is_paid: false,
+            due_date: meta.due_date || purchase.due_date || ""
+        };
+    }
+
+    function formatDraftProductsSummary(items) {
+        if (!items || !items.length) return "—";
+        return items.map(function (item) {
+            return InventoryApi.escapeHtml(item.product_name) + " × " + formatQty(item.quantity);
+        }).join(" · ");
+    }
+
+    function saveDraftFinalizeMeta(purchaseId, paymentInfo) {
+        var meta = loadSalePrintMeta(purchaseId) || {};
+        if (paymentInfo && paymentInfo.is_paid) {
+            meta.is_paid = true;
+            meta.due_date = "";
+        } else if (paymentInfo) {
+            meta.is_paid = false;
+            if (paymentInfo.due_date) meta.due_date = paymentInfo.due_date;
+        }
+        saveSalePrintMeta(purchaseId, meta);
+    }
+
+    function promptDraftFinalizePayment(purchase, paymentInfo) {
+        purchase = mergeSalePrintMeta(purchase || {});
+        paymentInfo = paymentInfo || resolveDraftPaymentInfo(purchase);
+        var isPaid = !!paymentInfo.is_paid;
+        var minDate = purchase.purchase_date || new Date().toISOString().slice(0, 10);
+        var defaultDueDate = paymentInfo.due_date || minDate;
+        if (defaultDueDate < minDate) defaultDueDate = minDate;
+        var invoiceNo = purchase.next_invoice_no || purchase.reference_no || "—";
+        var paymentStatusLabel = isPaid ? "Paid in Full" : "Not Paid";
+        var paymentStatusClass = isPaid ? "inv-finalize-draft-status--paid" : "inv-finalize-draft-status--due";
+
+        return new Promise(function (resolve) {
+            var backdrop = document.createElement("div");
+            backdrop.className = "inv-confirm-backdrop";
+            backdrop.id = "inv-finalize-draft-backdrop";
+
+            var modal = document.createElement("div");
+            modal.className = "inv-confirm-modal inv-confirm-modal--prompt inv-finalize-draft-modal";
+            modal.id = "inv-finalize-draft-modal";
+            modal.setAttribute("role", "dialog");
+            modal.setAttribute("aria-modal", "true");
+
+            var dueFieldHtml = isPaid
+                ? ""
+                : (
+                    '<div class="inv-confirm-modal__field inv-finalize-draft-due-field">' +
+                        '<label for="inv-finalize-draft-due-date" class="inv-confirm-modal__label">Due Date</label>' +
+                        '<input id="inv-finalize-draft-due-date" class="inv-confirm-modal__date" type="date" value="' +
+                            InventoryApi.escapeHtml(defaultDueDate) + '" min="' + InventoryApi.escapeHtml(minDate) + '"/>' +
+                        '<p id="inv-finalize-draft-due-error" class="inv-confirm-modal__error inv-hidden"></p>' +
+                    "</div>"
+                );
+
+            modal.innerHTML =
+                '<div class="inv-confirm-modal__icon inv-confirm-modal__icon--primary">' +
+                    '<span class="material-symbols-outlined">task_alt</span>' +
+                "</div>" +
+                '<h3 class="inv-confirm-modal__title">Finalize draft sale?</h3>' +
+                '<p class="inv-confirm-modal__message">Review the bill details below. The next invoice number will be assigned on finalize.</p>' +
+                '<div class="inv-finalize-draft-summary">' +
+                    '<div class="inv-finalize-draft-summary-row">' +
+                        '<span class="inv-finalize-draft-summary-label">Customer</span>' +
+                        '<span class="inv-finalize-draft-summary-value">' + formatCustomerDisplay(purchase) + "</span>" +
+                    "</div>" +
+                    '<div class="inv-finalize-draft-summary-row">' +
+                        '<span class="inv-finalize-draft-summary-label">Sale Date</span>' +
+                        '<span class="inv-finalize-draft-summary-value">' + displayValue(purchase.purchase_date) + "</span>" +
+                    "</div>" +
+                    '<div class="inv-finalize-draft-summary-row">' +
+                        '<span class="inv-finalize-draft-summary-label">Invoice No.</span>' +
+                        '<span class="inv-finalize-draft-summary-value inv-finalize-draft-summary-value--emphasis">' +
+                            InventoryApi.escapeHtml(invoiceNo) + "</span>" +
+                    "</div>" +
+                    '<div class="inv-finalize-draft-summary-row">' +
+                        '<span class="inv-finalize-draft-summary-label">Bill Amount</span>' +
+                        '<span class="inv-finalize-draft-summary-value inv-finalize-draft-summary-value--amount">₹ ' +
+                            InventoryApi.formatMoney(purchase.total_amount) + "</span>" +
+                    "</div>" +
+                    '<div class="inv-finalize-draft-summary-row inv-finalize-draft-summary-row--products">' +
+                        '<span class="inv-finalize-draft-summary-label">Products</span>' +
+                        '<span class="inv-finalize-draft-summary-value">' + formatDraftProductsSummary(purchase.items || []) + "</span>" +
+                    "</div>" +
+                    '<div class="inv-finalize-draft-summary-row">' +
+                        '<span class="inv-finalize-draft-summary-label">Payment Status</span>' +
+                        '<span class="inv-finalize-draft-status ' + paymentStatusClass + '">' + paymentStatusLabel + "</span>" +
+                    "</div>" +
+                "</div>" +
+                dueFieldHtml +
+                '<div class="inv-confirm-modal__actions">' +
+                    '<button type="button" class="inv-confirm-btn inv-confirm-btn--cancel" data-act="cancel">Cancel</button>' +
+                    '<button type="button" class="inv-confirm-btn inv-confirm-btn--primary" data-act="ok">Finalize Sale</button>' +
+                "</div>";
+
+            function closeModal(value) {
+                backdrop.remove();
+                modal.remove();
+                document.body.classList.remove("inv-confirm-open");
+                resolve(value);
+            }
+
+            document.body.appendChild(backdrop);
+            document.body.appendChild(modal);
+            document.body.classList.add("inv-confirm-open");
+
+            var dueDateEl = modal.querySelector("#inv-finalize-draft-due-date");
+            var dueErrorEl = modal.querySelector("#inv-finalize-draft-due-error");
+
+            modal.querySelector('[data-act="cancel"]').addEventListener("click", function () {
+                closeModal(null);
+            });
+            backdrop.addEventListener("click", function () {
+                closeModal(null);
+            });
+
+            modal.querySelector('[data-act="ok"]').addEventListener("click", function () {
+                if (!isPaid) {
+                    var dueDate = dueDateEl ? dueDateEl.value.trim() : "";
+                    if (!dueDate) {
+                        if (dueErrorEl) {
+                            dueErrorEl.textContent = "Please enter a due date for the pending payment.";
+                            dueErrorEl.classList.remove("inv-hidden");
+                        }
+                        if (dueDateEl) dueDateEl.focus();
+                        return;
+                    }
+                    if (dueDate < minDate) {
+                        if (dueErrorEl) {
+                            dueErrorEl.textContent = "Due date cannot be before the sale date.";
+                            dueErrorEl.classList.remove("inv-hidden");
+                        }
+                        if (dueDateEl) dueDateEl.focus();
+                        return;
+                    }
+                    closeModal({ is_paid: false, due_date: dueDate });
+                    return;
+                }
+                closeModal({ is_paid: true, due_date: "" });
+            });
+
+            window.addEventListener("keydown", function onKeydown(e) {
+                if (e.key === "Escape") {
+                    window.removeEventListener("keydown", onKeydown);
+                    closeModal(null);
+                }
+            });
+        });
+    }
+
+    function runDraftFinalize(purchaseId, paymentInfo, updatePayload) {
+        function finalizeRequest() {
+            saveDraftFinalizeMeta(purchaseId, paymentInfo);
+            return request("/" + purchaseId + "/finalize/", {
+                method: "POST",
+                body: { is_paid: !!paymentInfo.is_paid }
+            });
+        }
+
+        if (updatePayload) {
+            return request("/" + purchaseId + "/", {
+                method: "PATCH",
+                body: updatePayload
+            }).then(function (body) {
+                if (!body || !body.isSuccess) return body;
+                return finalizeRequest();
+            });
+        }
+        return finalizeRequest();
+    }
+
+    function finalizeDraftPurchase() {
+        if (!editingPurchaseId || !editingPurchaseIsDraft) return;
+        if (!validateSaleHeaderForCreate()) return;
+
+        var items = validateSaleItemsForSave();
+        if (!items) return;
+
+        if (validatePaymentFieldsForFinalize() == null) return;
+
+        var updatePayload = Object.assign(getSaleHeaderPayload(false), { items: items });
+        var formPayment = readPaymentIntentFromForm();
+
+        InventoryLoader.show();
+        fetchPurchase(editingPurchaseId)
+            .then(function (purchase) {
+                if (!purchase || !purchase.is_draft) return null;
+                purchase.total_amount = getBillAmount();
+                var paymentInfo = resolveDraftPaymentInfo(purchase, formPayment);
+                return promptDraftFinalizePayment(purchase, paymentInfo).then(function (confirmed) {
+                    if (!confirmed) return null;
+                    return { confirmed: confirmed, updatePayload: updatePayload };
+                });
+            })
+            .then(function (result) {
+                if (!result) return null;
+
+                var finalizeBtn = document.getElementById("purchase-finalize-btn");
+                var updateBtn = document.getElementById("purchase-save-btn");
+                InventoryLoader.button(finalizeBtn, true, "Finalizing...");
+
+                return runDraftFinalize(editingPurchaseId, result.confirmed, result.updatePayload)
+                    .then(function (body) {
+                        return { body: body, finalizeBtn: finalizeBtn, updateBtn: updateBtn };
+                    });
+            })
+            .then(function (result) {
+                if (!result || !result.body) return;
+                var body = result.body;
+                if (body.isSuccess) {
+                    InventoryToast.success(body.message || "Draft sale finalized.");
+                    resetForm(true);
+                    InventoryPagePanel.showList(PURCHASES_LIST_PANEL);
+                    loadPurchases(currentPage);
+                } else {
+                    var err = body.message || "Unable to finalize draft sale.";
+                    if (body.errors && body.errors.length) err = body.errors.join(" • ");
+                    InventoryToast.error(err);
+                }
+            })
+            .catch(function () {
+                InventoryToast.error("Network error. Please try again.");
+            })
+            .finally(function () {
+                InventoryLoader.hide();
+                var finalizeBtn = document.getElementById("purchase-finalize-btn");
+                var updateBtn = document.getElementById("purchase-save-btn");
+                InventoryLoader.button(finalizeBtn, false);
+                InventoryLoader.button(updateBtn, false);
+            });
+    }
+
+    function finalizeDraftFromList(id) {
+        if (!id) return;
+
+        InventoryLoader.show();
+        fetchPurchase(id)
+            .then(function (purchase) {
+                if (!purchase || !purchase.is_draft) return null;
+                var paymentInfo = resolveDraftPaymentInfo(purchase);
+                return promptDraftFinalizePayment(purchase, paymentInfo).then(function (confirmed) {
+                    if (!confirmed) return null;
+                    return runDraftFinalize(purchase.id, confirmed, null);
+                });
+            })
+            .then(function (body) {
+                if (!body) return;
+                if (body.isSuccess) {
+                    InventoryToast.success(body.message || "Draft sale finalized.");
+                    loadPurchases(currentPage);
+                } else {
+                    InventoryToast.error(body && body.message ? body.message : "Unable to finalize draft sale.");
+                }
+            })
+            .catch(function () {
+                InventoryToast.error("Network error. Please try again.");
+            })
+            .finally(function () {
+                InventoryLoader.hide();
+            });
+    }
+
+    function savePurchase() {
+        if (!validateSaleHeaderForCreate()) return;
+
+        if (editingPurchaseId && editingPurchaseIsDraft) {
+            var items = validateSaleItemsForSave();
+            if (!items) return;
+
+            var draftBtn = document.getElementById("purchase-save-btn");
+            InventoryLoader.button(draftBtn, true, "Updating...");
+
+            request("/" + editingPurchaseId + "/", {
+                method: "PATCH",
+                body: Object.assign(getSaleHeaderPayload(false), { items: items })
+            })
+                .then(function (body) {
+                    if (body && body.isSuccess) {
+                        saveSalePrintMeta(editingPurchaseId, getSalePrintMetaFromForm());
+                        InventoryToast.success(body.message || "Draft sale updated successfully.");
+                        resetForm(true);
+                        InventoryPagePanel.showList(PURCHASES_LIST_PANEL);
+                        loadPurchases(currentPage);
+                    } else {
+                        var err = body.message || "Unable to update draft sale.";
+                        if (body.errors && body.errors.length) err = body.errors.join(" • ");
+                        InventoryToast.error(err);
+                    }
+                })
+                .catch(function () {
+                    InventoryToast.error("Network error. Please try again.");
+                })
+                .finally(function () {
+                    InventoryLoader.button(draftBtn, false);
+                });
             return;
         }
 
@@ -1911,39 +2531,11 @@ var InventoryPurchases = (function () {
             return;
         }
 
-        var items = collectItems();
-        if (!items || !items.length) {
-            if (items !== null) {
-                InventoryToast.error("Add at least one product the customer is purchasing.");
-            }
-            return;
-        }
+        var items = validateSaleItemsForSave();
+        if (!items) return;
 
-        var rowCount = document.querySelectorAll("#purchase-items-container .inv-mgmt-item-row").length;
-        if (items.length !== rowCount) {
-            InventoryToast.error("Select an available product for each row.");
-            return;
-        }
-
-        var isPaid = isFullPaymentReceived();
-        if (shouldShowDueDateField()) {
-            var dueDateEl = document.getElementById("purchase-invoice-due-date");
-            if (!dueDateEl || !dueDateEl.value.trim()) {
-                InventoryToast.error("Please enter a due date until the full bill amount is received.");
-                if (dueDateEl) dueDateEl.focus();
-                return;
-            }
-        }
-
-        if (isPaidSegmentSelected()) {
-            var paidAmount = getPaidAmountValue();
-            if (paidAmount <= 0) {
-                InventoryToast.error("Please enter the amount received.");
-                var paidInput = document.getElementById("purchase-paid-amount");
-                if (paidInput) paidInput.focus();
-                return;
-            }
-        }
+        var isPaid = validatePaymentFieldsForFinalize();
+        if (isPaid == null) return;
 
         var btn = document.getElementById("purchase-save-btn");
         InventoryLoader.button(btn, true, "Saving...");
@@ -1952,7 +2544,8 @@ var InventoryPurchases = (function () {
             method: "POST",
             body: Object.assign(getSaleHeaderPayload(true), {
                 items: items,
-                is_paid: isPaid
+                is_paid: isPaid,
+                is_draft: false
             })
         })
             .then(function (body) {
@@ -1990,6 +2583,7 @@ var InventoryPurchases = (function () {
 
         function boot() {
             if (!InventoryBusiness.getActiveId()) return;
+            applyFiltersFromUrl();
             loadProducts().then(function () {
                 loadPaymentTypes();
                 loadCustomers();
@@ -2045,10 +2639,15 @@ var InventoryPurchases = (function () {
             addItemRow(null, true);
         });
         document.getElementById("purchase-save-btn").addEventListener("click", savePurchase);
+        var draftBtn = document.getElementById("purchase-save-draft-btn");
+        if (draftBtn) draftBtn.addEventListener("click", savePurchaseDraft);
+        var finalizeBtn = document.getElementById("purchase-finalize-btn");
+        if (finalizeBtn) finalizeBtn.addEventListener("click", finalizeDraftPurchase);
         wireSalePaidToggle();
         setSalePaidToggle(false);
 
         var searchEl = document.getElementById("purchases-search");
+        var invoiceStatusFilterEl = document.getElementById("purchases-invoice-status-filter");
         var dateFromEl = document.getElementById("purchases-date-from");
         var dateToEl = document.getElementById("purchases-date-to");
         var clearBtn = document.getElementById("purchases-clear-filters");
@@ -2059,6 +2658,11 @@ var InventoryPurchases = (function () {
                 searchTimer = window.setTimeout(function () {
                     loadPurchases(1);
                 }, 300);
+            });
+        }
+        if (invoiceStatusFilterEl) {
+            invoiceStatusFilterEl.addEventListener("change", function () {
+                loadPurchases(1);
             });
         }
         if (dateFromEl) dateFromEl.addEventListener("change", function () { loadPurchases(1); });
@@ -2125,6 +2729,12 @@ var InventoryPurchases = (function () {
                 var editBtn = e.target.closest(".inv-purchase-edit");
                 if (editBtn) {
                     openEditPurchase(editBtn.getAttribute("data-id"));
+                    return;
+                }
+
+                var finalizeListBtn = e.target.closest(".inv-purchase-finalize");
+                if (finalizeListBtn) {
+                    finalizeDraftFromList(finalizeListBtn.getAttribute("data-id"));
                     return;
                 }
 

@@ -5,7 +5,7 @@ from django.db import transaction
 from apps.inventory.batch_service import BatchInventoryService
 from apps.inventory.services import InventoryStockService
 from apps.products.models import Product
-from apps.purchases.models import PurchaseItem
+from apps.purchases.models import Purchase, PurchaseItem
 from apps.purchases.repositories import PurchaseRepository
 from core.base_service import BaseService
 from core.exceptions import NotFoundException, ValidationException
@@ -55,7 +55,7 @@ class PurchaseService(BaseService):
         data["customer_name"] = customer.name
         return data
 
-    def _apply_invoice_setting(self, data, business_id):
+    def _apply_invoice_setting(self, data, business_id, *, allocate_number=True):
         from apps.settings.models import InvoiceSetting
         from apps.settings.services import InvoiceSettingService
 
@@ -73,11 +73,56 @@ class PurchaseService(BaseService):
             raise NotFoundException("Invoice setting not found.")
 
         setting = InvoiceSettingService().resolve_for_sale(setting)
-        data["reference_no"] = setting.format_invoice_number()
         data["invoice_setting_id"] = setting.id
+        if allocate_number:
+            data["reference_no"] = setting.format_invoice_number()
+            setting.current_counter += 1
+            setting.save(update_fields=["current_counter", "updated_at"])
+        else:
+            data["reference_no"] = ""
+        return data
+
+    def _allocate_invoice_number_to_purchase(self, purchase):
+        reference_no = (purchase.reference_no or "").strip()
+        if reference_no:
+            return purchase
+
+        from apps.settings.models import InvoiceSetting
+        from apps.settings.services import InvoiceSettingService
+
+        setting_id = purchase.invoice_setting_id
+        if not setting_id:
+            raise ValidationException("Invoice setting is required to finalize the sale.")
+
+        try:
+            setting = InvoiceSetting.objects.select_for_update().get(
+                pk=setting_id,
+                business_id=purchase.business_id,
+                is_deleted=False,
+            )
+        except InvoiceSetting.DoesNotExist:
+            raise NotFoundException("Invoice setting not found.")
+
+        setting = InvoiceSettingService().resolve_for_sale(setting)
+        reference_no = setting.format_invoice_number()
         setting.current_counter += 1
         setting.save(update_fields=["current_counter", "updated_at"])
-        return data
+
+        purchase.reference_no = reference_no
+        purchase.invoice_setting_id = setting.id
+        purchase.save(update_fields=["reference_no", "invoice_setting_id", "updated_at"])
+        return purchase
+
+    def _strip_draft_invoice_number(self, purchase):
+        if not purchase.is_draft:
+            return purchase
+        if not (purchase.reference_no or "").strip():
+            return purchase
+
+        self._release_draft_invoice_number(purchase)
+        purchase.reference_no = ""
+        purchase.save(update_fields=["reference_no", "updated_at"])
+        return purchase
 
     @staticmethod
     def _normalize_sale_tax_ids(raw):
@@ -89,7 +134,7 @@ class PurchaseService(BaseService):
                 continue
         return ids
 
-    def _prepare_sale_items(self, items_data, business_id):
+    def _prepare_sale_items(self, items_data, business_id, *, skip_stock_check=False):
         if not items_data:
             raise ValidationException("At least one purchase item is required.")
 
@@ -140,16 +185,101 @@ class PurchaseService(BaseService):
                 "tax_amount": Decimal(str(item.get("tax_amount") or 0)),
             })
 
-        for product_id, requested_qty in requested_by_product.items():
-            available = self.batch_service.get_available_for_sale(business_id, product_id)
-            if requested_qty > available:
-                product = Product.objects.get(pk=product_id)
-                raise ValidationException(
-                    f"Insufficient stock for {product.name}. "
-                    f"Available: {available}, requested: {requested_qty}."
-                )
+        if not skip_stock_check:
+            for product_id, requested_qty in requested_by_product.items():
+                available = self.batch_service.get_available_for_sale(business_id, product_id)
+                if requested_qty > available:
+                    product = Product.objects.get(pk=product_id)
+                    raise ValidationException(
+                        f"Insufficient stock for {product.name}. "
+                        f"Available: {available}, requested: {requested_qty}."
+                    )
 
         return prepared_items, total_amount
+
+    def _attach_draft_items(self, purchase, prepared_items):
+        for item in prepared_items:
+            PurchaseItem.objects.create(
+                purchase=purchase,
+                product=item["product"],
+                quantity=item["quantity"],
+                list_price=item["list_price"],
+                unit_price=item["unit_price"],
+                line_total=item["line_total"],
+                discount_amount=item["discount_amount"],
+                discount_type=item["discount_type"],
+                discount_value=item["discount_value"],
+                distributor_discount_type=item["distributor_discount_type"],
+                distributor_discount_value=item["distributor_discount_value"],
+                sale_tax_ids=item["sale_tax_ids"],
+                tax_amount=item["tax_amount"],
+                cost_amount=Decimal("0"),
+                profit_amount=Decimal("0"),
+            )
+
+        purchase.total_cost = Decimal("0")
+        purchase.total_profit = Decimal("0")
+        purchase.save(update_fields=["total_cost", "total_profit", "updated_at"])
+
+    def _clear_draft_items(self, purchase):
+        existing_items = PurchaseItem.objects.filter(
+            purchase=purchase,
+            is_deleted=False,
+        )
+        for item in existing_items:
+            item.soft_delete()
+
+    def _release_draft_invoice_number(self, purchase):
+        from apps.settings.models import InvoiceSetting
+
+        setting_id = purchase.invoice_setting_id
+        reference_no = (purchase.reference_no or "").strip()
+        if not setting_id or not reference_no:
+            return
+
+        setting = (
+            InvoiceSetting.objects.select_for_update()
+            .filter(
+                pk=setting_id,
+                business_id=purchase.business_id,
+                is_deleted=False,
+            )
+            .first()
+        )
+        if not setting or setting.current_counter <= setting.counter:
+            return
+
+        expected_last = setting.format_invoice_number(setting.current_counter - 1)
+        if reference_no != expected_last:
+            return
+
+        in_use = (
+            Purchase.objects.filter(
+                business_id=purchase.business_id,
+                invoice_setting_id=setting.id,
+                reference_no=reference_no,
+                is_deleted=False,
+            )
+            .exclude(pk=purchase.pk)
+            .exists()
+        )
+        if in_use:
+            return
+
+        setting.current_counter -= 1
+        setting.save(update_fields=["current_counter", "updated_at"])
+
+    @transaction.atomic
+    def _delete_draft_purchase(self, purchase):
+        if not purchase.is_draft:
+            raise ValidationException("Only draft sales can be deleted this way.")
+        if purchase.is_cancelled:
+            return purchase
+
+        self._clear_draft_items(purchase)
+        self._release_draft_invoice_number(purchase)
+        purchase.soft_delete()
+        return purchase
 
     def _attach_sale_items(self, purchase, prepared_items, business_id):
         total_cost = Decimal("0")
@@ -206,6 +336,10 @@ class PurchaseService(BaseService):
         purchase.save(update_fields=["total_cost", "total_profit", "updated_at"])
 
     def _restore_existing_sale_items(self, purchase):
+        if purchase.is_draft:
+            self._clear_draft_items(purchase)
+            return
+
         business_id = purchase.business_id
         existing_items = PurchaseItem.objects.filter(
             purchase=purchase,
@@ -258,8 +392,9 @@ class PurchaseService(BaseService):
             raise ValidationException("Business is required.")
 
         items_data = data.pop("items", [])
+        is_draft = bool(data.pop("is_draft", False))
         self._apply_customer(data, business_id)
-        self._apply_invoice_setting(data, business_id)
+        self._apply_invoice_setting(data, business_id, allocate_number=not is_draft)
 
         if "payment_type_id" in data:
             data["payment_type_id"] = self._resolve_payment_type_id(
@@ -268,6 +403,8 @@ class PurchaseService(BaseService):
             )
 
         is_paid = bool(data.pop("is_paid", False))
+        if is_draft:
+            is_paid = False
         if is_paid:
             from django.utils import timezone
 
@@ -276,14 +413,144 @@ class PurchaseService(BaseService):
         else:
             data["is_paid"] = False
 
-        prepared_items, total_amount = self._prepare_sale_items(items_data, business_id)
+        data["is_draft"] = is_draft
+
+        prepared_items, total_amount = self._prepare_sale_items(
+            items_data,
+            business_id,
+            skip_stock_check=is_draft,
+        )
 
         data["owner_id"] = user.id
         data["total_amount"] = total_amount
         purchase = self.repository.create(**data)
 
-        self._attach_sale_items(purchase, prepared_items, business_id)
+        if is_draft:
+            self._attach_draft_items(purchase, prepared_items)
+        else:
+            self._attach_sale_items(purchase, prepared_items, business_id)
 
+        return purchase
+
+    @transaction.atomic
+    def update_draft_with_items(self, pk, data):
+        purchase = self.repository.get_by_id(pk)
+        if not purchase.is_draft:
+            raise ValidationException("Only draft sales can be updated with line items.")
+        if purchase.is_cancelled:
+            raise ValidationException("Cancelled invoices cannot be edited.")
+
+        self._strip_draft_invoice_number(purchase)
+
+        business_id = purchase.business_id
+        items_data = data.pop("items", None)
+
+        if items_data is None:
+            updates = self._build_header_updates(purchase, data)
+            if not updates:
+                return purchase
+            return self.repository.update(purchase, **updates)
+
+        self._clear_draft_items(purchase)
+
+        prepared_items, total_amount = self._prepare_sale_items(
+            items_data,
+            business_id,
+            skip_stock_check=True,
+        )
+
+        updates = self._build_header_updates(purchase, data)
+        updates["total_amount"] = total_amount
+        if updates:
+            purchase = self.repository.update(purchase, **updates)
+
+        self._attach_draft_items(purchase, prepared_items)
+        return purchase
+
+    @transaction.atomic
+    def finalize_draft(self, pk, data=None):
+        data = data or {}
+        purchase = self.repository.get_by_id(pk)
+        if not purchase.is_draft:
+            raise ValidationException("This sale is already finalized.")
+        if purchase.is_cancelled:
+            raise ValidationException("Cancelled drafts cannot be finalized.")
+
+        business_id = purchase.business_id
+        items = list(
+            PurchaseItem.objects.filter(
+                purchase=purchase,
+                is_deleted=False,
+            ).select_related("product")
+        )
+        if not items:
+            raise ValidationException("Add at least one product before finalizing the sale.")
+
+        self._allocate_invoice_number_to_purchase(purchase)
+
+        requested_by_product = {}
+        for item in items:
+            requested_by_product[item.product_id] = (
+                requested_by_product.get(item.product_id, Decimal("0")) + item.quantity
+            )
+
+        for product_id, requested_qty in requested_by_product.items():
+            available = self.batch_service.get_available_for_sale(business_id, product_id)
+            if requested_qty > available:
+                product = Product.objects.get(pk=product_id)
+                raise ValidationException(
+                    f"Insufficient stock for {product.name}. "
+                    f"Available: {available}, requested: {requested_qty}."
+                )
+
+        total_cost = Decimal("0")
+        total_profit = Decimal("0")
+
+        for item in items:
+            slices = self.batch_service.consume_fifo(
+                business_id,
+                item.product_id,
+                item.quantity,
+                reference_type=BatchInventoryService.REF_CUSTOMER_SALE,
+                reference_id=item.id,
+                selling_price=item.unit_price,
+                purchase_item=item,
+            )
+            line_cost = sum(
+                (s["purchase_price"] * s["quantity"] for s in slices),
+                Decimal("0"),
+            )
+            line_profit = sum(
+                (s["profit"] for s in slices),
+                Decimal("0"),
+            )
+            item.cost_amount = line_cost
+            item.profit_amount = line_profit
+            item.save(update_fields=["cost_amount", "profit_amount", "updated_at"])
+
+            total_cost += line_cost
+            total_profit += line_profit
+
+            self.inventory_service.deduct_stock(
+                business_id,
+                item.product_id,
+                item.quantity,
+            )
+
+        is_paid = bool(data.get("is_paid", False))
+        purchase.is_draft = False
+        purchase.total_cost = total_cost
+        purchase.total_profit = total_profit
+        update_fields = ["is_draft", "total_cost", "total_profit", "updated_at"]
+
+        if is_paid:
+            from django.utils import timezone
+
+            purchase.is_paid = True
+            purchase.paid_at = timezone.now()
+            update_fields.extend(["is_paid", "paid_at"])
+
+        purchase.save(update_fields=update_fields)
         return purchase
 
     @transaction.atomic
@@ -311,6 +578,8 @@ class PurchaseService(BaseService):
         purchase = self.repository.get_by_id(pk)
         if purchase.is_cancelled:
             raise ValidationException("Cancelled invoices cannot be edited.")
+        if purchase.is_draft:
+            raise ValidationException("Use draft update to change draft sale details.")
         updates = self._build_header_updates(purchase, data)
 
         if not updates:
@@ -321,6 +590,8 @@ class PurchaseService(BaseService):
     @transaction.atomic
     def mark_as_paid(self, pk):
         purchase = self.repository.get_by_id(pk)
+        if purchase.is_draft:
+            raise ValidationException("Draft sales must be finalized before marking as paid.")
         if purchase.is_cancelled:
             raise ValidationException("Cancelled invoices cannot be marked as paid.")
         if purchase.is_paid:
@@ -334,27 +605,56 @@ class PurchaseService(BaseService):
         return purchase
 
     @transaction.atomic
-    def mark_as_cancelled(self, pk, reason=""):
+    def mark_as_cancelled(self, pk, reason="", cancellation_date=None):
         purchase = self.repository.get_by_id(pk)
         if purchase.is_cancelled:
             return purchase
+
+        if purchase.is_draft:
+            return self._delete_draft_purchase(purchase)
 
         reason = (reason or "").strip()
         if not reason:
             raise ValidationException("Cancellation reason is required.")
 
-        business_id = purchase.business_id
-        items = PurchaseItem.objects.filter(purchase=purchase, is_deleted=False)
-        for item in items:
-            self.batch_service.restore_purchase_item_consumptions(item)
-            self.inventory_service.add_stock(business_id, item.product_id, item.quantity)
-
         from django.utils import timezone
+
+        if cancellation_date is None:
+            cancellation_date = timezone.localdate()
+        elif isinstance(cancellation_date, str):
+            from datetime import datetime
+
+            try:
+                cancellation_date = datetime.strptime(cancellation_date, "%Y-%m-%d").date()
+            except ValueError as exc:
+                raise ValidationException("Invalid cancellation date.") from exc
+
+        invoice_date = purchase.purchase_date
+        if not invoice_date and purchase.created_at:
+            invoice_date = timezone.localtime(purchase.created_at).date()
+        if invoice_date and cancellation_date < invoice_date:
+            raise ValidationException(
+                "Cancellation date cannot be before the invoice date."
+            )
+
+        business_id = purchase.business_id
+        if not purchase.is_draft:
+            items = PurchaseItem.objects.filter(purchase=purchase, is_deleted=False)
+            for item in items:
+                self.batch_service.restore_purchase_item_consumptions(item)
+                self.inventory_service.add_stock(business_id, item.product_id, item.quantity)
 
         purchase.is_cancelled = True
         purchase.cancelled_at = timezone.now()
+        purchase.cancellation_date = cancellation_date
         purchase.cancellation_reason = reason
         purchase.save(
-            update_fields=["is_cancelled", "cancelled_at", "cancellation_reason", "updated_at"]
+            update_fields=[
+                "is_cancelled",
+                "cancelled_at",
+                "cancellation_date",
+                "cancellation_reason",
+                "updated_at",
+            ]
         )
         return purchase

@@ -10,6 +10,11 @@ urlpatterns = [
         name="purchase-detail",
     ),
     path(
+        "<int:pk>/finalize/",
+        PurchaseViewSet.as_view({"post": "finalize"}),
+        name="purchase-finalize",
+    ),
+    path(
         "<int:pk>/mark-paid/",
         PurchaseViewSet.as_view({"post": "mark_paid"}),
         name="purchase-mark-paid",

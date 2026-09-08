@@ -82,14 +82,12 @@ define("api", function (require, module, exports) {
 
         return doFetch()
             .then(function (res) {
-                // Auto-refresh once on expiry.
-                if (auth && res.status === 401 && !isRefreshing && auth.getRefreshToken()) {
+                if (auth && res.status === 401 && !isRefreshing) {
                     isRefreshing = true;
                     return tryRefresh().then(function (ok) {
                         isRefreshing = false;
                         if (ok) return doFetch();
-                        if (auth)
-                            auth.clear();
+                        auth.clear();
                         window.location.href = c.LOGIN_URL;
                         return res;
                     });

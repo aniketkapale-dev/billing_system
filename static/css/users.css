@@ -19,6 +19,12 @@
 }
 
 .inv-user-toggle-btn--activate {
+    --inv-action-base-color: var(--inv-success-text);
+    --inv-action-base-bg: var(--inv-success-bg);
+    --inv-action-base-border: var(--inv-success-bg);
+    --inv-action-hover-bg: var(--inv-success-text);
+    --inv-action-hover-border: var(--inv-success-text);
+    --inv-action-tip-bg: var(--inv-success-text);
     color: var(--inv-success-text);
     border-color: var(--inv-success-bg);
     background: var(--inv-success-bg);
@@ -31,6 +37,12 @@
 }
 
 .inv-user-toggle-btn--deactivate {
+    --inv-action-base-color: var(--inv-error);
+    --inv-action-base-bg: var(--inv-error-container);
+    --inv-action-base-border: var(--inv-error-container);
+    --inv-action-hover-bg: var(--inv-error);
+    --inv-action-hover-border: var(--inv-error);
+    --inv-action-tip-bg: var(--inv-error);
     color: var(--inv-error);
     border-color: var(--inv-error-container);
     background: var(--inv-error-container);

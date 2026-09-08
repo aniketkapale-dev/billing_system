@@ -1,6 +1,8 @@
 from rest_framework import status
 
 from apps.purchases.serializers import (
+    PurchaseDraftUpdateSerializer,
+    PurchaseFinalizeSerializer,
     PurchaseHeaderWriteSerializer,
     PurchaseSerializer,
     PurchaseWriteSerializer,
@@ -34,10 +36,21 @@ class PurchaseViewSet(BusinessScopedViewSetMixin, BaseViewSet):
         queryset = super().filter_queryset(queryset)
         date_from = self.request.query_params.get("date_from")
         date_to = self.request.query_params.get("date_to")
+        invoice_status = self.request.query_params.get("invoice_status")
         if date_from:
             queryset = queryset.filter(purchase_date__gte=date_from)
         if date_to:
             queryset = queryset.filter(purchase_date__lte=date_to)
+        if invoice_status:
+            status_value = invoice_status.lower()
+            if status_value == "paid":
+                queryset = queryset.filter(is_cancelled=False, is_draft=False, is_paid=True)
+            elif status_value == "pending":
+                queryset = queryset.filter(is_cancelled=False, is_draft=False, is_paid=False)
+            elif status_value == "draft":
+                queryset = queryset.filter(is_cancelled=False, is_draft=True)
+            elif status_value == "cancelled":
+                queryset = queryset.filter(is_cancelled=True)
         return queryset
 
     def get_permissions(self):
@@ -50,11 +63,17 @@ class PurchaseViewSet(BusinessScopedViewSetMixin, BaseViewSet):
         )
         serializer.is_valid(raise_exception=True)
         data = self.inject_business_scope(dict(serializer.validated_data))
+        is_draft = bool(data.get("is_draft", False))
         instance = self.get_service().create_with_items(data)
         payload = self.serializer_class(instance, context={"request": request}).data
+        message = (
+            "Sale saved as draft. Stock was not updated. Invoice number will be assigned when finalized."
+            if is_draft
+            else "Sale added successfully. Stock has been updated."
+        )
         return ApiResponse.success(
             data=payload,
-            message="Sale added successfully. Stock has been updated.",
+            message=message,
             status_code=status.HTTP_201_CREATED,
         )
 
@@ -65,6 +84,23 @@ class PurchaseViewSet(BusinessScopedViewSetMixin, BaseViewSet):
         )
 
     def partial_update(self, request, pk=None):
+        service = self.get_service()
+        purchase = service.get(pk)
+
+        if purchase.is_draft:
+            serializer = PurchaseDraftUpdateSerializer(
+                data=request.data,
+                partial=True,
+                context={"request": request},
+            )
+            serializer.is_valid(raise_exception=True)
+            instance = service.update_draft_with_items(pk, dict(serializer.validated_data))
+            payload = self.serializer_class(instance, context={"request": request}).data
+            return ApiResponse.success(
+                data=payload,
+                message="Draft sale updated successfully. Invoice number will be assigned when finalized.",
+            )
+
         serializer = PurchaseHeaderWriteSerializer(
             data=request.data,
             partial=True,
@@ -77,11 +113,24 @@ class PurchaseViewSet(BusinessScopedViewSetMixin, BaseViewSet):
                 message="Sale line items cannot be changed after the invoice is created.",
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
-        instance = self.get_service().update_header(pk, validated)
+        instance = service.update_header(pk, validated)
         payload = self.serializer_class(instance, context={"request": request}).data
         return ApiResponse.success(
             data=payload,
             message="Sale updated successfully.",
+        )
+
+    def finalize(self, request, pk=None):
+        serializer = PurchaseFinalizeSerializer(
+            data=request.data,
+            context={"request": request},
+        )
+        serializer.is_valid(raise_exception=True)
+        instance = self.get_service().finalize_draft(pk, dict(serializer.validated_data))
+        payload = self.serializer_class(instance, context={"request": request}).data
+        return ApiResponse.success(
+            data=payload,
+            message="Draft sale finalized. Stock has been updated.",
         )
 
     def mark_paid(self, request, pk=None):
@@ -97,13 +146,19 @@ class PurchaseViewSet(BusinessScopedViewSetMixin, BaseViewSet):
         service = self.get_service()
         purchase = service.get(pk)
         already_cancelled = purchase.is_cancelled
+        was_draft = purchase.is_draft
         reason = request.data.get("cancellation_reason", "")
-        instance = service.mark_as_cancelled(pk, reason=reason)
+        cancellation_date = request.data.get("cancellation_date")
+        instance = service.mark_as_cancelled(pk, reason=reason, cancellation_date=cancellation_date)
         payload = self.serializer_class(instance, context={"request": request}).data
         message = (
             "Invoice is already cancelled."
             if already_cancelled
-            else "Invoice cancelled. Stock has been restored."
+            else (
+                "Draft sale deleted. Invoice number has been released."
+                if was_draft
+                else "Invoice cancelled. Stock has been restored."
+            )
         )
         return ApiResponse.success(data=payload, message=message)
 

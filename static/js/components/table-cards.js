@@ -29,8 +29,19 @@ var InventoryTableCards = (function () {
 
     function isDashboardTable(table) {
         if (!table) return false;
+        if (table.classList.contains("inv-dashboard-pending-table")) return false;
+        if (table.classList.contains("inv-dashboard-expiring-table")) return false;
         if (table.classList.contains("inv-mgmt-table--dashboard")) return true;
         return !!table.closest(".inv-dashboard-page");
+    }
+
+    function syncActionTooltips(root) {
+        (root || document).querySelectorAll(".inv-row-action-btn[title], .inv-bulk-action-btn[title]").forEach(function (btn) {
+            if (!btn.getAttribute("aria-label")) {
+                btn.setAttribute("aria-label", btn.getAttribute("title"));
+            }
+            btn.removeAttribute("title");
+        });
     }
 
     function syncTable(table) {
@@ -57,6 +68,8 @@ var InventoryTableCards = (function () {
                 }
             });
         });
+
+        syncActionTooltips(table);
     }
 
     function syncAll(root) {
@@ -80,6 +93,7 @@ var InventoryTableCards = (function () {
     }
 
     function init() {
+        syncActionTooltips(document);
         document.querySelectorAll(".inv-mgmt-table-wrap > .inv-mgmt-table").forEach(function (table) {
             if (!isDashboardTable(table)) wireTable(table);
         });
@@ -105,7 +119,8 @@ var InventoryTableCards = (function () {
     return {
         init: init,
         syncAll: syncAll,
-        syncTable: syncTable
+        syncTable: syncTable,
+        syncActionTooltips: syncActionTooltips
     };
 })();
 
