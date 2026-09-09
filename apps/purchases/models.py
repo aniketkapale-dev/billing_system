@@ -57,6 +57,7 @@ class Purchase(BaseEntity):
     total_profit = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
     is_paid = models.BooleanField(default=False)
     paid_at = models.DateTimeField(null=True, blank=True)
+    due_date = models.DateField(null=True, blank=True)
     is_draft = models.BooleanField(default=False)
     is_cancelled = models.BooleanField(default=False)
     cancelled_at = models.DateTimeField(null=True, blank=True)

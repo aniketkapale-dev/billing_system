@@ -379,7 +379,25 @@ class PurchaseService(BaseService):
                 data.get("payment_type_id"),
             )
 
+        if "due_date" in data:
+            updates["due_date"] = self._parse_optional_date(data.get("due_date"))
+
         return updates
+
+    @staticmethod
+    def _parse_optional_date(value):
+        if value in (None, ""):
+            return None
+
+        if hasattr(value, "year"):
+            return value
+
+        from datetime import datetime
+
+        try:
+            return datetime.strptime(str(value), "%Y-%m-%d").date()
+        except ValueError as exc:
+            raise ValidationException("Invalid due date.") from exc
 
     @transaction.atomic
     def create_with_items(self, data):
@@ -403,6 +421,7 @@ class PurchaseService(BaseService):
             )
 
         is_paid = bool(data.pop("is_paid", False))
+        due_date = data.pop("due_date", None)
         if is_draft:
             is_paid = False
         if is_paid:
@@ -410,8 +429,13 @@ class PurchaseService(BaseService):
 
             data["is_paid"] = True
             data["paid_at"] = timezone.now()
+            data["due_date"] = None
         else:
             data["is_paid"] = False
+            parsed_due_date = self._parse_optional_date(due_date)
+            if not is_draft and not parsed_due_date:
+                raise ValidationException("Due date is required for unpaid sales.")
+            data["due_date"] = parsed_due_date
 
         data["is_draft"] = is_draft
 
@@ -538,6 +562,7 @@ class PurchaseService(BaseService):
             )
 
         is_paid = bool(data.get("is_paid", False))
+        due_date = data.get("due_date")
         purchase.is_draft = False
         purchase.total_cost = total_cost
         purchase.total_profit = total_profit
@@ -548,7 +573,14 @@ class PurchaseService(BaseService):
 
             purchase.is_paid = True
             purchase.paid_at = timezone.now()
-            update_fields.extend(["is_paid", "paid_at"])
+            purchase.due_date = None
+            update_fields.extend(["is_paid", "paid_at", "due_date"])
+        else:
+            parsed_due_date = self._parse_optional_date(due_date)
+            if not parsed_due_date:
+                raise ValidationException("Due date is required for unpaid sales.")
+            purchase.due_date = parsed_due_date
+            update_fields.append("due_date")
 
         purchase.save(update_fields=update_fields)
         return purchase
@@ -580,6 +612,15 @@ class PurchaseService(BaseService):
             raise ValidationException("Cancelled invoices cannot be edited.")
         if purchase.is_draft:
             raise ValidationException("Use draft update to change draft sale details.")
+        if purchase.is_paid and "due_date" in data:
+            data = dict(data)
+            data.pop("due_date", None)
+        elif "due_date" in data and not purchase.is_paid:
+            parsed_due_date = self._parse_optional_date(data.get("due_date"))
+            if not parsed_due_date:
+                raise ValidationException("Due date is required for unpaid sales.")
+            data = dict(data)
+            data["due_date"] = parsed_due_date
         updates = self._build_header_updates(purchase, data)
 
         if not updates:
@@ -601,7 +642,8 @@ class PurchaseService(BaseService):
 
         purchase.is_paid = True
         purchase.paid_at = timezone.now()
-        purchase.save(update_fields=["is_paid", "paid_at", "updated_at"])
+        purchase.due_date = None
+        purchase.save(update_fields=["is_paid", "paid_at", "due_date", "updated_at"])
         return purchase
 
     @transaction.atomic

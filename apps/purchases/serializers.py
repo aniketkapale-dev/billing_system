@@ -115,6 +115,7 @@ class PurchaseSerializer(BaseModelSerializer):
             "pending_bill",
             "is_paid",
             "paid_at",
+            "due_date",
             "is_draft",
             "is_cancelled",
             "cancelled_at",
@@ -186,12 +187,14 @@ class PurchaseWriteSerializer(serializers.Serializer):
     shipping_address = serializers.CharField(required=False, allow_blank=True)
     payment_type_id = serializers.IntegerField(required=False, allow_null=True)
     is_paid = serializers.BooleanField(required=False, default=False)
+    due_date = serializers.DateField(required=False, allow_null=True)
     is_draft = serializers.BooleanField(required=False, default=False)
     items = PurchaseItemWriteSerializer(many=True)
 
 
 class PurchaseFinalizeSerializer(serializers.Serializer):
     is_paid = serializers.BooleanField(required=False, default=False)
+    due_date = serializers.DateField(required=False, allow_null=True)
 
 
 class PurchaseDraftUpdateSerializer(serializers.Serializer):
@@ -201,6 +204,7 @@ class PurchaseDraftUpdateSerializer(serializers.Serializer):
     billing_address = serializers.CharField(required=False, allow_blank=True)
     shipping_address = serializers.CharField(required=False, allow_blank=True)
     payment_type_id = serializers.IntegerField(required=False, allow_null=True)
+    due_date = serializers.DateField(required=False, allow_null=True)
     items = PurchaseItemWriteSerializer(many=True, required=False)
 
 
@@ -212,3 +216,4 @@ class PurchaseHeaderWriteSerializer(serializers.Serializer):
     billing_address = serializers.CharField(required=False, allow_blank=True)
     shipping_address = serializers.CharField(required=False, allow_blank=True)
     payment_type_id = serializers.IntegerField(required=False, allow_null=True)
+    due_date = serializers.DateField(required=False, allow_null=True)
