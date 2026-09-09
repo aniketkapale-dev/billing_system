@@ -128,8 +128,7 @@ var InventoryPurchases = (function () {
                     { id: "products", label: "Products Sold", cell: function (p) { return '<td class="inv-col-name">' + formatProductsSoldCell(p.items || [], p.id) + "</td>"; } },
                     { id: "sale_amount", label: "Bill Amount", sortKey: "total_amount", headerClass: "inv-mgmt-cell--num", cell: function (p) { return '<td class="inv-mgmt-cell--num">' + InventoryApi.formatMoney(p.total_amount) + "</td>"; } },
                     { id: "total_paid", label: "Total Paid", headerClass: "inv-mgmt-cell--num", cell: function (p) { return '<td class="inv-mgmt-cell--num">' + InventoryApi.formatMoney(p.total_paid) + "</td>"; } },
-                    { id: "pending_bill", label: "Pending Bill", headerClass: "inv-mgmt-cell--num", cell: function (p) { return formatPendingBillCell(p); } },
-                    { id: "total_cost", label: "Total Cost", sortKey: "total_cost", headerClass: "inv-mgmt-cell--num", cell: function (p) { return '<td class="inv-mgmt-cell--num">' + InventoryApi.formatMoney(p.total_cost) + "</td>"; } }
+                    { id: "pending_bill", label: "Pending Bill", headerClass: "inv-mgmt-cell--num", cell: function (p) { return formatPendingBillCell(p); } }
                 ],
                 onApply: function () {
                     renderPurchaseRows(cachedItems);
@@ -185,6 +184,7 @@ var InventoryPurchases = (function () {
         InventoryLoader.show();
         fetchSalesDetails(ids)
             .then(function (sales) {
+                InventoryLoader.hide();
                 if (!sales.length) {
                     InventoryToast.error("Unable to load selected sales.");
                     return;
@@ -195,8 +195,9 @@ var InventoryPurchases = (function () {
                     : "Sales Invoices";
                 InventoryDocumentExport.printHtml(printTitle, html);
             })
-            .finally(function () {
+            .catch(function () {
                 InventoryLoader.hide();
+                InventoryToast.error("Unable to load selected sales.");
             });
     }
 

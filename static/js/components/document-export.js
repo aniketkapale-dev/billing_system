@@ -236,12 +236,14 @@ var InventoryDocumentExport = (function () {
             ? (sale.company_address || sale.billing_address || "")
             : (sale.customer_address || sale.billing_address || "");
 
-        return wrapHeaderPanel(
+        var body =
             '<p class="inv-header-customer-name">' + escapeHtml(companyName) + "</p>" +
-            buildHeaderAddressLines(companyAddress) +
-            buildInlineDetailField("GST No", gstNo, false),
-            "inv-header-panel--company"
-        );
+            buildHeaderAddressLines(companyAddress);
+        if (hasCustomerCompany(sale)) {
+            body += buildInlineDetailField("GST No", gstNo, true);
+        }
+
+        return wrapHeaderPanel(body, "inv-header-panel--company");
     }
 
     function buildBusinessColumn(business, businessName) {
@@ -812,19 +814,41 @@ var InventoryDocumentExport = (function () {
         );
     }
 
+    var printFrame = null;
+
+    function getPrintFrame() {
+        if (printFrame && printFrame.parentNode) {
+            return printFrame;
+        }
+        printFrame = document.createElement("iframe");
+        printFrame.setAttribute("title", "Print document");
+        printFrame.setAttribute("aria-hidden", "true");
+        printFrame.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;opacity:0;pointer-events:none;";
+        document.body.appendChild(printFrame);
+        return printFrame;
+    }
+
     function printHtml(title, html) {
-        var win = window.open("", "_blank");
-        if (!win) {
-            if (window.InventoryToast) InventoryToast.error("Allow pop-ups to print records.");
+        var frame = getPrintFrame();
+        var frameWin = frame.contentWindow;
+        var frameDoc = frame.contentDocument || frameWin.document;
+        if (!frameWin || !frameDoc) {
+            if (window.InventoryToast) InventoryToast.error("Unable to prepare print view.");
             return;
         }
-        win.document.open();
-        win.document.write(html);
-        win.document.close();
-        win.focus();
-        win.onload = function () {
-            win.print();
-        };
+
+        var printed = false;
+        function triggerPrint() {
+            if (printed) return;
+            printed = true;
+            frameWin.print();
+            window.focus();
+        }
+
+        frameDoc.open();
+        frameDoc.write(html);
+        frameDoc.close();
+        window.setTimeout(triggerPrint, 100);
     }
 
     function downloadTablePdf(title, headers, rows, filename) {

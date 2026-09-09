@@ -2,12 +2,15 @@ var InventorySettingsBarcode = (function () {
     "use strict";
 
     var API = "/api/settings/barcodes";
+    var PRODUCTS_API = "/api/products";
     var LIST_PANEL = "settings-barcode-list-panel";
     var FORM_PANEL = "settings-barcode-form-panel";
     var PAGINATION_ID = "settings-barcode-pagination";
     var currentPage = 1;
     var currentSearch = "";
     var editingId = null;
+    var products = [];
+    var activeTab = "bulk";
 
     function request(path, opts) {
         return InventoryApi.request(API, path, opts);
@@ -50,6 +53,28 @@ var InventorySettingsBarcode = (function () {
     function displayText(value) {
         if (value === null || value === undefined || String(value).trim() === "") return "—";
         return InventoryApi.escapeHtml(String(value));
+    }
+
+    function renderReprintProductSelect() {
+        var select = document.getElementById("settings-barcode-reprint-product");
+        if (!select) return;
+
+        var html = '<option value="">All products</option>';
+        products.forEach(function (item) {
+            html += '<option value="' + item.id + '">' + InventoryApi.escapeHtml(item.name) + "</option>";
+        });
+        select.innerHTML = html;
+        if (window.InventorySearchableSelect) {
+            InventorySearchableSelect.refresh(select);
+        }
+    }
+
+    function loadProducts() {
+        return InventoryApi.request(PRODUCTS_API, "?page_size=500&ordering=name").then(function (body) {
+            products = body && body.isSuccess ? (body.data.items || []) : [];
+            renderReprintProductSelect();
+            return products;
+        });
     }
 
     function productLabel(item) {
@@ -120,6 +145,7 @@ var InventorySettingsBarcode = (function () {
         if (modelEl) modelEl.value = "";
         if (qtyEl) qtyEl.value = "1";
         updateDateHint();
+        setActiveTab("bulk");
         toggleGenerateViews(false);
     }
 
@@ -127,9 +153,23 @@ var InventorySettingsBarcode = (function () {
         var editView = document.getElementById("settings-barcode-edit-view");
         var generateView = document.getElementById("settings-barcode-generate-view");
         var generateBtn = document.getElementById("settings-barcode-generate-btn");
+        var reprintBtn = document.getElementById("settings-barcode-reprint-btn");
         if (editView) editView.classList.toggle("inv-hidden", !isEdit);
         if (generateView) generateView.classList.toggle("inv-hidden", isEdit);
-        if (generateBtn) generateBtn.classList.toggle("inv-hidden", isEdit);
+        if (generateBtn) generateBtn.classList.toggle("inv-hidden", isEdit || activeTab === "reprint");
+        if (reprintBtn) reprintBtn.classList.toggle("inv-hidden", isEdit || activeTab !== "reprint");
+    }
+
+    function setActiveTab(tab) {
+        activeTab = tab || "bulk";
+        document.querySelectorAll(".inv-barcode-tab").forEach(function (btn) {
+            btn.classList.toggle("inv-barcode-tab--active", btn.getAttribute("data-barcode-tab") === activeTab);
+        });
+        var bulkPanel = document.getElementById("settings-barcode-tab-bulk");
+        var reprintPanel = document.getElementById("settings-barcode-tab-reprint");
+        if (bulkPanel) bulkPanel.classList.toggle("inv-hidden", activeTab !== "bulk");
+        if (reprintPanel) reprintPanel.classList.toggle("inv-hidden", activeTab !== "reprint");
+        toggleGenerateViews(false);
     }
 
     function openAddModal() {
@@ -265,6 +305,45 @@ var InventorySettingsBarcode = (function () {
         });
     }
 
+    function reprintBarcodes() {
+        var modelNumber = (document.getElementById("settings-barcode-reprint-model").value || "").trim();
+        var productId = document.getElementById("settings-barcode-reprint-product").value;
+        if (!modelNumber) {
+            InventoryToast.error("Model number is required.");
+            return;
+        }
+
+        var params = new URLSearchParams();
+        params.set("page_size", "500");
+        params.set("search", modelNumber);
+        if (productId) params.set("product_id", productId);
+
+        var btn = document.getElementById("settings-barcode-reprint-btn");
+        InventoryLoader.button(btn, true);
+
+        request("?" + params.toString())
+            .then(function (body) {
+                if (!(body && body.isSuccess && body.data)) {
+                    InventoryToast.error(body.message || "Failed to load barcodes.");
+                    return;
+                }
+                var items = (body.data.items || []).filter(function (item) {
+                    return String(item.model_label || "").toLowerCase() === modelNumber.toLowerCase();
+                });
+                if (!items.length) {
+                    InventoryToast.error("No barcodes found for this model number.");
+                    return;
+                }
+                return downloadPdf(items);
+            })
+            .catch(function () {
+                InventoryToast.error("Network error while loading barcodes.");
+            })
+            .finally(function () {
+                InventoryLoader.button(btn, false);
+            });
+    }
+
     function viewBarcode(id) {
         InventoryLoader.show();
         request("/" + id + "/")
@@ -326,6 +405,7 @@ var InventorySettingsBarcode = (function () {
 
         var addBtn = document.getElementById("settings-barcode-add-btn");
         var generateBtn = document.getElementById("settings-barcode-generate-btn");
+        var reprintBtn = document.getElementById("settings-barcode-reprint-btn");
         var searchEl = document.getElementById("settings-barcode-search");
         var tableBody = document.getElementById("settings-barcode-table-body");
 
@@ -333,12 +413,19 @@ var InventorySettingsBarcode = (function () {
             InventoryPagePanel.init();
         }
 
+        document.querySelectorAll(".inv-barcode-tab").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                setActiveTab(btn.getAttribute("data-barcode-tab"));
+            });
+        });
+
         if (addBtn) {
             addBtn.addEventListener("click", function () {
-                openAddModal();
+                openAddModal(null);
             });
         }
         if (generateBtn) generateBtn.addEventListener("click", handleGenerate);
+        if (reprintBtn) reprintBtn.addEventListener("click", reprintBarcodes);
 
         if (searchEl) {
             var searchTimer = null;
@@ -366,16 +453,20 @@ var InventorySettingsBarcode = (function () {
         if (isListPage()) {
             InventoryBusiness.whenReady(function () {
                 if (!InventoryBusiness.getActiveId()) return;
-                loadBarcodes(1);
+                loadProducts().then(function () {
+                    loadBarcodes(1);
+                });
                 if (window.InventorySidebar && InventorySidebar.consumeAddAction()) {
-                    openAddModal();
+                    openAddModal(null);
                 }
             });
 
             window.addEventListener("inventory:business-changed", function () {
                 closeForm();
                 if (InventoryBusiness.getActiveId()) {
-                    loadBarcodes(1);
+                    loadProducts().then(function () {
+                        loadBarcodes(1);
+                    });
                 } else {
                     renderRows([]);
                 }

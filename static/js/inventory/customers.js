@@ -248,6 +248,7 @@ var InventoryCustomers = (function () {
         if (!customer) return false;
         return !!(
             (customer.company_name && String(customer.company_name).trim()) ||
+            (customer.company_mobile && String(customer.company_mobile).trim()) ||
             (customer.gst_number && String(customer.gst_number).trim()) ||
             (customer.business_address && String(customer.business_address).trim()) ||
             (customer.shipping_address && String(customer.shipping_address).trim())
@@ -261,6 +262,7 @@ var InventoryCustomers = (function () {
         document.getElementById("customer-email").value = "";
         document.getElementById("customer-address").value = "";
         document.getElementById("customer-company-name").value = "";
+        document.getElementById("customer-company-mobile").value = "";
         document.getElementById("customer-gst").value = "";
         document.getElementById("customer-business-address").value = "";
         document.getElementById("customer-shipping-address").value = "";
@@ -279,6 +281,7 @@ var InventoryCustomers = (function () {
         document.getElementById("customer-email").value = customer.email || "";
         document.getElementById("customer-address").value = customer.address || "";
         document.getElementById("customer-company-name").value = customer.company_name || "";
+        document.getElementById("customer-company-mobile").value = customer.company_mobile || "";
         document.getElementById("customer-gst").value = customer.gst_number || "";
         document.getElementById("customer-business-address").value = customer.business_address || "";
         document.getElementById("customer-shipping-address").value = customer.shipping_address || "";
@@ -299,6 +302,7 @@ var InventoryCustomers = (function () {
         var address = document.getElementById("customer-address").value.trim();
         var addBusiness = document.getElementById("customer-add-business").checked;
         var companyName = document.getElementById("customer-company-name").value.trim();
+        var companyMobile = document.getElementById("customer-company-mobile").value.trim();
         var gstNumber = document.getElementById("customer-gst").value.trim();
         var businessAddress = document.getElementById("customer-business-address").value.trim();
         var shippingAddress = document.getElementById("customer-shipping-address").value.trim();
@@ -324,6 +328,11 @@ var InventoryCustomers = (function () {
             document.getElementById("customer-company-name").focus();
             return null;
         }
+        if (addBusiness && companyMobile && !isValidMobile(companyMobile)) {
+            InventoryToast.error("Enter a valid 10-digit company mobile number.");
+            document.getElementById("customer-company-mobile").focus();
+            return null;
+        }
 
         return {
             name: name,
@@ -331,6 +340,7 @@ var InventoryCustomers = (function () {
             email: email,
             address: address,
             company_name: addBusiness ? companyName : "",
+            company_mobile: addBusiness ? companyMobile : "",
             gst_number: addBusiness ? gstNumber : "",
             business_address: addBusiness ? businessAddress : "",
             shipping_address: addBusiness ? shippingAddress : ""
@@ -371,6 +381,7 @@ var InventoryCustomers = (function () {
         if (hasBusinessData(customer)) {
             rows.push(
                 { label: "Company Name", value: displayValue(customer.company_name) },
+                { label: "Company Mobile", value: displayValue(customer.company_mobile) },
                 { label: "GST No", value: displayValue(customer.gst_number) },
                 { label: "Company Address", value: displayValue(customer.business_address), full: true },
                 { label: "Shipping Address", value: displayValue(customer.shipping_address), full: true }

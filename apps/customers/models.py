@@ -14,6 +14,7 @@ class Customer(BaseEntity):
     mobile = models.CharField(max_length=20, blank=True, default="")
     email = models.EmailField(blank=True, default="")
     company_name = models.CharField(max_length=150, blank=True, default="")
+    company_mobile = models.CharField(max_length=20, blank=True, default="")
     gst_number = models.CharField(max_length=30, blank=True, default="")
     address = models.TextField(blank=True, default="")
     business_address = models.TextField(blank=True, default="")

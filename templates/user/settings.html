@@ -251,17 +251,37 @@
                     </div>
                 </div>
                 <div id="settings-barcode-generate-view">
-                    <div class="inv-mgmt-form-grid" style="padding:0;">
-                        <div class="inv-mgmt-field">
-                            <label for="settings-barcode-model-number">Model Number</label>
-                            <input id="settings-barcode-model-number" class="inv-mgmt-input" type="text" placeholder="e.g. 1234 or AB12" required/>
-                            <p class="inv-field-hint">Printed top text: <strong>ModelNumber</strong></p>
-                            <p class="inv-field-hint">Barcode value format: <strong>ModelNumber + <span id="settings-barcode-date-hint">DDMMYYYY</span> + RAND4</strong> (4-digit suffix is always unique)</p>
+                    <div class="inv-barcode-tabs" role="tablist">
+                        <button type="button" class="inv-barcode-tab inv-barcode-tab--active" data-barcode-tab="bulk">Bulk Generate</button>
+                        <button type="button" class="inv-barcode-tab" data-barcode-tab="reprint">Reprint</button>
+                    </div>
+                    <div id="settings-barcode-tab-bulk" class="inv-barcode-tab-panel">
+                        <div class="inv-mgmt-form-grid" style="padding:0;margin-top:16px;">
+                            <div class="inv-mgmt-field">
+                                <label for="settings-barcode-model-number">Model Number</label>
+                                <input id="settings-barcode-model-number" class="inv-mgmt-input" type="text" placeholder="e.g. 1234 or AB12" required/>
+                                <p class="inv-field-hint">Printed top text: <strong>ModelNumber</strong></p>
+                                <p class="inv-field-hint">Barcode value format: <strong>ModelNumber + <span id="settings-barcode-date-hint">DDMMYYYY</span> + RAND4</strong> (4-digit suffix is always unique)</p>
+                            </div>
+                            <div class="inv-mgmt-field">
+                                <label for="settings-barcode-quantity">Quantity</label>
+                                <input id="settings-barcode-quantity" class="inv-mgmt-input" type="number" min="1" max="500" step="1" placeholder="e.g. 10" value="1" required/>
+                                <p class="inv-field-hint">Product can be assigned later when adding a purchase item.</p>
+                            </div>
                         </div>
-                        <div class="inv-mgmt-field">
-                            <label for="settings-barcode-quantity">Quantity</label>
-                            <input id="settings-barcode-quantity" class="inv-mgmt-input" type="number" min="1" max="500" step="1" placeholder="e.g. 10" value="1" required/>
-                            <p class="inv-field-hint">Product can be assigned later when adding a purchase item.</p>
+                    </div>
+                    <div id="settings-barcode-tab-reprint" class="inv-barcode-tab-panel inv-hidden">
+                        <div class="inv-mgmt-form-grid" style="padding:0;margin-top:16px;">
+                            <div class="inv-mgmt-field">
+                                <label for="settings-barcode-reprint-model">Model Number</label>
+                                <input id="settings-barcode-reprint-model" class="inv-mgmt-input" type="text" placeholder="e.g. MODEL01" required/>
+                            </div>
+                            <div class="inv-mgmt-field">
+                                <label for="settings-barcode-reprint-product">Product <span class="inv-field-optional">(optional)</span></label>
+                                <select id="settings-barcode-reprint-product" class="inv-mgmt-select">
+                                    <option value="">All products</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -271,6 +291,10 @@
                 <button id="settings-barcode-generate-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">
                     <span class="material-symbols-outlined">picture_as_pdf</span>
                     Generate &amp; Download
+                </button>
+                <button id="settings-barcode-reprint-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary inv-hidden">
+                    <span class="material-symbols-outlined">picture_as_pdf</span>
+                    Download PDF
                 </button>
             </div>
         </div>

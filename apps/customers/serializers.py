@@ -17,6 +17,7 @@ class CustomerSerializer(BaseModelSerializer):
             "mobile",
             "email",
             "company_name",
+            "company_mobile",
             "gst_number",
             "address",
             "business_address",
@@ -40,6 +41,7 @@ class CustomerWriteSerializer(serializers.ModelSerializer):
             "mobile",
             "email",
             "company_name",
+            "company_mobile",
             "gst_number",
             "address",
             "business_address",
@@ -72,6 +74,14 @@ class CustomerWriteSerializer(serializers.ModelSerializer):
 
     def validate_company_name(self, value):
         return (value or "").strip()
+
+    def validate_company_mobile(self, value):
+        value = (value or "").strip()
+        if not value:
+            return ""
+        from core.validators import validate_mobile_number
+
+        return validate_mobile_number(value)
 
     def validate_business_address(self, value):
         return (value or "").strip()
