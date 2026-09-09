@@ -1,4 +1,4 @@
-from apps.settings.models import InvoiceSetting, Tax
+from apps.settings.models import InvoiceSetting, ProductBarcode, Tax
 from core.base_repository import BaseRepository
 
 
@@ -14,3 +14,10 @@ class InvoiceSettingRepository(BaseRepository):
 
     def get_queryset(self):
         return super().get_queryset().select_related("business")
+
+
+class ProductBarcodeRepository(BaseRepository):
+    model = ProductBarcode
+
+    def get_queryset(self):
+        return super().get_queryset().select_related("business", "product")

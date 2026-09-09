@@ -15,6 +15,41 @@ var InventorySearchableSelect = (function () {
         return select.closest("." + WRAP_CLASS);
     }
 
+    function getMenu(wrap) {
+        if (!wrap) return null;
+        if (wrap._searchSelectMenu) return wrap._searchSelectMenu;
+        var menu = wrap.querySelector(".inv-search-select-menu");
+        if (menu) wrap._searchSelectMenu = menu;
+        return menu;
+    }
+
+    function isInModal(wrap) {
+        if (!wrap) return false;
+        var modal = wrap.closest(".inv-modal");
+        return !!(modal && !modal.classList.contains("inv-hidden"));
+    }
+
+    function attachMenuForOpen(wrap) {
+        var menu = getMenu(wrap);
+        if (!menu) return null;
+        if (isInModal(wrap)) {
+            if (menu.parentNode !== document.body) {
+                document.body.appendChild(menu);
+            }
+        } else if (menu.parentNode !== wrap) {
+            wrap.appendChild(menu);
+        }
+        return menu;
+    }
+
+    function restoreMenuHome(wrap) {
+        var menu = getMenu(wrap);
+        if (!menu || !wrap) return;
+        if (!isInModal(wrap) && menu.parentNode !== wrap) {
+            wrap.appendChild(menu);
+        }
+    }
+
     function selectedLabel(select) {
         var option = select.options[select.selectedIndex];
         return option ? option.textContent : "";
@@ -40,8 +75,9 @@ var InventorySearchableSelect = (function () {
 
     function renderOptions(wrap, highlightValue) {
         var select = wrap.querySelector("select");
-        var list = wrap.querySelector(".inv-search-select-list");
-        var searchInput = wrap.querySelector(".inv-search-select-input");
+        var menu = getMenu(wrap);
+        var list = menu ? menu.querySelector(".inv-search-select-list") : null;
+        var searchInput = menu ? menu.querySelector(".inv-search-select-input") : null;
         if (!select || !list) return;
 
         var query = searchInput ? searchInput.value.trim().toLowerCase() : "";
@@ -75,7 +111,7 @@ var InventorySearchableSelect = (function () {
     }
 
     function resetMenuPosition(wrap) {
-        var menu = wrap.querySelector(".inv-search-select-menu");
+        var menu = getMenu(wrap);
         if (!menu) return;
         menu.style.position = "";
         menu.style.top = "";
@@ -89,7 +125,7 @@ var InventorySearchableSelect = (function () {
 
     function positionMenu(wrap) {
         var trigger = wrap.querySelector(".inv-search-select-trigger");
-        var menu = wrap.querySelector(".inv-search-select-menu");
+        var menu = attachMenuForOpen(wrap);
         if (!trigger || !menu) return;
 
         menu.classList.remove("inv-hidden");
@@ -99,12 +135,13 @@ var InventorySearchableSelect = (function () {
         var spaceBelow = window.innerHeight - rect.bottom - gap;
         var spaceAbove = rect.top - gap;
         var openUp = spaceBelow < 140 && spaceAbove > spaceBelow;
+        var inModal = isInModal(wrap);
 
         menu.style.position = "fixed";
         menu.style.left = rect.left + "px";
         menu.style.width = rect.width + "px";
         menu.style.right = "auto";
-        menu.style.zIndex = "10050";
+        menu.style.zIndex = inModal ? "10051" : "10050";
 
         if (openUp) {
             var heightUp = Math.min(maxMenuHeight, Math.max(spaceAbove, 100));
@@ -126,9 +163,10 @@ var InventorySearchableSelect = (function () {
     function close(wrap) {
         if (!wrap) return;
         wrap.classList.remove("is-open");
-        var menu = wrap.querySelector(".inv-search-select-menu");
+        var menu = getMenu(wrap);
         if (menu) menu.classList.add("inv-hidden");
         resetMenuPosition(wrap);
+        restoreMenuHome(wrap);
     }
 
     function closeAll(except) {
@@ -154,7 +192,8 @@ var InventorySearchableSelect = (function () {
         wrap.classList.add("is-open");
         positionMenu(wrap);
         renderOptions(wrap);
-        var searchInput = wrap.querySelector(".inv-search-select-input");
+        var menu = getMenu(wrap);
+        var searchInput = menu ? menu.querySelector(".inv-search-select-input") : null;
         if (searchInput) {
             searchInput.value = "";
             searchInput.focus();
@@ -205,6 +244,7 @@ var InventorySearchableSelect = (function () {
 
         wrap.appendChild(trigger);
         wrap.appendChild(menu);
+        wrap._searchSelectMenu = menu;
         return wrap;
     }
 
@@ -214,9 +254,9 @@ var InventorySearchableSelect = (function () {
 
         var select = wrap.querySelector("select");
         var trigger = wrap.querySelector(".inv-search-select-trigger");
-        var menu = wrap.querySelector(".inv-search-select-menu");
-        var searchInput = wrap.querySelector(".inv-search-select-input");
-        var list = wrap.querySelector(".inv-search-select-list");
+        var menu = getMenu(wrap);
+        var searchInput = menu ? menu.querySelector(".inv-search-select-input") : null;
+        var list = menu ? menu.querySelector(".inv-search-select-list") : null;
 
         trigger.addEventListener("click", function (e) {
             e.stopPropagation();
@@ -227,9 +267,11 @@ var InventorySearchableSelect = (function () {
             }
         });
 
-        menu.addEventListener("click", function (e) {
-            e.stopPropagation();
-        });
+        if (menu) {
+            menu.addEventListener("click", function (e) {
+                e.stopPropagation();
+            });
+        }
 
         if (searchInput) {
             searchInput.addEventListener("input", function () {
@@ -341,6 +383,7 @@ var InventorySearchableSelect = (function () {
         enhance: enhance,
         refresh: refresh,
         rebuild: rebuild,
-        enhanceAll: enhanceAll
+        enhanceAll: enhanceAll,
+        closeAll: closeAll
     };
 })();

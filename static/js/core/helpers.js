@@ -12,10 +12,20 @@ define("helpers", function (require, module, exports) {
     }
 
     function formatDate(value) {
+        if (typeof InventoryDateFormat !== "undefined") {
+            return InventoryDateFormat.formatDateTime(value);
+        }
         if (!value) return "";
         var d = new Date(value);
         if (isNaN(d.getTime())) return value;
         return d.toLocaleString();
+    }
+
+    function formatDisplayDate(value) {
+        if (typeof InventoryDateFormat !== "undefined") {
+            return InventoryDateFormat.formatDisplayDate(value);
+        }
+        return value || "";
     }
 
     function debounce(fn, wait) {
@@ -48,6 +58,7 @@ define("helpers", function (require, module, exports) {
     module.exports = {
         escapeHtml: escapeHtml,
         formatDate: formatDate,
+        formatDisplayDate: formatDisplayDate,
         debounce: debounce,
         getQueryString: getQueryString,
         titleCase: titleCase

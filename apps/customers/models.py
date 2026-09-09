@@ -18,6 +18,7 @@ class Customer(BaseEntity):
     address = models.TextField(blank=True, default="")
     business_address = models.TextField(blank=True, default="")
     shipping_address = models.TextField(blank=True, default="")
+    place_of_supply = models.CharField(max_length=100, blank=True, default="")
 
     class Meta:
         db_table = "customers"

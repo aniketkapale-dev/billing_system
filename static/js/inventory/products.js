@@ -4,6 +4,7 @@ var InventoryProducts = (function () {
     var API = "/api/products";
     var CATALOG_API = "/api/catalog";
     var TAXES_API = "/api/settings/taxes";
+    var BARCODES_API = "/api/settings/barcodes";
     var PAGE_SIZE = (window.InventoryConstants && InventoryConstants.PAGE_SIZE) || 10;
     var searchTimer = null;
     var currentPage = 1;
@@ -18,6 +19,7 @@ var InventoryProducts = (function () {
     var brands = [];
     var manufacturers = [];
     var taxes = [];
+    var barcodes = [];
     var cachedItems = [];
     var bulkSelect = null;
     var columnCtrl = null;
@@ -277,14 +279,7 @@ var InventoryProducts = (function () {
     }
 
     function formatDate(value) {
-        if (isEmpty(value)) return "—";
-        var d = new Date(value);
-        if (isNaN(d.getTime())) return "—";
-        return d.toLocaleDateString(undefined, {
-            day: "2-digit",
-            month: "short",
-            year: "numeric"
-        });
+        return InventoryApi.formatDisplayDate(value, "—");
     }
 
     function cellOpeningQty(item) {
@@ -901,7 +896,7 @@ var InventoryProducts = (function () {
         setFormMode("add");
         document.getElementById("product-name").value = "";
         document.getElementById("product-sku").value = "";
-        document.getElementById("product-barcode").value = "";
+        renderBarcodeSelect("");
         document.getElementById("product-category").value = "";
         document.getElementById("product-brand").value = "";
         document.getElementById("product-manufacturer").value = "";
@@ -920,16 +915,87 @@ var InventoryProducts = (function () {
 
     function syncProductSelectDisplays() {
         if (!window.InventorySearchableSelect) return;
-        ["product-category", "product-brand", "product-manufacturer", "product-unit"].forEach(function (id) {
+        ["product-category", "product-brand", "product-manufacturer", "product-unit", "product-barcode"].forEach(function (id) {
             var el = document.getElementById(id);
             if (el) InventorySearchableSelect.refresh(el);
+        });
+    }
+
+    function getBarcodeEntry(barcodeId) {
+        return barcodes.find(function (item) {
+            return String(item.id) === String(barcodeId);
+        });
+    }
+
+    function findBarcodeIdForValue(value, productId) {
+        if (!value) return "";
+        var match = barcodes.find(function (item) {
+            if (String(item.value) !== String(value)) return false;
+            if (!item.product) return true;
+            return productId && String(item.product) === String(productId);
+        });
+        return match ? match.id : "";
+    }
+
+    function barcodeOptions(selectedBarcodeId) {
+        var html = '<option value="">Select barcode (optional)</option>';
+        barcodes.forEach(function (item) {
+            var selected = String(item.id) === String(selectedBarcodeId) ? " selected" : "";
+            var label = item.model_label
+                ? InventoryApi.escapeHtml(item.model_label) + " — " + InventoryApi.escapeHtml(item.value)
+                : InventoryApi.escapeHtml(item.value);
+            html += '<option value="' + item.id + '"' + selected + ">" + label + "</option>";
+        });
+        return html;
+    }
+
+    function renderBarcodeSelect(selectedBarcodeId) {
+        var select = document.getElementById("product-barcode");
+        if (!select) return;
+        select.innerHTML = barcodeOptions(selectedBarcodeId);
+        if (selectedBarcodeId) select.value = String(selectedBarcodeId);
+        syncProductSelectDisplays();
+    }
+
+    function loadBarcodes(productId) {
+        var params = new URLSearchParams();
+        params.set("page_size", "500");
+        params.set("ordering", "model_label");
+        if (productId) {
+            params.set("product_id", String(productId));
+        } else {
+            params.set("unassigned", "1");
+        }
+        return InventoryApi.request(BARCODES_API, "?" + params.toString()).then(function (body) {
+            barcodes = body && body.isSuccess ? (body.data.items || []) : [];
+            return barcodes;
+        });
+    }
+
+    function assignBarcodeToProduct(barcodeId, productId) {
+        if (!barcodeId || !productId) return Promise.resolve(null);
+        var barcode = getBarcodeEntry(barcodeId);
+        if (!barcode) return Promise.resolve(null);
+        if (barcode.product && String(barcode.product) === String(productId)) {
+            return Promise.resolve(barcode);
+        }
+        if (barcode.product) {
+            return Promise.resolve(null);
+        }
+        return InventoryApi.request(BARCODES_API, "/" + barcodeId + "/", {
+            method: "PATCH",
+            body: { product_id: Number(productId) }
+        }).then(function (body) {
+            if (body && body.isSuccess && body.data) {
+                return body.data;
+            }
+            return null;
         });
     }
 
     function populateForm(product) {
         document.getElementById("product-name").value = product.name || "";
         document.getElementById("product-sku").value = product.sku || "";
-        document.getElementById("product-barcode").value = product.barcode || "";
         document.getElementById("product-category").value = product.category || "";
         document.getElementById("product-brand").value = product.brand || "";
         document.getElementById("product-manufacturer").value = product.manufacturer || "";
@@ -941,7 +1007,9 @@ var InventoryProducts = (function () {
         document.getElementById("product-price-with-tax").value = priceWithTax != null ? priceWithTax : "";
         document.getElementById("product-mrp").value = product.mrp != null ? product.mrp : "";
         document.getElementById("product-description").value = product.description || "";
-        syncProductSelectDisplays();
+        return loadBarcodes(product.id).then(function () {
+            renderBarcodeSelect(findBarcodeIdForValue(product.barcode, product.id));
+        });
     }
 
     function renderViewDetails(product) {
@@ -992,14 +1060,16 @@ var InventoryProducts = (function () {
             return;
         }
             loadCatalogOptions().then(function () {
+                return loadBarcodes(null);
+            }).then(function () {
                 resetForm();
-                fetchNextSku().then(function (sku) {
-                    if (sku) {
-                        document.getElementById("product-sku").value = sku;
-                    }
-                    showProductFormPanel();
-                    document.getElementById("product-name").focus();
-                });
+                return fetchNextSku();
+            }).then(function (sku) {
+                if (sku) {
+                    document.getElementById("product-sku").value = sku;
+                }
+                showProductFormPanel();
+                document.getElementById("product-name").focus();
             });
     }
 
@@ -1032,7 +1102,9 @@ var InventoryProducts = (function () {
                 if (!product) return;
                 editingId = product.id;
                 setFormMode("edit");
-                populateForm(product);
+                return populateForm(product);
+            })
+            .then(function () {
                 showProductFormPanel();
                 document.getElementById("product-name").focus();
             })
@@ -1099,10 +1171,13 @@ var InventoryProducts = (function () {
 
         var brandId = document.getElementById("product-brand").value;
         var manufacturerId = document.getElementById("product-manufacturer").value;
+        var barcodeSelect = document.getElementById("product-barcode");
+        var selectedBarcodeId = barcodeSelect ? barcodeSelect.value : "";
+        var selectedBarcode = getBarcodeEntry(selectedBarcodeId);
         var payload = {
             name: name,
             sku: sku,
-            barcode: document.getElementById("product-barcode").value.trim(),
+            barcode: selectedBarcode ? selectedBarcode.value : "",
             unit_id: Number(unitId),
             description: document.getElementById("product-description").value.trim(),
             quantity: openingStock,
@@ -1125,17 +1200,22 @@ var InventoryProducts = (function () {
             .then(function (body) {
                 if (body && body.isSuccess) {
                     var savedProduct = body.data;
-                    InventoryToast.success(editingId ? "Product updated successfully." : "Product added successfully.");
-                    resetForm();
-                    hideProductFormPanel();
-                    if (document.getElementById("products-table-body")) {
-                        loadProducts(currentSearch, editingId ? currentPage : 1);
-                    }
-                    if (savedProduct && !editingId) {
-                        window.dispatchEvent(new CustomEvent("inventory:product-created", {
-                            detail: { product: savedProduct }
-                        }));
-                    }
+                    var assignPromise = selectedBarcodeId && savedProduct
+                        ? assignBarcodeToProduct(selectedBarcodeId, savedProduct.id)
+                        : Promise.resolve(null);
+                    return assignPromise.then(function () {
+                        InventoryToast.success(editingId ? "Product updated successfully." : "Product added successfully.");
+                        resetForm();
+                        hideProductFormPanel();
+                        if (document.getElementById("products-table-body")) {
+                            loadProducts(currentSearch, editingId ? currentPage : 1);
+                        }
+                        if (savedProduct && !editingId) {
+                            window.dispatchEvent(new CustomEvent("inventory:product-created", {
+                                detail: { product: savedProduct }
+                            }));
+                        }
+                    });
                 } else {
                     var err = body.message || "Unable to save product.";
                     if (body.errors && body.errors.length) err = body.errors.join(" • ");
@@ -1251,6 +1331,28 @@ var InventoryProducts = (function () {
         }
 
         if (saveBtn) saveBtn.addEventListener("click", saveProduct);
+
+        var barcodeAddBtn = document.getElementById("product-barcode-add-btn");
+        if (barcodeAddBtn) {
+            barcodeAddBtn.addEventListener("click", function () {
+                if (window.InventorySettingsBarcode && typeof InventorySettingsBarcode.openAddModal === "function") {
+                    InventorySettingsBarcode.openAddModal();
+                    return;
+                }
+                InventoryToast.error("Barcode generator is not available.");
+            });
+        }
+
+        window.addEventListener("inventory:barcode-created", function (e) {
+            var detail = e.detail || {};
+            var created = detail.barcodes || (detail.barcode ? [detail.barcode] : []);
+            var productId = editingId || null;
+            loadBarcodes(productId).then(function () {
+                if (created.length) {
+                    renderBarcodeSelect(created[0].id);
+                }
+            });
+        });
 
         var categoryAddBtn = document.getElementById("product-category-add-btn");
         var categorySaveBtn = document.getElementById("product-category-save-btn");

@@ -20,6 +20,11 @@ urlpatterns = [
         name="purchase-mark-paid",
     ),
     path(
+        "<int:pk>/payments/",
+        PurchaseViewSet.as_view({"get": "list_payments", "post": "record_payment"}),
+        name="purchase-payments",
+    ),
+    path(
         "<int:pk>/mark-cancelled/",
         PurchaseViewSet.as_view({"post": "mark_cancelled"}),
         name="purchase-mark-cancelled",

@@ -71,36 +71,16 @@ var InventoryDashboard = (function () {
         return isNaN(date.getTime()) ? null : date;
     }
 
-    function formatShortDate(value) {
-        var date = parseChartDate(value);
-        if (!date) return "—";
-        return date.toLocaleDateString("en-IN", {
-            day: "numeric",
-            month: "short",
-            year: "numeric"
-        });
-    }
-
     function formatChartLabel(value, period) {
-        var date = parseChartDate(value);
-        if (!date) return "—";
         if (period === "all") {
+            var date = parseChartDate(value);
+            if (!date) return "—";
             return date.toLocaleDateString("en-IN", {
                 month: "short",
                 year: "numeric"
             });
         }
-        if (period === "day") {
-            return date.toLocaleDateString("en-IN", {
-                weekday: "short",
-                day: "numeric",
-                month: "short"
-            });
-        }
-        return date.toLocaleDateString("en-IN", {
-            day: "numeric",
-            month: "short"
-        });
+        return InventoryApi.formatDisplayDate(value, "—");
     }
 
     function sortChartRows(rows) {
@@ -335,8 +315,7 @@ var InventoryDashboard = (function () {
     }
 
     function formatPendingDate(value) {
-        if (!value) return "—";
-        return escapeCell(String(value).slice(0, 10));
+        return escapeCell(InventoryApi.formatDisplayDate(value, "—"));
     }
 
     function formatPendingProductsCell(lines, itemId) {

@@ -1,0 +1,28 @@
+<div id="barcode-modal" class="inv-modal inv-hidden" aria-hidden="true">
+    <div class="inv-modal-backdrop" data-modal-close></div>
+    <div class="inv-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="barcode-modal-title">
+        <div class="inv-modal-header">
+            <h3 id="barcode-modal-title">Generate Barcode</h3>
+            <button type="button" class="inv-modal-close" data-modal-close aria-label="Close">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="inv-modal-body">
+            <div class="inv-mgmt-form-grid" style="padding:0;">
+                <div class="inv-mgmt-field">
+                    <label for="settings-barcode-model-number">Model Number</label>
+                    <input id="settings-barcode-model-number" class="inv-mgmt-input" type="text" placeholder="e.g. 1234 or AB12" required/>
+                    <p class="inv-field-hint">Barcode format: <strong>ModelNumber + <span id="settings-barcode-date-hint">DDMMYYYY</span> + RAND4</strong> (unique 4-digit suffix)</p>
+                </div>
+                <div class="inv-mgmt-field">
+                    <label for="settings-barcode-quantity">Quantity</label>
+                    <input id="settings-barcode-quantity" class="inv-mgmt-input" type="number" min="1" max="500" step="1" placeholder="e.g. 1" value="1" required/>
+                </div>
+            </div>
+        </div>
+        <div class="inv-modal-footer">
+            <button type="button" class="inv-mgmt-btn" data-modal-close>Cancel</button>
+            <button id="settings-barcode-generate-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Generate</button>
+        </div>
+    </div>
+</div>

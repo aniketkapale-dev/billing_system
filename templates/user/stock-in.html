@@ -93,19 +93,12 @@
                     </div>
                     <div id="stockin-items-container"></div>
                     <div id="stockin-totals" class="inv-stockin-totals">
-                        <div class="inv-stockin-total-row">
-                            <div class="inv-stockin-total-label">
-                                <span>Subtotal</span>
-                                <small>Total before other charges</small>
-                            </div>
-                            <strong id="stockin-subtotal" class="inv-stockin-total-value">0.00</strong>
-                        </div>
                         <div class="inv-stockin-total-row inv-stockin-total-row--grand">
                             <div class="inv-stockin-total-label">
-                                <span>Grand Total</span>
-                                <small>Final amount after all additions and deductions</small>
+                                <span>Total Amount</span>
+                                <small>Total of all purchase items</small>
                             </div>
-                            <strong id="stockin-grand-total" class="inv-stockin-total-value">0.00</strong>
+                            <strong id="stockin-subtotal" class="inv-stockin-total-value">0.00</strong>
                         </div>
                     </div>
                 </div>
@@ -138,16 +131,20 @@
 </div>
 
 {% include "partials/product_modal.html" %}
+{% include "partials/barcode_modal.html" %}
 {% endblock %}
 
 {% block page_scripts %}
 <script src="{% static 'js/components/modal.js' %}"></script>
 <script src="{% static 'js/components/page-panel.js' %}"></script>
 <script src="{% static 'js/inventory/products.js' %}?v=20260308-view-redesign"></script>
-<script src="{% static 'js/inventory/stock-in.js' %}?v=20260308-view-redesign"></script>
+<script src="{% static 'js/components/barcode-pdf.js' %}?v=20260309-barcode-gen"></script>
+<script src="{% static 'js/inventory/settings-barcode.js' %}?v=20260309-barcode-gen"></script>
+<script src="{% static 'js/inventory/stock-in.js' %}?v=20260309-barcode"></script>
 <script>
 InventoryPagePanel.init();
 InventoryProducts.init();
+InventorySettingsBarcode.init();
 InventoryStockIn.init();
 </script>
 {% endblock %}

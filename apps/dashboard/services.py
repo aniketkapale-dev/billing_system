@@ -278,7 +278,7 @@ class DashboardService:
                 purchase_date__lte=today,
             )
             .select_related("payment_type", "customer")
-            .prefetch_related(Prefetch("items", queryset=items_qs))
+            .prefetch_related(Prefetch("items", queryset=items_qs), "payments")
             .order_by("-purchase_date", "-created_at")
         )
 
@@ -291,7 +291,18 @@ class DashboardService:
                     "customer_name": sale.customer_name,
                     "customer_mobile": customer.mobile if customer else "",
                     "company_name": customer.company_name if customer else "",
-                    "amount": sale.total_amount,
+                    "amount": max(
+                        (sale.total_amount or Decimal("0"))
+                        - sum(
+                            (
+                                payment.amount
+                                for payment in sale.payments.all()
+                                if not payment.is_deleted
+                            ),
+                            Decimal("0"),
+                        ),
+                        Decimal("0"),
+                    ),
                     "total_cost": sale.total_cost,
                     "purchase_date": sale.purchase_date.isoformat() if sale.purchase_date else "",
                     "reference_no": sale.reference_no or "",

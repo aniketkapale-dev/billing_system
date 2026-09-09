@@ -1,11 +1,12 @@
 from decimal import Decimal
 
 from django.db import transaction
+from django.db.models import Sum
 
 from apps.inventory.batch_service import BatchInventoryService
 from apps.inventory.services import InventoryStockService
 from apps.products.models import Product
-from apps.purchases.models import Purchase, PurchaseItem
+from apps.purchases.models import Purchase, PurchaseItem, PurchasePayment
 from apps.purchases.repositories import PurchaseRepository
 from core.base_service import BaseService
 from core.exceptions import NotFoundException, ValidationException
@@ -82,34 +83,18 @@ class PurchaseService(BaseService):
             data["reference_no"] = ""
         return data
 
-    def _allocate_invoice_number_to_purchase(self, purchase):
+    def _assign_invoice_on_finalize(self, purchase, invoice_setting_id):
         reference_no = (purchase.reference_no or "").strip()
         if reference_no:
             return purchase
 
-        from apps.settings.models import InvoiceSetting
-        from apps.settings.services import InvoiceSettingService
+        if not invoice_setting_id:
+            raise ValidationException("Please select an invoice before finalizing the sale.")
 
-        setting_id = purchase.invoice_setting_id
-        if not setting_id:
-            raise ValidationException("Invoice setting is required to finalize the sale.")
-
-        try:
-            setting = InvoiceSetting.objects.select_for_update().get(
-                pk=setting_id,
-                business_id=purchase.business_id,
-                is_deleted=False,
-            )
-        except InvoiceSetting.DoesNotExist:
-            raise NotFoundException("Invoice setting not found.")
-
-        setting = InvoiceSettingService().resolve_for_sale(setting)
-        reference_no = setting.format_invoice_number()
-        setting.current_counter += 1
-        setting.save(update_fields=["current_counter", "updated_at"])
-
-        purchase.reference_no = reference_no
-        purchase.invoice_setting_id = setting.id
+        invoice_data = {"invoice_setting_id": invoice_setting_id}
+        self._apply_invoice_setting(invoice_data, purchase.business_id, allocate_number=True)
+        purchase.invoice_setting_id = invoice_data["invoice_setting_id"]
+        purchase.reference_no = invoice_data["reference_no"]
         purchase.save(update_fields=["reference_no", "invoice_setting_id", "updated_at"])
         return purchase
 
@@ -384,6 +369,150 @@ class PurchaseService(BaseService):
 
         return updates
 
+    def _get_last_payment_date(self, purchase):
+        return (
+            PurchasePayment.objects.filter(purchase=purchase, is_deleted=False)
+            .order_by("-payment_date", "-created_at")
+            .values_list("payment_date", flat=True)
+            .first()
+        )
+
+    def _sum_payments(self, purchase):
+        total = (
+            PurchasePayment.objects.filter(purchase=purchase, is_deleted=False)
+            .aggregate(total=Sum("amount"))
+            .get("total")
+        )
+        return total or Decimal("0")
+
+    def _pending_bill(self, purchase):
+        total_amount = purchase.total_amount or Decimal("0")
+        pending = total_amount - self._sum_payments(purchase)
+        if pending < 0:
+            return Decimal("0")
+        return pending
+
+    def _sync_purchase_payment_state(self, purchase, *, next_due_date=None):
+        from django.utils import timezone
+
+        total_paid = self._sum_payments(purchase)
+        total_amount = purchase.total_amount or Decimal("0")
+        pending = total_amount - total_paid
+
+        if pending <= Decimal("0"):
+            purchase.is_paid = True
+            purchase.paid_at = timezone.now()
+            purchase.due_date = None
+            purchase.save(update_fields=["is_paid", "paid_at", "due_date", "updated_at"])
+            return purchase
+
+        parsed_due_date = self._parse_optional_date(next_due_date)
+        if not parsed_due_date:
+            parsed_due_date = purchase.due_date
+        if not parsed_due_date:
+            raise ValidationException("Next due date is required when the bill is not fully paid.")
+
+        purchase.is_paid = False
+        purchase.paid_at = None
+        purchase.due_date = parsed_due_date
+        purchase.save(update_fields=["is_paid", "paid_at", "due_date", "updated_at"])
+        return purchase
+
+    @transaction.atomic
+    def _create_payment(
+        self,
+        purchase,
+        *,
+        amount,
+        payment_date=None,
+        payment_type_id=None,
+        next_due_date=None,
+        notes="",
+    ):
+        if purchase.is_draft:
+            raise ValidationException("Draft sales must be finalized before recording payments.")
+        if purchase.is_cancelled:
+            raise ValidationException("Cancelled invoices cannot receive payments.")
+
+        amount = Decimal(str(amount))
+        if amount <= 0:
+            raise ValidationException("Payment amount must be greater than zero.")
+
+        pending = self._pending_bill(purchase)
+        if amount > pending + Decimal("0.0001"):
+            raise ValidationException("Payment amount cannot exceed the pending bill.")
+
+        from django.utils import timezone
+
+        payment_date = self._parse_optional_date(payment_date) or timezone.localdate()
+        last_payment_date = self._get_last_payment_date(purchase)
+        if last_payment_date and payment_date < last_payment_date:
+            raise ValidationException(
+                "Payment date cannot be before the last recorded payment date."
+            )
+
+        resolved_payment_type_id = None
+        if payment_type_id:
+            resolved_payment_type_id = self._resolve_payment_type_id(
+                purchase.business_id,
+                payment_type_id,
+            )
+
+        will_clear = amount + Decimal("0.0001") >= pending
+        parsed_next_due = self._parse_optional_date(next_due_date)
+        if not will_clear and not parsed_next_due:
+            raise ValidationException("Next due date is required when payment does not clear the full bill.")
+        if not will_clear and parsed_next_due and parsed_next_due < payment_date:
+            raise ValidationException("Next due date cannot be before the payment date.")
+
+        payment = PurchasePayment.objects.create(
+            purchase=purchase,
+            amount=amount,
+            payment_date=payment_date,
+            next_due_date=None if will_clear else parsed_next_due,
+            payment_type_id=resolved_payment_type_id,
+            notes=(notes or "").strip(),
+        )
+        self._sync_purchase_payment_state(
+            purchase,
+            next_due_date=None if will_clear else parsed_next_due,
+        )
+        return payment
+
+    def _apply_sale_payment_on_finalize(self, purchase, data):
+        is_paid = bool(data.get("is_paid", False))
+        due_date = data.get("due_date")
+        payment_amount = data.get("payment_amount")
+        payment_type_id = purchase.payment_type_id
+
+        if is_paid:
+            self._create_payment(
+                purchase,
+                amount=purchase.total_amount or Decimal("0"),
+                payment_date=purchase.purchase_date,
+                payment_type_id=payment_type_id,
+            )
+            return purchase
+
+        if payment_amount is not None and Decimal(str(payment_amount)) > 0:
+            self._create_payment(
+                purchase,
+                amount=payment_amount,
+                payment_date=purchase.purchase_date,
+                payment_type_id=payment_type_id,
+                next_due_date=due_date,
+            )
+            return purchase
+
+        parsed_due_date = self._parse_optional_date(due_date)
+        if not parsed_due_date:
+            raise ValidationException("Due date is required for unpaid sales.")
+        purchase.is_paid = False
+        purchase.paid_at = None
+        purchase.due_date = parsed_due_date
+        purchase.save(update_fields=["is_paid", "paid_at", "due_date", "updated_at"])
+        return purchase
+
     @staticmethod
     def _parse_optional_date(value):
         if value in (None, ""):
@@ -412,7 +541,11 @@ class PurchaseService(BaseService):
         items_data = data.pop("items", [])
         is_draft = bool(data.pop("is_draft", False))
         self._apply_customer(data, business_id)
-        self._apply_invoice_setting(data, business_id, allocate_number=not is_draft)
+        if is_draft:
+            data.pop("invoice_setting_id", None)
+            data["reference_no"] = ""
+        else:
+            self._apply_invoice_setting(data, business_id, allocate_number=True)
 
         if "payment_type_id" in data:
             data["payment_type_id"] = self._resolve_payment_type_id(
@@ -422,13 +555,16 @@ class PurchaseService(BaseService):
 
         is_paid = bool(data.pop("is_paid", False))
         due_date = data.pop("due_date", None)
+        payment_amount = data.pop("payment_amount", None)
         if is_draft:
             is_paid = False
-        if is_paid:
-            from django.utils import timezone
-
-            data["is_paid"] = True
-            data["paid_at"] = timezone.now()
+            payment_amount = None
+            data["is_paid"] = False
+            data["paid_at"] = None
+            data["due_date"] = self._parse_optional_date(due_date)
+        elif is_paid or (payment_amount and Decimal(str(payment_amount)) > 0):
+            data["is_paid"] = False
+            data["paid_at"] = None
             data["due_date"] = None
         else:
             data["is_paid"] = False
@@ -438,6 +574,11 @@ class PurchaseService(BaseService):
             data["due_date"] = parsed_due_date
 
         data["is_draft"] = is_draft
+        payment_payload = {
+            "is_paid": is_paid,
+            "due_date": due_date,
+            "payment_amount": payment_amount,
+        }
 
         prepared_items, total_amount = self._prepare_sale_items(
             items_data,
@@ -453,6 +594,7 @@ class PurchaseService(BaseService):
             self._attach_draft_items(purchase, prepared_items)
         else:
             self._attach_sale_items(purchase, prepared_items, business_id)
+            self._apply_sale_payment_on_finalize(purchase, payment_payload)
 
         return purchase
 
@@ -510,7 +652,8 @@ class PurchaseService(BaseService):
         if not items:
             raise ValidationException("Add at least one product before finalizing the sale.")
 
-        self._allocate_invoice_number_to_purchase(purchase)
+        invoice_setting_id = data.pop("invoice_setting_id", None)
+        self._assign_invoice_on_finalize(purchase, invoice_setting_id)
 
         requested_by_product = {}
         for item in items:
@@ -561,28 +704,11 @@ class PurchaseService(BaseService):
                 item.quantity,
             )
 
-        is_paid = bool(data.get("is_paid", False))
-        due_date = data.get("due_date")
         purchase.is_draft = False
         purchase.total_cost = total_cost
         purchase.total_profit = total_profit
-        update_fields = ["is_draft", "total_cost", "total_profit", "updated_at"]
-
-        if is_paid:
-            from django.utils import timezone
-
-            purchase.is_paid = True
-            purchase.paid_at = timezone.now()
-            purchase.due_date = None
-            update_fields.extend(["is_paid", "paid_at", "due_date"])
-        else:
-            parsed_due_date = self._parse_optional_date(due_date)
-            if not parsed_due_date:
-                raise ValidationException("Due date is required for unpaid sales.")
-            purchase.due_date = parsed_due_date
-            update_fields.append("due_date")
-
-        purchase.save(update_fields=update_fields)
+        purchase.save(update_fields=["is_draft", "total_cost", "total_profit", "updated_at"])
+        self._apply_sale_payment_on_finalize(purchase, data)
         return purchase
 
     @transaction.atomic
@@ -631,20 +757,43 @@ class PurchaseService(BaseService):
     @transaction.atomic
     def mark_as_paid(self, pk):
         purchase = self.repository.get_by_id(pk)
-        if purchase.is_draft:
-            raise ValidationException("Draft sales must be finalized before marking as paid.")
-        if purchase.is_cancelled:
-            raise ValidationException("Cancelled invoices cannot be marked as paid.")
         if purchase.is_paid:
+            return purchase
+
+        pending = self._pending_bill(purchase)
+        if pending <= 0:
             return purchase
 
         from django.utils import timezone
 
-        purchase.is_paid = True
-        purchase.paid_at = timezone.now()
-        purchase.due_date = None
-        purchase.save(update_fields=["is_paid", "paid_at", "due_date", "updated_at"])
-        return purchase
+        self._create_payment(
+            purchase,
+            amount=pending,
+            payment_date=timezone.localdate(),
+            payment_type_id=purchase.payment_type_id,
+        )
+        return self.repository.get_by_id(pk)
+
+    @transaction.atomic
+    def record_payment(self, pk, data):
+        purchase = self.repository.get_by_id(pk)
+        self._create_payment(
+            purchase,
+            amount=data.get("amount"),
+            payment_date=data.get("payment_date"),
+            payment_type_id=data.get("payment_type_id"),
+            next_due_date=data.get("next_due_date"),
+            notes=data.get("notes", ""),
+        )
+        return self.repository.get_by_id(pk)
+
+    def list_payments(self, pk):
+        purchase = self.repository.get_by_id(pk)
+        return (
+            PurchasePayment.objects.filter(purchase=purchase, is_deleted=False)
+            .select_related("payment_type")
+            .order_by("payment_date", "created_at")
+        )
 
     @transaction.atomic
     def mark_as_cancelled(self, pk, reason="", cancellation_date=None):

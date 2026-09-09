@@ -281,6 +281,27 @@ var InventoryApi = (function () {
         return html.join("");
     }
 
+    function formatDisplayDate(value, emptyValue) {
+        if (typeof InventoryDateFormat !== "undefined") {
+            return InventoryDateFormat.formatDisplayDate(value, emptyValue);
+        }
+        return value == null || String(value).trim() === "" ? (emptyValue !== undefined ? emptyValue : "") : String(value);
+    }
+
+    function formatDateTime(value, emptyValue) {
+        if (typeof InventoryDateFormat !== "undefined") {
+            return InventoryDateFormat.formatDateTime(value, emptyValue);
+        }
+        return formatDisplayDate(value, emptyValue);
+    }
+
+    function toInputDateValue(value) {
+        if (typeof InventoryDateFormat !== "undefined") {
+            return InventoryDateFormat.toInputDateValue(value);
+        }
+        return value == null ? "" : String(value).slice(0, 10);
+    }
+
     return {
         buildUrl: buildUrl,
         request: request,
@@ -290,6 +311,9 @@ var InventoryApi = (function () {
         scheduleSessionExpiry: scheduleSessionExpiry,
         escapeHtml: escapeHtml,
         formatMoney: formatMoney,
+        formatDisplayDate: formatDisplayDate,
+        formatDateTime: formatDateTime,
+        toInputDateValue: toInputDateValue,
         renderViewGrid: renderViewGrid
     };
 })();

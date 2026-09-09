@@ -140,3 +140,12 @@ def user_settings_invoice(request):
         "settings_title": "Invoice",
     })
 
+
+@never_cache
+def user_settings_barcode(request):
+    return render(request, "user/settings.html", {
+        "active_nav": "settings-barcode",
+        "settings_section": "barcode",
+        "settings_title": "Barcode",
+    })
+

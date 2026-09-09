@@ -477,76 +477,58 @@ body.inv-confirm-open { overflow: hidden; }
     justify-content: flex-end;
 }
 
-.inv-finalize-draft-modal {
-    width: min(100%, 460px);
-}
-
-.inv-finalize-draft-summary {
+.inv-sale-payment-summary {
     display: grid;
     gap: 10px;
-    margin: 0 0 16px;
     padding: 14px 16px;
-    border: 1px solid var(--inv-outline-variant);
+    border: 1px solid var(--inv-border, #e5e7eb);
     border-radius: 12px;
-    background: rgba(0, 103, 255, 0.03);
+    background: var(--inv-surface-muted, #f8fafc);
 }
 
-.inv-finalize-draft-summary-row {
-    display: grid;
-    grid-template-columns: 118px minmax(0, 1fr);
-    gap: 10px;
-    align-items: start;
-}
-
-.inv-finalize-draft-summary-row--products {
-    align-items: start;
-}
-
-.inv-finalize-draft-summary-label {
-    font-size: 12px;
-    font-weight: 600;
-    line-height: 1.35;
-    color: var(--inv-secondary);
-}
-
-.inv-finalize-draft-summary-value {
-    font-size: 14px;
-    font-weight: 600;
-    line-height: 1.4;
-    color: #212529;
-    word-break: break-word;
-}
-
-.inv-finalize-draft-summary-value--emphasis {
-    color: var(--inv-accent);
-}
-
-.inv-finalize-draft-summary-value--amount {
-    font-size: 15px;
-    font-weight: 700;
-    color: #212529;
-}
-
-.inv-finalize-draft-status {
-    display: inline-flex;
+.inv-sale-payment-summary-row {
+    display: flex;
     align-items: center;
-    justify-content: center;
-    min-height: 28px;
-    padding: 4px 10px;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 700;
-    line-height: 1.2;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 14px;
+    color: var(--inv-text-muted, #64748b);
 }
 
-.inv-finalize-draft-status--paid {
-    background: rgba(46, 125, 50, 0.12);
-    color: #2E7D32;
+.inv-sale-payment-summary-row strong {
+    color: var(--inv-primary, #1e293b);
+    font-size: 15px;
 }
 
-.inv-finalize-draft-status--due {
-    background: rgba(198, 40, 40, 0.12);
+.inv-sale-payment-summary-row--pending strong {
     color: #C62828;
+}
+
+.inv-sale-payment-history-table td,
+.inv-sale-payment-history-table th {
+    white-space: nowrap;
+}
+
+.inv-add-payment-dates {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.inv-add-payment-dates:has(#purchase-add-payment-next-due-wrap.inv-hidden) {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.inv-add-payment-date-col {
+    min-width: 0;
+}
+
+.inv-add-payment-date-col label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--inv-primary);
 }
 
 /* Tooltip */

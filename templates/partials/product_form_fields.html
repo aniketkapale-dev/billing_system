@@ -9,7 +9,14 @@
     </div>
     <div class="inv-mgmt-field">
         <label for="product-barcode">Barcode</label>
-        <input id="product-barcode" class="inv-mgmt-input" type="text" placeholder="Optional barcode"/>
+        <div class="inv-field-inline">
+            <select id="product-barcode" class="inv-mgmt-select">
+                <option value="">Select barcode (optional)</option>
+            </select>
+            <button id="product-barcode-add-btn" type="button" class="inv-inline-add-btn" title="Generate barcode" aria-label="Generate barcode">
+                <span class="material-symbols-outlined">add</span>
+            </button>
+        </div>
     </div>
 
     <div class="inv-mgmt-field">

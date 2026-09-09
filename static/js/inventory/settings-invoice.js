@@ -44,7 +44,7 @@ var InventorySettingsInvoice = (function () {
                 "<td>" + displayText(item.suffix) + "</td>" +
                 '<td class="inv-mgmt-cell--num">' + displayText(item.counter) + "</td>" +
                 '<td class="inv-mgmt-cell--num">' + displayText(item.current_counter) + "</td>" +
-                "<td>" + displayText(item.end_counter) + "</td>" +
+                "<td>" + displayText(InventoryApi.formatDisplayDate(item.end_counter, "—")) + "</td>" +
                 '<td class="inv-mgmt-cell--action"><div class="inv-row-actions">' +
                 '<button type="button" class="inv-row-action-btn inv-row-action-btn--edit" data-invoice-edit="' + item.id + '" title="Edit" aria-label="Edit">' +
                 '<span class="material-symbols-outlined">edit</span></button>' +
@@ -163,19 +163,51 @@ var InventorySettingsInvoice = (function () {
         setQrPreview(null);
     }
 
+    function isModalMode() {
+        return !!document.getElementById("invoice-setting-modal");
+    }
+
+    function isListPage() {
+        return !!document.getElementById("settings-invoice-table-body");
+    }
+
+    function resetForm() {
+        editingId = null;
+        var yearEl = document.getElementById("settings-invoice-year");
+        var prefixEl = document.getElementById("settings-invoice-prefix");
+        var suffixEl = document.getElementById("settings-invoice-suffix");
+        var counterEl = document.getElementById("settings-invoice-start-counter");
+        var endCounterEl = document.getElementById("settings-invoice-end-counter");
+        if (yearEl) yearEl.value = String(new Date().getFullYear());
+        if (prefixEl) prefixEl.value = "";
+        if (suffixEl) suffixEl.value = "";
+        if (counterEl) counterEl.value = "1";
+        if (endCounterEl) endCounterEl.value = "";
+        if (getTermsEditor()) resetTermsEditor();
+        if (document.getElementById("settings-invoice-qr")) resetQrState();
+    }
+
+    function openAddModal() {
+        if (!InventoryBusiness.getActiveId()) {
+            InventoryToast.error("Select or create a business first.");
+            return;
+        }
+        resetForm();
+        if (isModalMode()) {
+            InventoryModal.open("invoice-setting-modal");
+            var yearEl = document.getElementById("settings-invoice-year");
+            if (yearEl) yearEl.focus();
+            return;
+        }
+        openForm(false);
+    }
+
     function openForm(isEdit) {
         var title = document.getElementById("settings-invoice-form-title");
         if (!title) return;
 
         if (!isEdit) {
-            editingId = null;
-            document.getElementById("settings-invoice-year").value = String(new Date().getFullYear());
-            document.getElementById("settings-invoice-prefix").value = "";
-            document.getElementById("settings-invoice-suffix").value = "";
-            document.getElementById("settings-invoice-start-counter").value = "1";
-            document.getElementById("settings-invoice-end-counter").value = "";
-            resetTermsEditor();
-            resetQrState();
+            resetForm();
             title.textContent = "Add Invoice Setting";
         } else {
             title.textContent = "Edit Invoice Setting";
@@ -261,8 +293,18 @@ var InventorySettingsInvoice = (function () {
             .then(function (body) {
                 if (body && body.isSuccess) {
                     InventoryToast.success(body.message || (editingId ? "Invoice settings updated." : "Invoice settings added."));
-                    closeForm();
-                    loadSettings(editingId ? currentPage : 1);
+                    if (isModalMode()) {
+                        InventoryModal.close("invoice-setting-modal");
+                        resetForm();
+                        if (body.data) {
+                            window.dispatchEvent(new CustomEvent("inventory:invoice-setting-created", {
+                                detail: { invoiceSetting: body.data }
+                            }));
+                        }
+                    } else {
+                        closeForm();
+                        loadSettings(editingId ? currentPage : 1);
+                    }
                 } else {
                     InventoryToast.error(body.message || "Failed to save invoice settings.");
                 }
@@ -333,28 +375,26 @@ var InventorySettingsInvoice = (function () {
 
     function init() {
         if (init._wired) return;
-
-        var tableBody = document.getElementById("settings-invoice-table-body");
-        if (!tableBody) return;
+        if (!isModalMode() && !isListPage()) return;
 
         init._wired = true;
+
+        if (isModalMode()) {
+            InventoryModal.wire("invoice-setting-modal");
+        }
 
         var addBtn = document.getElementById("settings-invoice-add-btn");
         var saveBtn = document.getElementById("settings-invoice-save-btn");
 
-        if (window.InventoryPagePanel) {
+        if (window.InventoryPagePanel && isListPage()) {
             InventoryPagePanel.init();
         }
 
-        initTermsEditor();
+        if (getTermsEditor()) initTermsEditor();
 
         if (addBtn) {
             addBtn.addEventListener("click", function () {
-                if (!InventoryBusiness.getActiveId()) {
-                    InventoryToast.error("Select or create a business first.");
-                    return;
-                }
-                openForm(false);
+                openAddModal();
             });
         }
 
@@ -380,30 +420,35 @@ var InventorySettingsInvoice = (function () {
             });
         }
 
-        tableBody.addEventListener("click", function (e) {
-            var editBtn = e.target.closest("[data-invoice-edit]");
-            var deleteBtn = e.target.closest("[data-invoice-delete]");
-            if (editBtn) {
-                editSetting(editBtn.getAttribute("data-invoice-edit"));
-            } else if (deleteBtn) {
-                deleteSetting(deleteBtn.getAttribute("data-invoice-delete"));
-            }
-        });
+        var tableBody = document.getElementById("settings-invoice-table-body");
+        if (tableBody) {
+            tableBody.addEventListener("click", function (e) {
+                var editBtn = e.target.closest("[data-invoice-edit]");
+                var deleteBtn = e.target.closest("[data-invoice-delete]");
+                if (editBtn) {
+                    editSetting(editBtn.getAttribute("data-invoice-edit"));
+                } else if (deleteBtn) {
+                    deleteSetting(deleteBtn.getAttribute("data-invoice-delete"));
+                }
+            });
+        }
 
-        InventoryBusiness.whenReady(function () {
-            if (!InventoryBusiness.getActiveId()) return;
-            loadSettings(1);
-            if (window.InventorySidebar && InventorySidebar.consumeAddAction()) {
-                openForm(false);
-            }
-        });
+        if (isListPage()) {
+            InventoryBusiness.whenReady(function () {
+                if (!InventoryBusiness.getActiveId()) return;
+                loadSettings(1);
+                if (window.InventorySidebar && InventorySidebar.consumeAddAction()) {
+                    openForm(false);
+                }
+            });
 
-        window.addEventListener("inventory:business-changed", function () {
-            closeForm();
-            if (InventoryBusiness.getActiveId()) loadSettings(1);
-            else renderRows([]);
-        });
+            window.addEventListener("inventory:business-changed", function () {
+                closeForm();
+                if (InventoryBusiness.getActiveId()) loadSettings(1);
+                else renderRows([]);
+            });
+        }
     }
 
-    return { init: init };
+    return { init: init, openAddModal: openAddModal };
 })();

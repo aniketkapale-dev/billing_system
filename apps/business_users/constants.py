@@ -11,6 +11,7 @@ BUSINESS_TAB_DEFINITIONS = [
     {"code": "customers", "label": "Customers", "group": "Manage Sales"},
     {"code": "settings-tax", "label": "Tax", "group": "Settings"},
     {"code": "settings-invoice", "label": "Invoice", "group": "Settings"},
+    {"code": "settings-barcode", "label": "Barcode", "group": "Settings"},
 ]
 
 ALL_BUSINESS_TAB_CODES = [item["code"] for item in BUSINESS_TAB_DEFINITIONS]

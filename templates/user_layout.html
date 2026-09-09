@@ -161,8 +161,8 @@
                 </button>
             </div>
         </li>
-        <li class="inv-nav-group{% if active_nav == 'settings-tax' or active_nav == 'settings-invoice' %} inv-nav-group--has-active-child{% endif %}{% if active_nav == 'settings-tax' or active_nav == 'settings-invoice' %} inv-nav-group--open{% endif %}" data-nav-group="settings-tax settings-invoice">
-            <button type="button" class="inv-nav-item inv-nav-group-toggle" aria-expanded="{% if active_nav == 'settings-tax' or active_nav == 'settings-invoice' %}true{% else %}false{% endif %}">
+        <li class="inv-nav-group{% if active_nav == 'settings-tax' or active_nav == 'settings-invoice' or active_nav == 'settings-barcode' %} inv-nav-group--has-active-child{% endif %}{% if active_nav == 'settings-tax' or active_nav == 'settings-invoice' or active_nav == 'settings-barcode' %} inv-nav-group--open{% endif %}" data-nav-group="settings-tax settings-invoice settings-barcode">
+            <button type="button" class="inv-nav-item inv-nav-group-toggle" aria-expanded="{% if active_nav == 'settings-tax' or active_nav == 'settings-invoice' or active_nav == 'settings-barcode' %}true{% else %}false{% endif %}">
                 <span class="material-symbols-outlined inv-nav-icon">tune</span>
                 Settings
                 <span class="material-symbols-outlined inv-nav-group-chevron">expand_more</span>
@@ -186,6 +186,17 @@
                             Invoice
                         </a>
                         <a class="inv-nav-add-btn" href="/dashboard/settings/invoice/?action=add" title="Add invoice setting" aria-label="Add invoice setting">
+                            <span class="material-symbols-outlined">add</span>
+                        </a>
+                    </div>
+                </li>
+                <li data-nav-tab="settings-barcode">
+                    <div class="inv-nav-row{% if active_nav == 'settings-barcode' %} inv-nav-row--active{% endif %}">
+                        <a class="inv-nav-item inv-nav-item--sub{% if active_nav == 'settings-barcode' %} inv-nav-item--active{% endif %}" href="/dashboard/settings/barcode/">
+                            <span class="material-symbols-outlined inv-nav-icon inv-nav-icon--sub">barcode</span>
+                            Barcode
+                        </a>
+                        <a class="inv-nav-add-btn" href="/dashboard/settings/barcode/?action=add" title="Add barcode" aria-label="Add barcode">
                             <span class="material-symbols-outlined">add</span>
                         </a>
                     </div>
@@ -398,14 +409,15 @@
 <script src="{% static 'js/core/pagination.js' %}?v=20260308-pagination-native"></script>
 <script src="{% static 'js/components/page-panel.js' %}"></script>
 <script src="{% static 'js/components/modal.js' %}"></script>
-<script src="{% static 'js/core/api.js' %}?v=20260308-session-expiry"></script>
+<script src="{% static 'js/core/date-format.js' %}?v=20260309-dd-mm-yyyy"></script>
+<script src="{% static 'js/core/api.js' %}?v=20260309-dd-mm-yyyy"></script>
 <script src="{% static 'js/layout/business.js' %}"></script>
 <script src="{% static 'js/layout/nav-access.js' %}"></script>
 <script src="{% static 'js/components/bulk-select.js' %}"></script>
 <script src="{% static 'js/components/terms-html.js' %}"></script>
-<script src="{% static 'js/components/document-export.js' %}?v=20260308-header-table-align"></script>
+<script src="{% static 'js/components/document-export.js' %}?v=20260309-dd-mm-yyyy"></script>
 <script src="{% static 'js/components/column-customize.js' %}"></script>
-<script src="{% static 'js/components/searchable-select.js' %}?v=20260308-search-select-ui"></script>
+<script src="{% static 'js/components/searchable-select.js' %}?v=20260309-modal-select"></script>
 <script src="{% static 'js/components/table-cards.js' %}?v=20260308-action-hover"></script>
 <script src="{% static 'js/layout/sidebar.js' %}?v=20260307-sidebar-hover"></script>
 <script src="{% static 'js/layout/quick-access.js' %}"></script>

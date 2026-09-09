@@ -1,6 +1,6 @@
 {% extends "user_layout.html" %}
 {% load static %}
-{% block title %}{% if settings_section == 'tax' %}Tax Settings{% elif settings_section == 'invoice' %}Invoice Settings{% else %}Settings{% endif %} - Billing System{% endblock %}
+{% block title %}{% if settings_section == 'tax' %}Tax Settings{% elif settings_section == 'invoice' %}Invoice Settings{% elif settings_section == 'barcode' %}Barcode Settings{% else %}Settings{% endif %} - Billing System{% endblock %}
 
 {% block content %}
 <div class="inv-mgmt-page">
@@ -184,6 +184,97 @@
             </div>
         </div>
     </div>
+
+    {% elif settings_section == 'barcode' %}
+    <div id="settings-barcode-list-panel" class="inv-mgmt-page-panel">
+        <div class="inv-mgmt-header">
+            <h2 class="inv-dashboard-greeting">Barcode Settings</h2>
+            <button id="settings-barcode-add-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">
+                <span class="material-symbols-outlined">barcode</span>
+                Generate Barcodes
+            </button>
+        </div>
+
+        <div class="inv-mgmt-card">
+            <div class="inv-mgmt-toolbar inv-mgmt-toolbar--filters">
+                <input type="search" id="settings-barcode-search" class="inv-mgmt-search" placeholder="Search product, model or barcode"/>
+            </div>
+            <div class="inv-mgmt-table-wrap">
+                <table class="inv-mgmt-table inv-mgmt-table--settings-barcode">
+                    <colgroup>
+                        <col style="width:25%"/>
+                        <col style="width:25%"/>
+                        <col style="width:35%"/>
+                        <col style="width:15%"/>
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Model Number</th>
+                            <th>Barcode Value</th>
+                            <th class="inv-mgmt-cell--action">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="settings-barcode-table-body">
+                        <tr><td colspan="4" class="inv-mgmt-empty">Loading barcodes...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="settings-barcode-pagination" class="inv-pagination"></div>
+        </div>
+    </div>
+
+    <div id="settings-barcode-form-panel" class="inv-mgmt-page-panel inv-hidden">
+        <div class="inv-mgmt-panel-header">
+            <h2 id="settings-barcode-form-title" class="inv-dashboard-greeting">Generate Barcodes</h2>
+            <button type="button" class="inv-mgmt-btn inv-page-back-btn" data-page-back="settings-barcode-list-panel">
+                <span class="material-symbols-outlined">arrow_back</span>
+                Back to List
+            </button>
+        </div>
+        <div class="inv-mgmt-card inv-mgmt-panel-card">
+            <div class="inv-mgmt-panel-body">
+                <div id="settings-barcode-edit-view" class="inv-hidden">
+                    <div class="inv-mgmt-form-grid" style="padding:0;">
+                        <div class="inv-mgmt-field">
+                            <label>Product</label>
+                            <input id="settings-barcode-edit-product" class="inv-mgmt-input" type="text" readonly/>
+                        </div>
+                        <div class="inv-mgmt-field">
+                            <label>Model Number</label>
+                            <input id="settings-barcode-edit-model" class="inv-mgmt-input" type="text" readonly/>
+                        </div>
+                        <div class="inv-mgmt-field inv-mgmt-field--full">
+                            <label>Barcode Value</label>
+                            <input id="settings-barcode-edit-value" class="inv-mgmt-input" type="text" readonly/>
+                        </div>
+                    </div>
+                </div>
+                <div id="settings-barcode-generate-view">
+                    <div class="inv-mgmt-form-grid" style="padding:0;">
+                        <div class="inv-mgmt-field">
+                            <label for="settings-barcode-model-number">Model Number</label>
+                            <input id="settings-barcode-model-number" class="inv-mgmt-input" type="text" placeholder="e.g. 1234 or AB12" required/>
+                            <p class="inv-field-hint">Printed top text: <strong>ModelNumber</strong></p>
+                            <p class="inv-field-hint">Barcode value format: <strong>ModelNumber + <span id="settings-barcode-date-hint">DDMMYYYY</span> + RAND4</strong> (4-digit suffix is always unique)</p>
+                        </div>
+                        <div class="inv-mgmt-field">
+                            <label for="settings-barcode-quantity">Quantity</label>
+                            <input id="settings-barcode-quantity" class="inv-mgmt-input" type="number" min="1" max="500" step="1" placeholder="e.g. 10" value="1" required/>
+                            <p class="inv-field-hint">Product can be assigned later when adding a purchase item.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="inv-mgmt-panel-footer">
+                <button type="button" class="inv-mgmt-btn" data-page-back="settings-barcode-list-panel">Cancel</button>
+                <button id="settings-barcode-generate-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">
+                    <span class="material-symbols-outlined">picture_as_pdf</span>
+                    Generate &amp; Download
+                </button>
+            </div>
+        </div>
+    </div>
     {% endif %}
 </div>
 {% endblock %}
@@ -200,6 +291,13 @@ InventorySettingsTax.init();
 <script>
 InventoryPagePanel.init();
 InventorySettingsInvoice.init();
+</script>
+{% elif settings_section == 'barcode' %}
+<script src="{% static 'js/components/barcode-pdf.js' %}?v=20260309-barcode-gen"></script>
+<script src="{% static 'js/inventory/settings-barcode.js' %}?v=20260309-barcode-gen"></script>
+<script>
+InventoryPagePanel.init();
+InventorySettingsBarcode.init();
 </script>
 {% endif %}
 {% endblock %}

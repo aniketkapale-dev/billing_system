@@ -78,14 +78,43 @@ var InventorySettingsTax = (function () {
             });
     }
 
+    function isModalMode() {
+        return !!document.getElementById("tax-modal");
+    }
+
+    function isListPage() {
+        return !!document.getElementById("settings-tax-table-body");
+    }
+
+    function resetForm() {
+        editingId = null;
+        var keyEl = document.getElementById("settings-tax-key");
+        var valueEl = document.getElementById("settings-tax-value");
+        if (keyEl) keyEl.value = "";
+        if (valueEl) valueEl.value = "";
+    }
+
+    function openAddModal() {
+        if (!InventoryBusiness.getActiveId()) {
+            InventoryToast.error("Select or create a business first.");
+            return;
+        }
+        resetForm();
+        if (isModalMode()) {
+            InventoryModal.open("tax-modal");
+            var keyEl = document.getElementById("settings-tax-key");
+            if (keyEl) keyEl.focus();
+            return;
+        }
+        openForm(false);
+    }
+
     function openForm(isEdit) {
         var title = document.getElementById("settings-tax-form-title");
         if (!title) return;
 
         if (!isEdit) {
-            editingId = null;
-            document.getElementById("settings-tax-key").value = "";
-            document.getElementById("settings-tax-value").value = "";
+            resetForm();
             title.textContent = "Add Tax";
         } else {
             title.textContent = "Edit Tax";
@@ -134,8 +163,18 @@ var InventorySettingsTax = (function () {
             .then(function (body) {
                 if (body && body.isSuccess) {
                     InventoryToast.success(body.message || (editingId ? "Tax updated." : "Tax added."));
-                    closeForm();
-                    loadTaxes(editingId ? currentPage : 1);
+                    if (isModalMode()) {
+                        InventoryModal.close("tax-modal");
+                        resetForm();
+                        if (body.data) {
+                            window.dispatchEvent(new CustomEvent("inventory:tax-created", {
+                                detail: { tax: body.data }
+                            }));
+                        }
+                    } else {
+                        closeForm();
+                        loadTaxes(editingId ? currentPage : 1);
+                    }
                 } else {
                     InventoryToast.error(body.message || "Failed to save tax.");
                 }
@@ -197,55 +236,58 @@ var InventorySettingsTax = (function () {
 
     function init() {
         if (init._wired) return;
-
-        var tableBody = document.getElementById("settings-tax-table-body");
-        if (!tableBody) return;
+        if (!isModalMode() && !isListPage()) return;
 
         init._wired = true;
+
+        if (isModalMode()) {
+            InventoryModal.wire("tax-modal");
+        }
 
         var addBtn = document.getElementById("settings-tax-add-btn");
         var saveBtn = document.getElementById("settings-tax-save-btn");
 
-        if (window.InventoryPagePanel) {
+        if (window.InventoryPagePanel && isListPage()) {
             InventoryPagePanel.init();
         }
 
         if (addBtn) {
             addBtn.addEventListener("click", function () {
-                if (!InventoryBusiness.getActiveId()) {
-                    InventoryToast.error("Select or create a business first.");
-                    return;
-                }
-                openForm(false);
+                openAddModal();
             });
         }
 
         if (saveBtn) saveBtn.addEventListener("click", saveTax);
 
-        tableBody.addEventListener("click", function (e) {
-            var editBtn = e.target.closest("[data-tax-edit]");
-            var deleteBtn = e.target.closest("[data-tax-delete]");
-            if (editBtn) {
-                editTax(editBtn.getAttribute("data-tax-edit"));
-            } else if (deleteBtn) {
-                deleteTax(deleteBtn.getAttribute("data-tax-delete"));
-            }
-        });
+        var tableBody = document.getElementById("settings-tax-table-body");
+        if (tableBody) {
+            tableBody.addEventListener("click", function (e) {
+                var editBtn = e.target.closest("[data-tax-edit]");
+                var deleteBtn = e.target.closest("[data-tax-delete]");
+                if (editBtn) {
+                    editTax(editBtn.getAttribute("data-tax-edit"));
+                } else if (deleteBtn) {
+                    deleteTax(deleteBtn.getAttribute("data-tax-delete"));
+                }
+            });
+        }
 
-        InventoryBusiness.whenReady(function () {
-            if (!InventoryBusiness.getActiveId()) return;
-            loadTaxes(1);
-            if (window.InventorySidebar && InventorySidebar.consumeAddAction()) {
-                openForm(false);
-            }
-        });
+        if (isListPage()) {
+            InventoryBusiness.whenReady(function () {
+                if (!InventoryBusiness.getActiveId()) return;
+                loadTaxes(1);
+                if (window.InventorySidebar && InventorySidebar.consumeAddAction()) {
+                    openForm(false);
+                }
+            });
 
-        window.addEventListener("inventory:business-changed", function () {
-            closeForm();
-            if (InventoryBusiness.getActiveId()) loadTaxes(1);
-            else renderRows([]);
-        });
+            window.addEventListener("inventory:business-changed", function () {
+                closeForm();
+                if (InventoryBusiness.getActiveId()) loadTaxes(1);
+                else renderRows([]);
+            });
+        }
     }
 
-    return { init: init };
+    return { init: init, openAddModal: openAddModal };
 })();

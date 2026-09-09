@@ -1,6 +1,18 @@
+import random
+import re
 from decimal import Decimal
 
-from apps.settings.repositories import InvoiceSettingRepository, TaxRepository
+from django.db import transaction
+from django.utils import timezone
+
+from apps.products.models import Product
+from apps.settings.models import ProductBarcode
+
+from apps.settings.repositories import (
+    InvoiceSettingRepository,
+    ProductBarcodeRepository,
+    TaxRepository,
+)
 from core.base_service import BaseService
 from core.exceptions import ValidationException
 from core.middleware import get_current_user
@@ -208,3 +220,148 @@ class InvoiceSettingService(BaseService):
             successor.current_counter = successor.counter
             successor.save(update_fields=["current_counter", "updated_at"])
             return successor
+
+
+class ProductBarcodeService(BaseService):
+    def __init__(self):
+        super().__init__(repository=ProductBarcodeRepository())
+
+    def before_create(self, data):
+        user = get_current_user()
+        if not user:
+            raise ValidationException("Authentication required.")
+        data.pop("owner_id", None)
+        business_id = data.get("business_id")
+        if not business_id:
+            raise ValidationException("Business is required.")
+        if "product_id" in data:
+            self._apply_product(data, business_id)
+        self._validate(data)
+
+    def before_update(self, instance, data):
+        data.pop("owner_id", None)
+        data.pop("business_id", None)
+        if "product_id" in data:
+            self._apply_product(data, instance.business_id)
+            new_product_id = data.get("product_id")
+            if instance.product_id and new_product_id and instance.product_id != new_product_id:
+                raise ValidationException("This barcode is already assigned to a product.")
+        self._validate(data, exclude_pk=instance.pk, business_id=instance.business_id)
+
+    def _apply_product(self, data, business_id):
+        product_id = data.pop("product_id", None)
+        if not product_id:
+            data["product_id"] = None
+            return
+
+        product = Product.objects.filter(
+            pk=product_id,
+            business_id=business_id,
+            is_deleted=False,
+        ).first()
+        if not product:
+            raise ValidationException("Product not found.")
+        data["product_id"] = product.id
+
+    def _validate(self, data, exclude_pk=None, business_id=None):
+        value = data.get("value")
+        if value is not None:
+            value = str(value).strip()
+            if not value:
+                raise ValidationException("Barcode value is required.")
+            data["value"] = value
+
+        scoped_business_id = business_id or data.get("business_id")
+        if value and scoped_business_id:
+            qs = self.repository.model.objects.filter(
+                business_id=scoped_business_id,
+                value=value,
+                is_deleted=False,
+            )
+            if exclude_pk:
+                qs = qs.exclude(pk=exclude_pk)
+            if qs.exists():
+                raise ValidationException("This barcode value already exists.")
+
+        if "model_label" in data:
+            data["model_label"] = str(data.get("model_label") or "").strip()
+
+    def bulk_generate(self, data):
+        user = get_current_user()
+        if not user:
+            raise ValidationException("Authentication required.")
+
+        business_id = data.get("business_id")
+        if not business_id:
+            raise ValidationException("Business is required.")
+
+        model_number = str(data.get("model_number") or "").strip()
+        quantity = data.get("quantity")
+
+        if not model_number:
+            raise ValidationException("Model number is required.")
+        if not re.fullmatch(r"[A-Za-z0-9]+", model_number):
+            raise ValidationException("Model number can only contain letters and numbers.")
+        if len(model_number) > 80:
+            raise ValidationException("Model number is too long.")
+
+        try:
+            quantity = int(quantity)
+        except (TypeError, ValueError):
+            raise ValidationException("Quantity must be a whole number.")
+        if quantity < 1 or quantity > 500:
+            raise ValidationException("Quantity must be between 1 and 500.")
+
+        date_stamp = timezone.localdate().strftime("%d%m%Y")
+        prefix = f"{model_number}{date_stamp}"
+        if len(prefix) + 4 > 100:
+            raise ValidationException("Model number is too long for barcode format.")
+
+        suffixes = self._allocate_unique_suffixes(prefix, business_id, quantity)
+        created = []
+
+        with transaction.atomic():
+            for suffix in suffixes:
+                value = f"{prefix}{suffix}"
+                instance = self.repository.create(
+                    business_id=business_id,
+                    product_id=None,
+                    value=value,
+                    model_label=model_number,
+                    is_active=True,
+                )
+                created.append(instance)
+
+        return created
+
+    def _collect_used_suffixes(self, prefix, business_id):
+        """Return RAND4 suffixes already used for this model+date prefix."""
+        used = set()
+        suffix_len = 4
+        expected_len = len(prefix) + suffix_len
+
+        values = ProductBarcode.objects.filter(
+            business_id=business_id,
+            is_deleted=False,
+            value__startswith=prefix,
+        ).values_list("value", flat=True)
+
+        for value in values:
+            if len(value) == expected_len:
+                used.add(value[len(prefix):])
+
+        return used
+
+    def _allocate_unique_suffixes(self, prefix, business_id, quantity):
+        """Pick unique random 4-digit suffixes not yet used for this prefix."""
+        used = self._collect_used_suffixes(prefix, business_id)
+        remaining = 10000 - len(used)
+        if quantity > remaining:
+            raise ValidationException(
+                f"Cannot generate {quantity} unique barcodes for this model and date. "
+                f"Only {remaining} unique suffixes remain."
+            )
+
+        available = [f"{i:04d}" for i in range(10000) if f"{i:04d}" not in used]
+        random.shuffle(available)
+        return available[:quantity]

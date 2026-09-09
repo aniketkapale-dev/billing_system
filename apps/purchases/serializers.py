@@ -1,9 +1,17 @@
 from decimal import Decimal
 
+from django.db.models import Sum
 from rest_framework import serializers
 
-from apps.purchases.models import Purchase, PurchaseItem
+from apps.purchases.models import Purchase, PurchaseItem, PurchasePayment
 from core.base_serializer import BaseModelSerializer
+
+
+class OptionalDateField(serializers.DateField):
+    def to_internal_value(self, data):
+        if data in ("", None):
+            return None
+        return super().to_internal_value(data)
 
 
 class PurchaseItemSerializer(BaseModelSerializer):
@@ -60,8 +68,26 @@ class PurchaseItemSerializer(BaseModelSerializer):
         }]
 
 
+class PurchasePaymentSerializer(BaseModelSerializer):
+    payment_type_name = serializers.CharField(source="payment_type.name", read_only=True, default="")
+
+    class Meta:
+        model = PurchasePayment
+        fields = (
+            "id",
+            "amount",
+            "payment_date",
+            "next_due_date",
+            "payment_type",
+            "payment_type_name",
+            "notes",
+            "created_at",
+        )
+
+
 class PurchaseSerializer(BaseModelSerializer):
     items = PurchaseItemSerializer(many=True, read_only=True)
+    payments = PurchasePaymentSerializer(many=True, read_only=True)
     business_name = serializers.CharField(source="business.business_name", read_only=True)
     invoice_terms_conditions = serializers.CharField(
         source="invoice_setting.terms_conditions",
@@ -78,6 +104,7 @@ class PurchaseSerializer(BaseModelSerializer):
     company_address = serializers.CharField(source="customer.business_address", read_only=True, default="")
     total_paid = serializers.SerializerMethodField()
     pending_bill = serializers.SerializerMethodField()
+    payment_status = serializers.SerializerMethodField()
     invoice_setting_id = serializers.IntegerField(read_only=True)
     next_invoice_no = serializers.SerializerMethodField()
 
@@ -113,6 +140,8 @@ class PurchaseSerializer(BaseModelSerializer):
             "total_profit",
             "total_paid",
             "pending_bill",
+            "payment_status",
+            "payments",
             "is_paid",
             "paid_at",
             "due_date",
@@ -137,15 +166,46 @@ class PurchaseSerializer(BaseModelSerializer):
             return request.build_absolute_uri(url)
         return url
 
+    def _sum_payments(self, obj):
+        payments = getattr(obj, "_prefetched_objects_cache", {}).get("payments")
+        if payments is not None:
+            return sum(
+                (payment.amount for payment in payments if not payment.is_deleted),
+                Decimal("0"),
+            )
+        total = (
+            PurchasePayment.objects.filter(purchase=obj, is_deleted=False)
+            .aggregate(total=Sum("amount"))
+            .get("total")
+        )
+        return total or Decimal("0")
+
     def get_total_paid(self, obj):
-        if obj.is_draft or obj.is_cancelled or not obj.is_paid:
+        if obj.is_draft or obj.is_cancelled:
             return Decimal("0")
-        return obj.total_amount or Decimal("0")
+        return self._sum_payments(obj)
 
     def get_pending_bill(self, obj):
-        if obj.is_draft or obj.is_cancelled or obj.is_paid:
+        if obj.is_draft or obj.is_cancelled:
             return Decimal("0")
-        return obj.total_amount or Decimal("0")
+        total_amount = obj.total_amount or Decimal("0")
+        pending = total_amount - self._sum_payments(obj)
+        if pending < 0:
+            return Decimal("0")
+        return pending
+
+    def get_payment_status(self, obj):
+        if obj.is_draft:
+            return "draft"
+        if obj.is_cancelled:
+            return "cancelled"
+        total_paid = self._sum_payments(obj)
+        total_amount = obj.total_amount or Decimal("0")
+        if total_paid <= 0:
+            return "unpaid"
+        if total_paid + Decimal("0.0001") < total_amount:
+            return "partial"
+        return "paid"
 
     def get_next_invoice_no(self, obj):
         reference_no = (obj.reference_no or "").strip()
@@ -178,7 +238,7 @@ class PurchaseItemWriteSerializer(serializers.Serializer):
 
 class PurchaseWriteSerializer(serializers.Serializer):
     customer_id = serializers.IntegerField()
-    invoice_setting_id = serializers.IntegerField()
+    invoice_setting_id = serializers.IntegerField(required=False, allow_null=True)
     supplier_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
     reference_no = serializers.CharField(max_length=50, required=False, allow_blank=True)
     purchase_date = serializers.DateField(required=False)
@@ -187,14 +247,43 @@ class PurchaseWriteSerializer(serializers.Serializer):
     shipping_address = serializers.CharField(required=False, allow_blank=True)
     payment_type_id = serializers.IntegerField(required=False, allow_null=True)
     is_paid = serializers.BooleanField(required=False, default=False)
-    due_date = serializers.DateField(required=False, allow_null=True)
+    due_date = OptionalDateField(required=False, allow_null=True)
+    payment_amount = serializers.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        required=False,
+        allow_null=True,
+    )
     is_draft = serializers.BooleanField(required=False, default=False)
     items = PurchaseItemWriteSerializer(many=True)
 
+    def validate(self, attrs):
+        is_draft = attrs.get("is_draft", False)
+        if not is_draft and not attrs.get("invoice_setting_id"):
+            raise serializers.ValidationError(
+                {"invoice_setting_id": "Invoice setting is required."}
+            )
+        return attrs
+
 
 class PurchaseFinalizeSerializer(serializers.Serializer):
+    invoice_setting_id = serializers.IntegerField()
     is_paid = serializers.BooleanField(required=False, default=False)
-    due_date = serializers.DateField(required=False, allow_null=True)
+    due_date = OptionalDateField(required=False, allow_null=True)
+    payment_amount = serializers.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        required=False,
+        allow_null=True,
+    )
+
+
+class PurchasePaymentWriteSerializer(serializers.Serializer):
+    amount = serializers.DecimalField(max_digits=14, decimal_places=2)
+    payment_date = OptionalDateField(required=False)
+    next_due_date = OptionalDateField(required=False, allow_null=True)
+    payment_type_id = serializers.IntegerField(required=False, allow_null=True)
+    notes = serializers.CharField(required=False, allow_blank=True, default="")
 
 
 class PurchaseDraftUpdateSerializer(serializers.Serializer):
@@ -204,7 +293,7 @@ class PurchaseDraftUpdateSerializer(serializers.Serializer):
     billing_address = serializers.CharField(required=False, allow_blank=True)
     shipping_address = serializers.CharField(required=False, allow_blank=True)
     payment_type_id = serializers.IntegerField(required=False, allow_null=True)
-    due_date = serializers.DateField(required=False, allow_null=True)
+    due_date = OptionalDateField(required=False, allow_null=True)
     items = PurchaseItemWriteSerializer(many=True, required=False)
 
 
@@ -216,4 +305,4 @@ class PurchaseHeaderWriteSerializer(serializers.Serializer):
     billing_address = serializers.CharField(required=False, allow_blank=True)
     shipping_address = serializers.CharField(required=False, allow_blank=True)
     payment_type_id = serializers.IntegerField(required=False, allow_null=True)
-    due_date = serializers.DateField(required=False, allow_null=True)
+    due_date = OptionalDateField(required=False, allow_null=True)

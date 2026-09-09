@@ -283,8 +283,7 @@ var InventoryStock = (function () {
     }
 
     function formatDate(value) {
-        if (!value) return "—";
-        return InventoryApi.escapeHtml(value);
+        return InventoryApi.escapeHtml(InventoryApi.formatDisplayDate(value, "—"));
     }
 
     function displayValue(value) {

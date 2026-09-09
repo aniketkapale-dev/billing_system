@@ -83,3 +83,41 @@ class InvoiceSetting(BaseEntity):
 
     def __str__(self):
         return f"{self.format_invoice_number()} ({self.year})"
+
+
+class ProductBarcode(BaseEntity):
+    business = models.ForeignKey(
+        "businesses.Business",
+        on_delete=models.CASCADE,
+        related_name="product_barcodes",
+        db_column="business_id",
+    )
+    product = models.ForeignKey(
+        "products.Product",
+        on_delete=models.SET_NULL,
+        related_name="barcode_entries",
+        db_column="product_id",
+        null=True,
+        blank=True,
+    )
+    value = models.CharField(max_length=100)
+    model_label = models.CharField(max_length=100, blank=True, default="")
+
+    class Meta:
+        db_table = "product_barcodes"
+        verbose_name = "Product Barcode"
+        verbose_name_plural = "Product Barcodes"
+        ordering = ("model_label", "value")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["business", "value"],
+                condition=models.Q(is_deleted=False),
+                name="uniq_active_business_product_barcode_value",
+            )
+        ]
+
+    def __str__(self):
+        label = (self.model_label or "").strip()
+        if label:
+            return f"{label} ({self.value})"
+        return self.value

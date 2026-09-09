@@ -21,6 +21,7 @@ class CustomerSerializer(BaseModelSerializer):
             "address",
             "business_address",
             "shipping_address",
+            "place_of_supply",
             "is_active",
             "is_deleted",
             "created_at",
@@ -43,6 +44,7 @@ class CustomerWriteSerializer(serializers.ModelSerializer):
             "address",
             "business_address",
             "shipping_address",
+            "place_of_supply",
             "is_active",
         )
 
@@ -78,4 +80,7 @@ class CustomerWriteSerializer(serializers.ModelSerializer):
         return (value or "").strip()
 
     def validate_address(self, value):
+        return (value or "").strip()
+
+    def validate_place_of_supply(self, value):
         return (value or "").strip()

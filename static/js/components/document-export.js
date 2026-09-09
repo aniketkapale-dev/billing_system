@@ -79,11 +79,10 @@ var InventoryDocumentExport = (function () {
     }
 
     function formatDisplayDate(value) {
-        if (!value) return "—";
-        var parts = String(value).split("-");
-        if (parts.length === 3) {
-            return escapeHtml(parts[2] + "/" + parts[1] + "/" + parts[0]);
+        if (typeof InventoryDateFormat !== "undefined") {
+            return escapeHtml(InventoryDateFormat.formatDisplayDate(value, "—"));
         }
+        if (!value) return "—";
         return escapeHtml(String(value));
     }
 
@@ -807,7 +806,7 @@ var InventoryDocumentExport = (function () {
             "th{background:#f5f5f5;}" +
             "</style></head><body>" +
             "<h1>" + escapeHtml(title) + "</h1>" +
-            '<p class="meta">' + escapeHtml(getBusinessName()) + " · Generated " + new Date().toLocaleString() + "</p>" +
+            '<p class="meta">' + escapeHtml(getBusinessName()) + " · Generated " + escapeHtml(InventoryDateFormat.formatDateTime(new Date().toISOString())) + "</p>" +
             "<table><thead><tr>" + head + "</tr></thead><tbody>" + body + "</tbody></table>" +
             "</body></html>"
         );
@@ -838,7 +837,7 @@ var InventoryDocumentExport = (function () {
                     docWithTable.text(title, 14, 16);
                     docWithTable.setFontSize(10);
                     docWithTable.text(getBusinessName(), 14, 24);
-                    docWithTable.text("Generated " + new Date().toLocaleString(), 14, 30);
+                    docWithTable.text("Generated " + InventoryDateFormat.formatDateTime(new Date().toISOString()), 14, 30);
 
                     docWithTable.autoTable({
                         head: [headers],
@@ -887,7 +886,7 @@ var InventoryDocumentExport = (function () {
                     doc.setFontSize(10);
                     doc.text("Business: " + businessName, 14, y);
                     y += 6;
-                    doc.text("Date: " + (sale.purchase_date || "—"), 14, y);
+                    doc.text("Date: " + formatDisplayDate(sale.purchase_date), 14, y);
                     y += 6;
                     doc.text("Customer: " + (sale.customer_name || "—"), 14, y);
                     y += 6;

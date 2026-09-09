@@ -108,3 +108,33 @@ class PurchaseItem(BaseEntity):
 
     def __str__(self):
         return f"{self.product_id} x {self.quantity}"
+
+
+class PurchasePayment(BaseEntity):
+    purchase = models.ForeignKey(
+        Purchase,
+        on_delete=models.CASCADE,
+        related_name="payments",
+        db_column="purchase_id",
+    )
+    amount = models.DecimalField(max_digits=14, decimal_places=2)
+    payment_date = models.DateField(default=timezone.localdate)
+    next_due_date = models.DateField(null=True, blank=True)
+    payment_type = models.ForeignKey(
+        "catalog.PaymentType",
+        on_delete=models.SET_NULL,
+        related_name="purchase_payments",
+        db_column="payment_type_id",
+        null=True,
+        blank=True,
+    )
+    notes = models.TextField(blank=True, default="")
+
+    class Meta:
+        db_table = "purchase_payments"
+        verbose_name = "Purchase Payment"
+        verbose_name_plural = "Purchase Payments"
+        ordering = ("payment_date", "created_at")
+
+    def __str__(self):
+        return f"Payment {self.amount} for {self.purchase_id}"

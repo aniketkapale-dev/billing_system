@@ -20,11 +20,7 @@ var InventoryBusinessProfile = (function () {
             return { date: "—", time: "—" };
         }
         return {
-            date: parsed.toLocaleDateString(undefined, {
-                day: "numeric",
-                month: "long",
-                year: "numeric"
-            }),
+            date: InventoryApi.formatDisplayDate(value, "—"),
             time: parsed.toLocaleTimeString(undefined, {
                 hour: "numeric",
                 minute: "2-digit",

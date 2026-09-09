@@ -28,14 +28,7 @@ var InventoryUsers = (function () {
     var USERS_VIEW_PANEL = "users-view-panel";
 
     function formatDate(value) {
-        if (value === null || value === undefined || String(value).trim() === "") return "—";
-        var d = new Date(value);
-        if (isNaN(d.getTime())) return "—";
-        return d.toLocaleDateString(undefined, {
-            day: "2-digit",
-            month: "short",
-            year: "numeric"
-        });
+        return InventoryApi.formatDateTime(value, "—");
     }
 
     function displayValue(value) {

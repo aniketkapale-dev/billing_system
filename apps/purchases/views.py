@@ -4,6 +4,8 @@ from apps.purchases.serializers import (
     PurchaseDraftUpdateSerializer,
     PurchaseFinalizeSerializer,
     PurchaseHeaderWriteSerializer,
+    PurchasePaymentSerializer,
+    PurchasePaymentWriteSerializer,
     PurchaseSerializer,
     PurchaseWriteSerializer,
 )
@@ -139,8 +141,27 @@ class PurchaseViewSet(BusinessScopedViewSetMixin, BaseViewSet):
         already_paid = purchase.is_paid
         instance = service.mark_as_paid(pk)
         payload = self.serializer_class(instance, context={"request": request}).data
-        message = "Sale is already marked as paid." if already_paid else "Sale marked as paid."
+        message = "Sale is already marked as paid." if already_paid else "Payment recorded. Sale marked as paid."
         return ApiResponse.success(data=payload, message=message)
+
+    def list_payments(self, request, pk=None):
+        payments = self.get_service().list_payments(pk)
+        payload = PurchasePaymentSerializer(payments, many=True, context={"request": request}).data
+        return ApiResponse.success(data=payload, message="Payment history loaded.")
+
+    def record_payment(self, request, pk=None):
+        serializer = PurchasePaymentWriteSerializer(
+            data=request.data,
+            context={"request": request},
+        )
+        serializer.is_valid(raise_exception=True)
+        instance = self.get_service().record_payment(pk, dict(serializer.validated_data))
+        payload = self.serializer_class(instance, context={"request": request}).data
+        return ApiResponse.success(
+            data=payload,
+            message="Payment recorded successfully.",
+            status_code=status.HTTP_201_CREATED,
+        )
 
     def mark_cancelled(self, request, pk=None):
         service = self.get_service()

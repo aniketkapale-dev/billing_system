@@ -57,9 +57,14 @@
                 <div class="inv-mgmt-form-grid inv-mgmt-form-grid--sale-top" style="padding:0;">
                     <div id="purchase-invoice-setting-field" class="inv-mgmt-field">
                         <label for="purchase-invoice-setting">Invoice</label>
-                        <select id="purchase-invoice-setting" class="inv-mgmt-select" required>
-                            <option value="">Select invoice</option>
-                        </select>
+                        <div class="inv-field-inline">
+                            <select id="purchase-invoice-setting" class="inv-mgmt-select" required>
+                                <option value="">Select invoice</option>
+                            </select>
+                            <button id="purchase-invoice-add-btn" type="button" class="inv-inline-add-btn" title="Add invoice" aria-label="Add invoice">
+                                <span class="material-symbols-outlined">add</span>
+                            </button>
+                        </div>
                     </div>
                     <div class="inv-mgmt-field">
                         <label for="purchase-customer">Customer/Company</label>
@@ -132,7 +137,13 @@
                         <div>
                             <h4 style="margin:0;font-size:16px;font-weight:600;color:var(--inv-primary);">Products to Sell</h4>
                         </div>
-                        <button id="purchase-add-item-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Add Product</button>
+                        <div class="inv-mgmt-items-header-actions">
+                            <button id="purchase-tax-add-btn" type="button" class="inv-mgmt-btn" title="Add tax" aria-label="Add tax">
+                                <span class="material-symbols-outlined">add</span>
+                                Add Tax
+                            </button>
+                            <button id="purchase-add-item-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Add Product</button>
+                        </div>
                     </div>
                     <div id="purchase-items-container"></div>
                     <div id="purchase-totals" class="inv-stockin-totals">
@@ -198,13 +209,111 @@
                 <div id="purchase-view-items-wrap" class="inv-detail-view-items inv-stockin-view-items"></div>
             </div>
             <div class="inv-mgmt-panel-footer inv-detail-view-footer">
+                <button type="button" id="purchase-view-payment-history-btn" class="inv-mgmt-btn inv-hidden">Invoice History</button>
+                <button type="button" id="purchase-view-add-payment-btn" class="inv-mgmt-btn inv-mgmt-btn--secondary inv-hidden">Add Payment</button>
                 <button type="button" class="inv-mgmt-btn inv-mgmt-btn--primary" data-page-back="purchases-list-panel">Close</button>
             </div>
         </div>
     </div>
 </div>
 
+<div id="purchase-add-payment-modal" class="inv-modal inv-hidden" aria-hidden="true">
+    <div class="inv-modal-backdrop" data-modal-close></div>
+    <div class="inv-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="purchase-add-payment-title">
+        <div class="inv-modal-header">
+            <h3 id="purchase-add-payment-title">Add Payment</h3>
+            <button type="button" class="inv-modal-close" data-modal-close aria-label="Close">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="inv-modal-body">
+            <div class="inv-sale-payment-summary">
+                <div class="inv-sale-payment-summary-row">
+                    <span>Bill Amount</span>
+                    <strong id="purchase-add-payment-bill">0.00</strong>
+                </div>
+                <div class="inv-sale-payment-summary-row">
+                    <span>Total Paid</span>
+                    <strong id="purchase-add-payment-paid">0.00</strong>
+                </div>
+                <div class="inv-sale-payment-summary-row inv-sale-payment-summary-row--pending">
+                    <span>Pending Bill</span>
+                    <strong id="purchase-add-payment-pending">0.00</strong>
+                </div>
+            </div>
+            <div class="inv-mgmt-form-grid inv-add-payment-form-grid" style="padding:0;margin-top:16px;">
+                <div class="inv-mgmt-field">
+                    <label for="purchase-add-payment-amount">Amount Received</label>
+                    <input id="purchase-add-payment-amount" class="inv-mgmt-input" type="number" step="0.01" min="0.01" placeholder="0.00"/>
+                </div>
+                <div class="inv-mgmt-field inv-add-payment-dates-field">
+                    <div class="inv-add-payment-dates">
+                        <div class="inv-add-payment-date-col">
+                            <label for="purchase-add-payment-date">Payment Date</label>
+                            <input id="purchase-add-payment-date" class="inv-mgmt-input" type="date"/>
+                        </div>
+                        <div id="purchase-add-payment-next-due-wrap" class="inv-add-payment-date-col inv-hidden">
+                            <label for="purchase-add-payment-next-due">Next Due Date</label>
+                            <input id="purchase-add-payment-next-due" class="inv-mgmt-input" type="date"/>
+                        </div>
+                    </div>
+                </div>
+                <div class="inv-mgmt-field inv-mgmt-field--full">
+                    <label for="purchase-add-payment-type">Payment Type <span class="inv-field-optional">(optional)</span></label>
+                    <select id="purchase-add-payment-type" class="inv-mgmt-select">
+                        <option value="">Select payment type (optional)</option>
+                    </select>
+                </div>
+                <div class="inv-mgmt-field inv-mgmt-field--full">
+                    <label for="purchase-add-payment-notes">Notes <span class="inv-field-optional">(optional)</span></label>
+                    <textarea id="purchase-add-payment-notes" class="inv-mgmt-textarea" rows="2" placeholder="Payment notes"></textarea>
+                </div>
+            </div>
+        </div>
+        <div class="inv-modal-footer">
+            <button type="button" class="inv-mgmt-btn" data-modal-close>Cancel</button>
+            <button id="purchase-add-payment-save-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Save Payment</button>
+        </div>
+    </div>
+</div>
+
+<div id="purchase-payment-history-modal" class="inv-modal inv-hidden" aria-hidden="true">
+    <div class="inv-modal-backdrop" data-modal-close></div>
+    <div class="inv-modal-dialog inv-modal-dialog--wide" role="dialog" aria-modal="true" aria-labelledby="purchase-payment-history-title">
+        <div class="inv-modal-header">
+            <h3 id="purchase-payment-history-title">Invoice History</h3>
+            <button type="button" class="inv-modal-close" data-modal-close aria-label="Close">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="inv-modal-body">
+            <div id="purchase-payment-history-summary" class="inv-sale-payment-summary"></div>
+            <div class="inv-mgmt-table-wrap" style="margin-top:16px;">
+                <table class="inv-mgmt-table inv-sale-payment-history-table">
+                    <thead>
+                        <tr>
+                            <th>Payment Date</th>
+                            <th class="inv-mgmt-cell--num">Amount</th>
+                            <th>Payment Type</th>
+                            <th>Next Due Date</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody id="purchase-payment-history-body">
+                        <tr><td colspan="5" class="inv-mgmt-empty">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="inv-modal-footer">
+            <button type="button" class="inv-mgmt-btn inv-mgmt-btn--primary" data-modal-close>Close</button>
+        </div>
+    </div>
+</div>
+
 {% include "partials/customer_modal.html" %}
+{% include "partials/tax_modal.html" %}
+{% include "partials/invoice_setting_modal.html" %}
 {% endblock %}
 
 {% block page_scripts %}
@@ -213,10 +322,14 @@
 <script src="{% static 'js/components/multi-select.js' %}"></script>
 <script src="{% static 'js/components/tax-select.js' %}"></script>
 <script src="{% static 'js/inventory/customers.js' %}"></script>
-<script src="{% static 'js/inventory/purchases.js' %}?v=20260309-due-date-fix"></script>
+<script src="{% static 'js/inventory/settings-tax.js' %}?v=20260309-sale-add-modals"></script>
+<script src="{% static 'js/inventory/settings-invoice.js' %}?v=20260309-sale-add-modals"></script>
+<script src="{% static 'js/inventory/purchases.js' %}?v=20260309-sale-add-modals"></script>
 <script>
 InventoryPagePanel.init();
 InventoryCustomers.init();
+InventorySettingsTax.init();
+InventorySettingsInvoice.init();
 InventoryPurchases.init();
 </script>
 {% endblock %}

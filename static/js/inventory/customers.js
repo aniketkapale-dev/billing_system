@@ -175,10 +175,7 @@ var InventoryCustomers = (function () {
     }
 
     function formatDate(value) {
-        if (!value) return "—";
-        var date = new Date(value);
-        if (isNaN(date.getTime())) return "—";
-        return date.toLocaleString();
+        return InventoryApi.formatDateTime(value, "—");
     }
 
     function renderRows(items) {

@@ -1,0 +1,39 @@
+<div id="invoice-setting-modal" class="inv-modal inv-hidden" aria-hidden="true">
+    <div class="inv-modal-backdrop" data-modal-close></div>
+    <div class="inv-modal-dialog inv-modal-dialog--wide" role="dialog" aria-modal="true" aria-labelledby="invoice-setting-modal-title">
+        <div class="inv-modal-header">
+            <h3 id="invoice-setting-modal-title">Add Invoice</h3>
+            <button type="button" class="inv-modal-close" data-modal-close aria-label="Close">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="inv-modal-body">
+            <div class="inv-mgmt-form-grid inv-mgmt-form-grid--invoice-setting" style="padding:0;">
+                <div class="inv-mgmt-field">
+                    <label for="settings-invoice-year">Year</label>
+                    <input id="settings-invoice-year" class="inv-mgmt-input" type="number" min="2000" max="2100" step="1" placeholder="e.g. 2026" required/>
+                </div>
+                <div class="inv-mgmt-field">
+                    <label for="settings-invoice-prefix">Prefix</label>
+                    <input id="settings-invoice-prefix" class="inv-mgmt-input" type="text" placeholder="e.g. INV"/>
+                </div>
+                <div class="inv-mgmt-field">
+                    <label for="settings-invoice-suffix">Suffix</label>
+                    <input id="settings-invoice-suffix" class="inv-mgmt-input" type="text" placeholder="e.g. 2026-2027"/>
+                </div>
+                <div class="inv-mgmt-field">
+                    <label for="settings-invoice-start-counter">Start Counter</label>
+                    <input id="settings-invoice-start-counter" class="inv-mgmt-input" type="number" min="0" step="1" placeholder="e.g. 1" value="1"/>
+                </div>
+                <div class="inv-mgmt-field">
+                    <label for="settings-invoice-end-counter">End Counter <span class="inv-field-optional">(optional)</span></label>
+                    <input id="settings-invoice-end-counter" class="inv-mgmt-input" type="date"/>
+                </div>
+            </div>
+        </div>
+        <div class="inv-modal-footer">
+            <button type="button" class="inv-mgmt-btn" data-modal-close>Cancel</button>
+            <button id="settings-invoice-save-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Save Invoice</button>
+        </div>
+    </div>
+</div>

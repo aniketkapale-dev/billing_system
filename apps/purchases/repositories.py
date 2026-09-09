@@ -1,4 +1,6 @@
-from apps.purchases.models import Purchase, PurchaseItem
+from django.db.models import Prefetch
+
+from apps.purchases.models import Purchase, PurchaseItem, PurchasePayment
 from core.base_repository import BaseRepository
 
 
@@ -10,7 +12,16 @@ class PurchaseRepository(BaseRepository):
             super()
             .get_queryset()
             .select_related("owner", "payment_type", "customer", "invoice_setting")
-            .prefetch_related("items__product", "items__batch_consumptions__inventory_batch")
+            .prefetch_related(
+                "items__product",
+                "items__batch_consumptions__inventory_batch",
+                Prefetch(
+                    "payments",
+                    queryset=PurchasePayment.objects.filter(is_deleted=False).select_related(
+                        "payment_type"
+                    ),
+                ),
+            )
         )
 
     def get_by_id(self, pk, include_deleted=False):

@@ -76,13 +76,19 @@
         </div>
     </div>
 </div>
+
+{% include "partials/barcode_modal.html" %}
 {% endblock %}
 
 {% block page_scripts %}
+<script src="{% static 'js/components/modal.js' %}"></script>
 <script src="{% static 'js/components/page-panel.js' %}"></script>
-<script src="{% static 'js/inventory/products.js' %}?v=20260308-product-filters"></script>
+<script src="{% static 'js/components/barcode-pdf.js' %}?v=20260309-barcode-gen"></script>
+<script src="{% static 'js/inventory/settings-barcode.js' %}?v=20260309-barcode-gen"></script>
+<script src="{% static 'js/inventory/products.js' %}?v=20260309-product-barcode"></script>
 <script>
 InventoryPagePanel.init();
+InventorySettingsBarcode.init();
 InventoryProducts.init();
 </script>
 {% endblock %}

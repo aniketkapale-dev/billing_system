@@ -3,6 +3,7 @@ var InventoryStockIn = (function () {
 
     var API = "/api/invoicing/purchase-invoices";
     var PRODUCTS_API = "/api/products";
+    var BARCODES_API = "/api/settings/barcodes";
     var CATALOG_API = "/api/catalog";
     var PAGE_SIZE = (window.InventoryConstants && InventoryConstants.PAGE_SIZE) || 10;
     var currentPage = 1;
@@ -10,8 +11,10 @@ var InventoryStockIn = (function () {
     var searchTimer = null;
     var products = [];
     var vendors = [];
+    var barcodes = [];
     var pendingProductRow = null;
     var pendingVendorRow = null;
+    var pendingBarcodeRow = null;
     var editingInvoiceId = null;
     var existingAttachment = null;
     var ALLOWED_ATTACHMENT_EXT = ["pdf", "jpg", "jpeg", "png", "webp", "gif"];
@@ -39,8 +42,7 @@ var InventoryStockIn = (function () {
                     { id: "date", label: "Date", locked: true, cell: function (item) { return "<td>" + InventoryApi.escapeHtml(formatDate(item.invoice_date)) + "</td>"; } },
                     { id: "invoice_no", label: "Invoice No.", locked: true, sortKey: "invoice_number", cell: function (item) { return "<td><strong>" + InventoryApi.escapeHtml(item.invoice_number) + "</strong></td>"; } },
                     { id: "qty", label: "Qty", headerClass: "inv-mgmt-cell--num", cell: function (item) { return '<td class="inv-mgmt-cell--num">' + InventoryApi.escapeHtml(formatQty(item.total_quantity)) + "</td>"; } },
-                    { id: "subtotal", label: "Subtotal", sortKey: "subtotal", locked: true, headerClass: "inv-mgmt-cell--num", cell: function (item) { return '<td class="inv-mgmt-cell--num">' + InventoryApi.formatMoney(item.subtotal) + "</td>"; } },
-                    { id: "grand_total", label: "Grand Total", sortKey: "grand_total", locked: true, headerClass: "inv-mgmt-cell--num", cell: function (item) { return '<td class="inv-mgmt-cell--num"><strong>' + InventoryApi.formatMoney(item.grand_total) + "</strong></td>"; } },
+                    { id: "subtotal", label: "Total Amount", sortKey: "subtotal", locked: true, headerClass: "inv-mgmt-cell--num", cell: function (item) { return '<td class="inv-mgmt-cell--num"><strong>' + InventoryApi.formatMoney(item.subtotal) + "</strong></td>"; } },
                     { id: "file", label: "File", headerClass: "inv-col-file", cell: function (item) { return '<td class="inv-col-file">' + cellFile(item) + "</td>"; } }
                 ],
                 onApply: function () {
@@ -79,14 +81,13 @@ var InventoryStockIn = (function () {
         if (!items.length) return;
         InventoryDocumentExport.downloadTablePdf(
             "Purchase (Stock In)",
-            ["Date", "Invoice No.", "Qty", "Subtotal", "Grand Total"],
+            ["Date", "Invoice No.", "Qty", "Total Amount"],
             items.map(function (item) {
                 return [
                     formatDate(item.invoice_date),
                     item.invoice_number || "",
                     formatQty(item.total_quantity),
-                    item.subtotal || "",
-                    item.grand_total || ""
+                    item.subtotal || ""
                 ];
             }),
             "purchases-stock-in.pdf"
@@ -98,14 +99,13 @@ var InventoryStockIn = (function () {
         if (!items.length) return;
         var html = InventoryDocumentExport.buildTableHtml(
             "Purchase (Stock In)",
-            ["Date", "Invoice No.", "Qty", "Subtotal", "Grand Total"],
+            ["Date", "Invoice No.", "Qty", "Total Amount"],
             items.map(function (item) {
                 return [
                     formatDate(item.invoice_date),
                     item.invoice_number || "",
                     formatQty(item.total_quantity),
-                    item.subtotal || "",
-                    item.grand_total || ""
+                    item.subtotal || ""
                 ];
             })
         );
@@ -300,9 +300,7 @@ var InventoryStockIn = (function () {
     function updateInvoiceTotals() {
         var totals = calculateInvoiceTotals();
         var subEl = document.getElementById("stockin-subtotal");
-        var grandEl = document.getElementById("stockin-grand-total");
         if (subEl) subEl.textContent = InventoryApi.formatMoney(totals.subtotal);
-        if (grandEl) grandEl.textContent = InventoryApi.formatMoney(totals.grandTotal);
     }
 
     function updateAllRowTotals() {
@@ -343,10 +341,126 @@ var InventoryStockIn = (function () {
         });
     }
 
+    function getBarcode(barcodeId) {
+        return barcodes.find(function (item) {
+            return String(item.id) === String(barcodeId);
+        });
+    }
+
+    function getBarcodesForRow(productId) {
+        return barcodes.filter(function (item) {
+            if (!item.product) return true;
+            if (productId && String(item.product) === String(productId)) return true;
+            return false;
+        });
+    }
+
+    function assignBarcodeToProduct(barcodeId, productId) {
+        if (!barcodeId || !productId) return Promise.resolve(null);
+        var barcode = getBarcode(barcodeId);
+        if (!barcode) return Promise.resolve(null);
+        if (barcode.product && String(barcode.product) === String(productId)) {
+            return Promise.resolve(barcode);
+        }
+        if (barcode.product) {
+            InventoryToast.error("This barcode is already assigned to another product.");
+            return Promise.resolve(null);
+        }
+        return InventoryApi.request(BARCODES_API, "/" + barcodeId + "/", {
+            method: "PATCH",
+            body: { product_id: Number(productId) }
+        }).then(function (body) {
+            if (body && body.isSuccess && body.data) {
+                var idx = barcodes.findIndex(function (item) {
+                    return String(item.id) === String(barcodeId);
+                });
+                if (idx >= 0) barcodes[idx] = body.data;
+                return body.data;
+            }
+            InventoryToast.error(body.message || "Failed to assign barcode to product.");
+            return null;
+        });
+    }
+
+    function assignBarcodesFromForm() {
+        var rows = document.querySelectorAll("#stockin-items-container .inv-mgmt-item-row");
+        var promises = [];
+        rows.forEach(function (row) {
+            var productId = row.querySelector(".inv-item-product").value;
+            var barcodeSelect = row.querySelector(".inv-item-barcode");
+            var barcodeId = barcodeSelect ? barcodeSelect.value : "";
+            if (productId && barcodeId) {
+                promises.push(assignBarcodeToProduct(barcodeId, productId));
+            }
+        });
+        return Promise.all(promises);
+    }
+
+    function loadBarcodes() {
+        return InventoryApi.request(BARCODES_API, "?page_size=500&ordering=model_label").then(function (body) {
+            barcodes = body && body.isSuccess ? (body.data.items || []) : [];
+            refreshAllRowBarcodeSelects();
+            return barcodes;
+        });
+    }
+
+    function barcodeOptions(productId, selectedBarcodeId) {
+        var items = getBarcodesForRow(productId);
+        var html = '<option value="">Select barcode</option>';
+        items.forEach(function (item) {
+            var selected = String(item.id) === String(selectedBarcodeId) ? " selected" : "";
+            var label = item.model_label
+                ? InventoryApi.escapeHtml(item.model_label) + " — " + InventoryApi.escapeHtml(item.value)
+                : InventoryApi.escapeHtml(item.value);
+            html += '<option value="' + item.id + '"' + selected + ">" + label + "</option>";
+        });
+        return html;
+    }
+
+    function findBarcodeIdForLine(productId, batchNumber) {
+        if (!batchNumber) return "";
+        var match = barcodes.find(function (item) {
+            return String(item.value) === String(batchNumber);
+        });
+        return match ? match.id : "";
+    }
+
+    function renderRowBarcodeSelect(row, productId, selectedBarcodeId) {
+        var select = row.querySelector(".inv-item-barcode");
+        if (!select) return;
+        select.innerHTML = barcodeOptions(productId, selectedBarcodeId);
+        if (selectedBarcodeId) {
+            select.value = String(selectedBarcodeId);
+        }
+        if (window.InventorySearchableSelect) {
+            InventorySearchableSelect.refresh(select);
+        }
+    }
+
+    function refreshAllRowBarcodeSelects() {
+        document.querySelectorAll("#stockin-items-container .inv-mgmt-item-row").forEach(function (row) {
+            var productId = row.querySelector(".inv-item-product").value;
+            var barcodeSelect = row.querySelector(".inv-item-barcode");
+            var selectedId = barcodeSelect ? barcodeSelect.value : "";
+            renderRowBarcodeSelect(row, productId, selectedId);
+        });
+    }
+
+    function syncBatchFromBarcode(row) {
+        var barcodeSelect = row.querySelector(".inv-item-barcode");
+        var batchEl = row.querySelector(".inv-item-batch");
+        if (!barcodeSelect || !batchEl) return;
+        var barcode = getBarcode(barcodeSelect.value);
+        if (barcode) {
+            batchEl.value = barcode.value;
+        }
+    }
+
     function applyProductToRow(row, product) {
         var priceEl = row.querySelector(".inv-item-price-with-tax");
         if (!product) {
             if (priceEl) priceEl.value = "";
+            renderRowBarcodeSelect(row, "", "");
             updateRowTotalPrice(row);
             return;
         }
@@ -356,7 +470,25 @@ var InventoryStockIn = (function () {
                 : product.actual_price;
             priceEl.value = price != null && Number(price) > 0 ? price : "";
         }
+        var barcodeSelect = row.querySelector(".inv-item-barcode");
+        var selectedBarcodeId = barcodeSelect ? barcodeSelect.value : "";
+        if (selectedBarcodeId) {
+            var selectedBarcode = getBarcode(selectedBarcodeId);
+            if (selectedBarcode && selectedBarcode.product && String(selectedBarcode.product) !== String(product.id)) {
+                selectedBarcodeId = "";
+            }
+        }
+        renderRowBarcodeSelect(row, product.id, selectedBarcodeId);
         updateRowTotalPrice(row);
+    }
+
+    function openAddBarcodeModal(row) {
+        pendingBarcodeRow = row || null;
+        if (window.InventorySettingsBarcode && typeof InventorySettingsBarcode.openAddModal === "function") {
+            InventorySettingsBarcode.openAddModal();
+            return;
+        }
+        InventoryToast.error("Barcode form is not available.");
     }
 
     function updateAllProductSelects(newProductId, focusRow) {
@@ -399,6 +531,11 @@ var InventoryStockIn = (function () {
             '<div class="inv-mgmt-field"><label>Quantity</label><input class="inv-mgmt-input inv-item-qty" type="number" min="0.01" step="0.01" value="' + (data.quantity || 1) + '" required/></div>' +
             '<div class="inv-mgmt-field"><label>Actual Price with Tax (per product)</label><input class="inv-mgmt-input inv-item-price-with-tax" type="number" min="0" step="0.01" placeholder="0.00" value="' + (data.purchase_price != null ? data.purchase_price : "") + '"/></div>' +
             '<div class="inv-mgmt-field"><label>Total Price</label><input class="inv-mgmt-input inv-item-total" type="text" readonly value="0.00"/></div>' +
+            '<div class="inv-mgmt-field"><label>Barcode</label>' +
+            '<div class="inv-field-inline">' +
+            '<select class="inv-mgmt-select inv-item-barcode">' + barcodeOptions(data.product_id, data.barcode_id) + "</select>" +
+            '<button type="button" class="inv-inline-add-btn inv-item-barcode-add" title="Add barcode" aria-label="Add barcode">' +
+            '<span class="material-symbols-outlined">add</span></button></div></div>' +
             '<div class="inv-mgmt-field"><label>Batch No.</label><input class="inv-mgmt-input inv-item-batch" type="text" placeholder="B001" value="' + InventoryApi.escapeHtml(data.batch_number || "") + '"/></div>' +
             '<div class="inv-mgmt-field"><label>Expiry</label><input class="inv-mgmt-input inv-item-expiry" type="date" value="' + (data.expiry_date || "") + '"/></div>' +
             '<div class="inv-mgmt-item-row-remove">' +
@@ -411,6 +548,16 @@ var InventoryStockIn = (function () {
         });
         row.querySelector(".inv-item-product").addEventListener("change", function () {
             applyProductToRow(row, getProduct(this.value));
+        });
+        row.querySelector(".inv-item-barcode").addEventListener("change", function () {
+            syncBatchFromBarcode(row);
+            var productId = row.querySelector(".inv-item-product").value;
+            if (productId && this.value) {
+                assignBarcodeToProduct(this.value, productId);
+            }
+        });
+        row.querySelector(".inv-item-barcode-add").addEventListener("click", function () {
+            openAddBarcodeModal(row);
         });
         row.querySelector(".inv-item-product-add").addEventListener("click", function () {
             openAddProductModal(row);
@@ -536,18 +683,7 @@ var InventoryStockIn = (function () {
     }
 
     function formatDate(value) {
-        if (value === null || value === undefined || String(value).trim() === "") return "—";
-        var raw = String(value).trim();
-        var match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
-        if (match) {
-            return match[3] + "/" + match[2] + "/" + match[1];
-        }
-        var d = new Date(raw);
-        if (isNaN(d.getTime())) return "—";
-        var day = String(d.getDate()).padStart(2, "0");
-        var month = String(d.getMonth() + 1).padStart(2, "0");
-        var year = d.getFullYear();
-        return day + "/" + month + "/" + year;
+        return InventoryApi.formatDisplayDate(value, "—");
     }
 
     function formatQty(value) {
@@ -611,8 +747,7 @@ var InventoryStockIn = (function () {
             { label: "Invoice Number", value: displayValue(invoice.invoice_number), emphasis: true },
             { label: "Purchase Date", value: displayValue(formatDate(invoice.invoice_date)) },
             { label: "Total Quantity", value: displayValue(formatQty(invoice.total_quantity)), num: true },
-            { label: "Subtotal", value: InventoryApi.formatMoney(invoice.subtotal), num: true },
-            { label: "Grand Total", value: InventoryApi.formatMoney(invoice.grand_total), num: true, emphasis: true },
+            { label: "Total Amount", value: InventoryApi.formatMoney(invoice.subtotal), num: true, emphasis: true },
             { label: "Remarks", value: displayValue(invoice.remarks) }
         ];
 
@@ -652,7 +787,7 @@ var InventoryStockIn = (function () {
                     "<td class=\"inv-mgmt-cell--num\">" + displayValue(line.quantity) + "</td>" +
                     "<td class=\"inv-mgmt-cell--num\">" + InventoryApi.formatMoney(line.purchase_price) + "</td>" +
                     "<td>" + displayValue(line.batch_number) + "</td>" +
-                    "<td>" + displayValue(line.expiry_date) + "</td>" +
+                    "<td>" + displayValue(InventoryApi.formatDisplayDate(line.expiry_date, "—")) + "</td>" +
                     "<td class=\"inv-mgmt-cell--num\">" + InventoryApi.formatMoney(line.line_total) + "</td>" +
                     "</tr>"
                 );
@@ -681,7 +816,7 @@ var InventoryStockIn = (function () {
 
     function setItemsEditable(editable) {
         document.querySelectorAll("#stockin-items-container .inv-mgmt-item-row").forEach(function (row) {
-            row.querySelectorAll("input, select, button.inv-item-product-add, button.inv-item-vendor-add, button.inv-item-remove").forEach(function (el) {
+            row.querySelectorAll("input, select, button.inv-item-product-add, button.inv-item-vendor-add, button.inv-item-barcode-add, button.inv-item-remove").forEach(function (el) {
                 el.disabled = !editable;
             });
         });
@@ -703,6 +838,7 @@ var InventoryStockIn = (function () {
                 purchase_price: line.purchase_price,
                 vendor_id: line.vendor,
                 batch_number: line.batch_number,
+                barcode_id: findBarcodeIdForLine(line.product, line.batch_number),
                 expiry_date: line.expiry_date || ""
             }));
         });
@@ -749,6 +885,9 @@ var InventoryStockIn = (function () {
         loadProducts()
             .then(function () {
                 return loadVendors();
+            })
+            .then(function () {
+                return loadBarcodes();
             })
             .then(function () {
                 return fetchInvoice(id);
@@ -857,7 +996,7 @@ var InventoryStockIn = (function () {
     }
 
     function openModal() {
-        Promise.all([loadProducts(), loadVendors()]).then(function () {
+        Promise.all([loadProducts(), loadVendors(), loadBarcodes()]).then(function () {
             resetForm();
             InventoryPagePanel.showPanel(STOCKIN_LIST_PANEL, STOCKIN_FORM_PANEL);
             document.getElementById("stockin-invoice-no").focus();
@@ -910,8 +1049,10 @@ var InventoryStockIn = (function () {
 
         if (editingInvoiceId) {
             InventoryLoader.show();
+            assignBarcodesFromForm().then(function () {
             var editBody = attachmentFile ? buildInvoiceFormData(payload) : payload;
-            request("/" + editingInvoiceId + "/", { method: "PATCH", body: editBody })
+            return request("/" + editingInvoiceId + "/", { method: "PATCH", body: editBody });
+            })
                 .then(function (body) {
                     if (body && body.isSuccess) {
                         InventoryToast.success(body.message || "Purchase updated.");
@@ -942,8 +1083,10 @@ var InventoryStockIn = (function () {
         payload.items = items;
 
         InventoryLoader.show();
+        assignBarcodesFromForm().then(function () {
         var createBody = attachmentFile ? buildInvoiceFormData(payload, items) : payload;
-        request("/", { method: "POST", body: createBody })
+        return request("/", { method: "POST", body: createBody });
+        })
             .then(function (body) {
                 if (body && body.isSuccess) {
                     InventoryToast.success(body.message || "Purchase invoice saved.");
@@ -1004,6 +1147,23 @@ var InventoryStockIn = (function () {
                 updateAllProductSelects(product ? product.id : null, focusRow);
                 if (focusRow && product) {
                     applyProductToRow(focusRow, product);
+                }
+            });
+        });
+
+        window.addEventListener("inventory:barcode-created", function (e) {
+            var detail = e.detail || {};
+            var barcode = detail.barcode || (detail.barcodes && detail.barcodes[0]);
+            var focusRow = pendingBarcodeRow;
+            pendingBarcodeRow = null;
+            loadBarcodes().then(function () {
+                if (focusRow && barcode) {
+                    var productId = focusRow.querySelector(".inv-item-product").value;
+                    renderRowBarcodeSelect(focusRow, productId, barcode.id);
+                    syncBatchFromBarcode(focusRow);
+                    if (productId) {
+                        assignBarcodeToProduct(barcode.id, productId);
+                    }
                 }
             });
         });

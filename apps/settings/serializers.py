@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from apps.settings.models import InvoiceSetting, Tax
+from apps.settings.models import InvoiceSetting, ProductBarcode, Tax
 from core.base_serializer import BaseModelSerializer
 
 
@@ -99,4 +99,60 @@ class InvoiceSettingWriteSerializer(serializers.ModelSerializer):
             return 0
         if value < 0:
             raise serializers.ValidationError("Start counter cannot be negative.")
+        return value
+
+
+class ProductBarcodeSerializer(BaseModelSerializer):
+    business_name = serializers.CharField(source="business.business_name", read_only=True)
+    product_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ProductBarcode
+        fields = (
+            "id",
+            "business",
+            "business_name",
+            "product",
+            "product_name",
+            "value",
+            "model_label",
+            "is_active",
+            "is_deleted",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = ("business",)
+
+    def get_product_name(self, obj):
+        if obj.product_id and obj.product:
+            return obj.product.name
+        return None
+
+
+class ProductBarcodeWriteSerializer(serializers.Serializer):
+    product_id = serializers.IntegerField(required=False, allow_null=True)
+    value = serializers.CharField(max_length=100)
+    model_label = serializers.CharField(max_length=100, required=False, allow_blank=True, default="")
+    is_active = serializers.BooleanField(required=False, default=True)
+
+    def validate_value(self, value):
+        value = (value or "").strip()
+        if not value:
+            raise serializers.ValidationError("Barcode value is required.")
+        return value
+
+    def validate_model_label(self, value):
+        return (value or "").strip()
+
+
+class ProductBarcodeBulkGenerateSerializer(serializers.Serializer):
+    model_number = serializers.CharField(max_length=80)
+    quantity = serializers.IntegerField(min_value=1, max_value=500)
+
+    def validate_model_number(self, value):
+        value = (value or "").strip()
+        if not value:
+            raise serializers.ValidationError("Model number is required.")
+        if not value.isalnum():
+            raise serializers.ValidationError("Model number can only contain letters and numbers.")
         return value
