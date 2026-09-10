@@ -12,6 +12,8 @@ var InventoryStockIn = (function () {
     var products = [];
     var vendors = [];
     var barcodes = [];
+    var barcodesByProductId = {};
+    var barcodesLoadPromises = {};
     var pendingProductRow = null;
     var pendingVendorRow = null;
     var pendingBarcodeRow = null;
@@ -341,18 +343,165 @@ var InventoryStockIn = (function () {
         });
     }
 
+    function parseRowPrice(value) {
+        var num = Number(value);
+        return isNaN(num) ? 0 : num;
+    }
+
+    function getProductMrp(product) {
+        if (!product) return 0;
+        var mrp = Number(product.mrp || 0);
+        return isNaN(mrp) || mrp < 0 ? 0 : mrp;
+    }
+
+    function updateRowMrpEditHint(row) {
+        var productSelect = row.querySelector(".inv-item-product");
+        var priceEl = row.querySelector(".inv-item-price-with-tax");
+        var editBtn = row.querySelector(".inv-item-mrp-edit");
+        if (!productSelect || !priceEl || !editBtn) return;
+
+        var product = getProduct(productSelect.value);
+        var price = parseRowPrice(priceEl.value);
+        var show = !!(product && price > 0 && price > getProductMrp(product));
+        editBtn.classList.toggle("inv-hidden", !show);
+    }
+
+    function openEditProductMrpModal(row) {
+        var productSelect = row.querySelector(".inv-item-product");
+        var priceEl = row.querySelector(".inv-item-price-with-tax");
+        var productId = productSelect ? productSelect.value : "";
+        if (!productId) {
+            InventoryToast.error("Select a product first.");
+            return;
+        }
+        var price = parseRowPrice(priceEl ? priceEl.value : 0);
+        if (window.InventoryProducts && typeof InventoryProducts.openEditModal === "function") {
+            InventoryProducts.openEditModal(productId, {
+                highlightMrp: true,
+                purchasePriceHint: price
+            });
+            return;
+        }
+        InventoryToast.error("Product form is not available.");
+    }
+
     function getBarcode(barcodeId) {
-        return barcodes.find(function (item) {
+        var found = barcodes.find(function (item) {
             return String(item.id) === String(barcodeId);
+        });
+        if (found) return found;
+
+        return Object.keys(barcodesByProductId).reduce(function (match, key) {
+            if (match) return match;
+            return barcodesByProductId[key].find(function (item) {
+                return String(item.id) === String(barcodeId);
+            });
+        }, null);
+    }
+
+    function mergeBarcodesIntoCache(items) {
+        (items || []).forEach(function (item) {
+            var exists = barcodes.some(function (existing) {
+                return String(existing.id) === String(item.id);
+            });
+            if (!exists) barcodes.push(item);
         });
     }
 
-    function getBarcodesForRow(productId) {
-        return barcodes.filter(function (item) {
-            if (!item.product) return true;
-            if (productId && String(item.product) === String(productId)) return true;
-            return false;
+    function fetchAllBarcodePages(query) {
+        var page = 1;
+        var pageSize = 500;
+        var all = [];
+
+        function loadNext() {
+            var path = query + (query.indexOf("?") >= 0 ? "&" : "?") +
+                "page=" + page + "&page_size=" + pageSize;
+            return InventoryApi.request(BARCODES_API, path).then(function (body) {
+                if (!(body && body.isSuccess && body.data)) {
+                    return all;
+                }
+                all = all.concat(body.data.items || []);
+                var pagination = body.data.pagination || {};
+                if (pagination.has_next) {
+                    page += 1;
+                    return loadNext();
+                }
+                return all;
+            });
+        }
+
+        return loadNext();
+    }
+
+    function fetchBarcodesForProduct(productId) {
+        if (!productId) return Promise.resolve([]);
+
+        var key = String(productId);
+        if (Object.prototype.hasOwnProperty.call(barcodesByProductId, key)) {
+            return Promise.resolve(barcodesByProductId[key]);
+        }
+        if (barcodesLoadPromises[key]) {
+            return barcodesLoadPromises[key];
+        }
+
+        barcodesLoadPromises[key] = fetchAllBarcodePages(
+            "?product_id=" + encodeURIComponent(productId) + "&ordering=value"
+        ).then(function (items) {
+            var product = getProduct(productId);
+            var filtered = product
+                ? items.filter(function (item) {
+                    return barcodeBelongsToProduct(item, product);
+                })
+                : items;
+            barcodesByProductId[key] = filtered;
+            mergeBarcodesIntoCache(filtered);
+            delete barcodesLoadPromises[key];
+            return filtered;
+        }).catch(function () {
+            delete barcodesLoadPromises[key];
+            return [];
         });
+
+        return barcodesLoadPromises[key];
+    }
+
+    function invalidateProductBarcodes(productId) {
+        if (!productId) return;
+        delete barcodesByProductId[String(productId)];
+    }
+
+    function resetBarcodeCache() {
+        barcodes = [];
+        barcodesByProductId = {};
+        barcodesLoadPromises = {};
+    }
+
+    function formatBarcodeOptionLabel(item) {
+        return String(item.value || "").trim() || "—";
+    }
+
+    function getProductSkuKey(product) {
+        if (!product || !product.sku) return "";
+        return String(product.sku).trim().toLowerCase();
+    }
+
+    function barcodeBelongsToProduct(item, product) {
+        if (!item || !product) return false;
+
+        if (item.product) {
+            return String(item.product) === String(product.id);
+        }
+
+        var skuKey = getProductSkuKey(product);
+        if (!skuKey) return false;
+
+        var label = String(item.model_label || item.product_sku || "").trim().toLowerCase();
+        return label === skuKey;
+    }
+
+    function getBarcodesForRow(productId) {
+        if (!productId) return [];
+        return barcodesByProductId[String(productId)] || [];
     }
 
     function assignBarcodeToProduct(barcodeId, productId) {
@@ -375,6 +524,7 @@ var InventoryStockIn = (function () {
                     return String(item.id) === String(barcodeId);
                 });
                 if (idx >= 0) barcodes[idx] = body.data;
+                invalidateProductBarcodes(productId);
                 return body.data;
             }
             InventoryToast.error(body.message || "Failed to assign barcode to product.");
@@ -397,30 +547,28 @@ var InventoryStockIn = (function () {
     }
 
     function loadBarcodes() {
-        return InventoryApi.request(BARCODES_API, "?page_size=500&ordering=model_label").then(function (body) {
-            barcodes = body && body.isSuccess ? (body.data.items || []) : [];
-            refreshAllRowBarcodeSelects();
-            return barcodes;
-        });
+        resetBarcodeCache();
+        refreshAllRowBarcodeSelects();
+        return Promise.resolve([]);
     }
 
-    function barcodeOptions(productId, selectedBarcodeId) {
-        var items = getBarcodesForRow(productId);
+    function barcodeOptionsFromItems(items, selectedBarcodeId) {
         var html = '<option value="">Select barcode</option>';
-        items.forEach(function (item) {
+        (items || []).forEach(function (item) {
             var selected = String(item.id) === String(selectedBarcodeId) ? " selected" : "";
-            var label = item.model_label
-                ? InventoryApi.escapeHtml(item.model_label) + " — " + InventoryApi.escapeHtml(item.value)
-                : InventoryApi.escapeHtml(item.value);
-            html += '<option value="' + item.id + '"' + selected + ">" + label + "</option>";
+            html += '<option value="' + item.id + '"' + selected + ">" +
+                InventoryApi.escapeHtml(formatBarcodeOptionLabel(item)) + "</option>";
         });
         return html;
     }
 
     function findBarcodeIdForLine(productId, batchNumber) {
-        if (!batchNumber) return "";
+        if (!batchNumber || !productId) return "";
+        var product = getProduct(productId);
+        if (!product) return "";
         var match = barcodes.find(function (item) {
-            return String(item.value) === String(batchNumber);
+            return String(item.value) === String(batchNumber) &&
+                barcodeBelongsToProduct(item, product);
         });
         return match ? match.id : "";
     }
@@ -428,13 +576,33 @@ var InventoryStockIn = (function () {
     function renderRowBarcodeSelect(row, productId, selectedBarcodeId) {
         var select = row.querySelector(".inv-item-barcode");
         if (!select) return;
-        select.innerHTML = barcodeOptions(productId, selectedBarcodeId);
-        if (selectedBarcodeId) {
-            select.value = String(selectedBarcodeId);
+
+        if (!productId) {
+            select.disabled = false;
+            select.innerHTML = '<option value="">Select barcode</option>';
+            if (window.InventorySearchableSelect) {
+                InventorySearchableSelect.refresh(select);
+            }
+            return;
         }
+
+        select.disabled = true;
+        select.innerHTML = '<option value="">Loading barcodes...</option>';
         if (window.InventorySearchableSelect) {
             InventorySearchableSelect.refresh(select);
         }
+
+        fetchBarcodesForProduct(productId).then(function (items) {
+            if (!select.isConnected) return;
+            select.disabled = false;
+            select.innerHTML = barcodeOptionsFromItems(items, selectedBarcodeId);
+            if (selectedBarcodeId) {
+                select.value = String(selectedBarcodeId);
+            }
+            if (window.InventorySearchableSelect) {
+                InventorySearchableSelect.rebuild(select);
+            }
+        });
     }
 
     function refreshAllRowBarcodeSelects() {
@@ -456,12 +624,13 @@ var InventoryStockIn = (function () {
         }
     }
 
-    function applyProductToRow(row, product) {
+    function applyProductToRow(row, product, preferredBarcodeId) {
         var priceEl = row.querySelector(".inv-item-price-with-tax");
         if (!product) {
             if (priceEl) priceEl.value = "";
             renderRowBarcodeSelect(row, "", "");
             updateRowTotalPrice(row);
+            updateRowMrpEditHint(row);
             return;
         }
         if (priceEl) {
@@ -470,20 +639,42 @@ var InventoryStockIn = (function () {
                 : product.actual_price;
             priceEl.value = price != null && Number(price) > 0 ? price : "";
         }
-        var barcodeSelect = row.querySelector(".inv-item-barcode");
-        var selectedBarcodeId = barcodeSelect ? barcodeSelect.value : "";
+        var selectedBarcodeId = preferredBarcodeId || "";
+        if (!selectedBarcodeId) {
+            var barcodeSelect = row.querySelector(".inv-item-barcode");
+            selectedBarcodeId = barcodeSelect ? barcodeSelect.value : "";
+        }
         if (selectedBarcodeId) {
             var selectedBarcode = getBarcode(selectedBarcodeId);
-            if (selectedBarcode && selectedBarcode.product && String(selectedBarcode.product) !== String(product.id)) {
+            if (!selectedBarcode || !barcodeBelongsToProduct(selectedBarcode, product)) {
                 selectedBarcodeId = "";
             }
         }
         renderRowBarcodeSelect(row, product.id, selectedBarcodeId);
         updateRowTotalPrice(row);
+        updateRowMrpEditHint(row);
     }
 
     function openAddBarcodeModal(row) {
         pendingBarcodeRow = row || null;
+        var productId = "";
+        if (row) {
+            var productSelect = row.querySelector(".inv-item-product");
+            productId = productSelect ? productSelect.value : "";
+        }
+        if (!productId) {
+            InventoryToast.error("Select a product first.");
+            return;
+        }
+        var product = getProduct(productId);
+        if (!product || !getProductSkuKey(product)) {
+            InventoryToast.error("Selected product must have a SKU before adding barcodes.");
+            return;
+        }
+        var modal = document.getElementById("barcode-modal");
+        if (modal) {
+            modal.dataset.prefillProductId = productId;
+        }
         if (window.InventorySettingsBarcode && typeof InventorySettingsBarcode.openAddModal === "function") {
             InventorySettingsBarcode.openAddModal();
             return;
@@ -529,11 +720,15 @@ var InventoryStockIn = (function () {
             '<button type="button" class="inv-inline-add-btn inv-item-vendor-add" title="Add vendor" aria-label="Add vendor">' +
             '<span class="material-symbols-outlined">add</span></button></div></div>' +
             '<div class="inv-mgmt-field"><label>Quantity</label><input class="inv-mgmt-input inv-item-qty" type="number" min="0.01" step="0.01" value="' + (data.quantity || 1) + '" required/></div>' +
-            '<div class="inv-mgmt-field"><label>Actual Price with Tax (per product)</label><input class="inv-mgmt-input inv-item-price-with-tax" type="number" min="0" step="0.01" placeholder="0.00" value="' + (data.purchase_price != null ? data.purchase_price : "") + '"/></div>' +
+            '<div class="inv-mgmt-field inv-stockin-price-field"><label>Actual Price with Tax (per product)</label>' +
+            '<div class="inv-field-inline inv-field-inline--price">' +
+            '<input class="inv-mgmt-input inv-item-price-with-tax" type="number" min="0" step="0.01" placeholder="0.00" value="' + (data.purchase_price != null ? data.purchase_price : "") + '"/>' +
+            '<button type="button" class="inv-inline-edit-btn inv-item-mrp-edit inv-hidden" title="Update product MRP" aria-label="Update product MRP">' +
+            '<span class="material-symbols-outlined">edit</span></button></div></div>' +
             '<div class="inv-mgmt-field"><label>Total Price</label><input class="inv-mgmt-input inv-item-total" type="text" readonly value="0.00"/></div>' +
             '<div class="inv-mgmt-field"><label>Barcode</label>' +
             '<div class="inv-field-inline">' +
-            '<select class="inv-mgmt-select inv-item-barcode">' + barcodeOptions(data.product_id, data.barcode_id) + "</select>" +
+            '<select class="inv-mgmt-select inv-item-barcode"><option value="">Select barcode</option></select>' +
             '<button type="button" class="inv-inline-add-btn inv-item-barcode-add" title="Add barcode" aria-label="Add barcode">' +
             '<span class="material-symbols-outlined">add</span></button></div></div>' +
             '<div class="inv-mgmt-field"><label>Batch No.</label><input class="inv-mgmt-input inv-item-batch" type="text" placeholder="B001" value="' + InventoryApi.escapeHtml(data.batch_number || "") + '"/></div>' +
@@ -562,6 +757,9 @@ var InventoryStockIn = (function () {
         row.querySelector(".inv-item-product-add").addEventListener("click", function () {
             openAddProductModal(row);
         });
+        row.querySelector(".inv-item-mrp-edit").addEventListener("click", function () {
+            openEditProductMrpModal(row);
+        });
         row.querySelector(".inv-item-vendor-add").addEventListener("click", function () {
             pendingVendorRow = row;
             var panel = document.getElementById("stockin-vendor-new-panel");
@@ -569,7 +767,7 @@ var InventoryStockIn = (function () {
         });
 
         if (data.product_id) {
-            applyProductToRow(row, getProduct(data.product_id));
+            applyProductToRow(row, getProduct(data.product_id), data.barcode_id || "");
         } else {
             updateRowTotalPrice(row);
         }
@@ -1151,21 +1349,30 @@ var InventoryStockIn = (function () {
             });
         });
 
+        window.addEventListener("inventory:product-updated", function () {
+            loadProducts().then(function () {
+                document.querySelectorAll("#stockin-items-container .inv-mgmt-item-row").forEach(function (row) {
+                    updateRowMrpEditHint(row);
+                });
+            });
+        });
+
         window.addEventListener("inventory:barcode-created", function (e) {
             var detail = e.detail || {};
             var barcode = detail.barcode || (detail.barcodes && detail.barcodes[0]);
             var focusRow = pendingBarcodeRow;
             pendingBarcodeRow = null;
-            loadBarcodes().then(function () {
-                if (focusRow && barcode) {
-                    var productId = focusRow.querySelector(".inv-item-product").value;
+            if (focusRow && barcode) {
+                var productId = focusRow.querySelector(".inv-item-product").value;
+                invalidateProductBarcodes(productId);
+                fetchBarcodesForProduct(productId).then(function () {
                     renderRowBarcodeSelect(focusRow, productId, barcode.id);
                     syncBatchFromBarcode(focusRow);
                     if (productId) {
                         assignBarcodeToProduct(barcode.id, productId);
                     }
-                }
-            });
+                });
+            }
         });
 
         if (openBtn) openBtn.addEventListener("click", openModal);
@@ -1181,7 +1388,11 @@ var InventoryStockIn = (function () {
             itemsContainer.addEventListener("input", function (e) {
                 if (!e.target.matches(".inv-item-price-with-tax, .inv-item-qty")) return;
                 var row = e.target.closest(".inv-mgmt-item-row");
-                if (row) updateRowTotalPrice(row);
+                if (!row) return;
+                updateRowTotalPrice(row);
+                if (e.target.matches(".inv-item-price-with-tax")) {
+                    updateRowMrpEditHint(row);
+                }
             });
         }
 

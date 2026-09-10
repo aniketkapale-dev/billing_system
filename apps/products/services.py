@@ -278,6 +278,8 @@ class ProductService(BaseService):
     def _resolve_sku(self, data, business_id, exclude_pk=None):
         sku = self._normalize_sku(data.get("sku"))
         if not sku:
+            if exclude_pk is None:
+                raise ValidationException("SKU is required.")
             sku = self._generate_unique_sku(business_id, exclude_pk=exclude_pk)
         self._ensure_unique_sku(sku, business_id, exclude_pk=exclude_pk)
         return sku

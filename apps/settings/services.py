@@ -1,5 +1,4 @@
 import random
-import re
 from decimal import Decimal
 
 from django.db import transaction
@@ -295,27 +294,30 @@ class ProductBarcodeService(BaseService):
         if not business_id:
             raise ValidationException("Business is required.")
 
-        model_number = str(data.get("model_number") or "").strip()
+        product_id = data.get("product_id")
         quantity = data.get("quantity")
 
-        if not model_number:
-            raise ValidationException("Model number is required.")
-        if not re.fullmatch(r"[A-Za-z0-9]+", model_number):
-            raise ValidationException("Model number can only contain letters and numbers.")
-        if len(model_number) > 80:
-            raise ValidationException("Model number is too long.")
+        product = Product.objects.filter(
+            pk=product_id,
+            business_id=business_id,
+            is_deleted=False,
+        ).first()
+        if not product:
+            raise ValidationException("Product not found.")
+
+        sku = (product.sku or "").strip()
+        if not sku:
+            raise ValidationException("Product SKU is required.")
 
         try:
-            quantity = int(quantity)
+            quantity = int(round(float(quantity)))
         except (TypeError, ValueError):
             raise ValidationException("Quantity must be a whole number.")
         if quantity < 1 or quantity > 500:
             raise ValidationException("Quantity must be between 1 and 500.")
 
-        date_stamp = timezone.localdate().strftime("%d%m%Y")
-        prefix = f"{model_number}{date_stamp}"
-        if len(prefix) + 4 > 100:
-            raise ValidationException("Model number is too long for barcode format.")
+        date_stamp = timezone.localdate().strftime("%Y%m%d")
+        prefix = date_stamp
 
         suffixes = self._allocate_unique_suffixes(prefix, business_id, quantity)
         created = []
@@ -325,9 +327,9 @@ class ProductBarcodeService(BaseService):
                 value = f"{prefix}{suffix}"
                 instance = self.repository.create(
                     business_id=business_id,
-                    product_id=None,
+                    product_id=product.id,
                     value=value,
-                    model_label=model_number,
+                    model_label=sku,
                     is_active=True,
                 )
                 created.append(instance)
@@ -358,7 +360,7 @@ class ProductBarcodeService(BaseService):
         remaining = 10000 - len(used)
         if quantity > remaining:
             raise ValidationException(
-                f"Cannot generate {quantity} unique barcodes for this model and date. "
+                f"Cannot generate {quantity} unique barcodes for this date. "
                 f"Only {remaining} unique suffixes remain."
             )
 

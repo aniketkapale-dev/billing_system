@@ -64,6 +64,12 @@ body.inv-dashboard-body {
     list-style: none;
     margin: 0;
     padding: 0 10px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.inv-sidebar-nav::-webkit-scrollbar {
+    display: none;
 }
 
 .inv-sidebar-nav li + li { margin-top: 4px; }

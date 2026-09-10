@@ -105,6 +105,7 @@ class InvoiceSettingWriteSerializer(serializers.ModelSerializer):
 class ProductBarcodeSerializer(BaseModelSerializer):
     business_name = serializers.CharField(source="business.business_name", read_only=True)
     product_name = serializers.SerializerMethodField()
+    product_sku = serializers.CharField(source="product.sku", read_only=True, default=None)
 
     class Meta:
         model = ProductBarcode
@@ -114,6 +115,7 @@ class ProductBarcodeSerializer(BaseModelSerializer):
             "business_name",
             "product",
             "product_name",
+            "product_sku",
             "value",
             "model_label",
             "is_active",
@@ -146,13 +148,19 @@ class ProductBarcodeWriteSerializer(serializers.Serializer):
 
 
 class ProductBarcodeBulkGenerateSerializer(serializers.Serializer):
-    model_number = serializers.CharField(max_length=80)
+    product_id = serializers.IntegerField()
     quantity = serializers.IntegerField(min_value=1, max_value=500)
 
-    def validate_model_number(self, value):
-        value = (value or "").strip()
+    def validate_product_id(self, value):
         if not value:
-            raise serializers.ValidationError("Model number is required.")
-        if not value.isalnum():
-            raise serializers.ValidationError("Model number can only contain letters and numbers.")
+            raise serializers.ValidationError("SKU is required.")
         return value
+
+    def validate_quantity(self, value):
+        try:
+            rounded = int(round(float(value)))
+        except (TypeError, ValueError):
+            raise serializers.ValidationError("Quantity must be a whole number.")
+        if rounded < 1 or rounded > 500:
+            raise serializers.ValidationError("Quantity must be between 1 and 500.")
+        return rounded

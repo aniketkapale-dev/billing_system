@@ -14,12 +14,15 @@ class ProductRepository(BaseRepository):
 
     def get_queryset(self):
         active_stocks = InventoryStock.objects.filter(is_deleted=False)
-        opening_batch_qty = InventoryBatch.objects.filter(
+        opening_batches = InventoryBatch.objects.filter(
             product_id=OuterRef("pk"),
             is_deleted=False,
             purchase_invoice_item__isnull=True,
-            batch_number="OPEN",
-        ).order_by("created_at")
+        )
+        opening_batch_total = opening_batches.values("product_id").annotate(
+            total=Sum("purchased_quantity"),
+        ).values("total")
+        opening_batch_first_added = opening_batches.order_by("created_at").values("created_at")
         return (
             super()
             .get_queryset()
@@ -38,9 +41,10 @@ class ProductRepository(BaseRepository):
                     output_field=DecimalField(max_digits=12, decimal_places=2),
                 ),
                 opening_quantity=Coalesce(
-                    Subquery(opening_batch_qty.values("purchased_quantity")[:1]),
+                    Subquery(opening_batch_total[:1]),
                     Value(Decimal("0")),
                     output_field=DecimalField(max_digits=12, decimal_places=2),
                 ),
+                opening_added_at=Subquery(opening_batch_first_added[:1]),
             )
         )

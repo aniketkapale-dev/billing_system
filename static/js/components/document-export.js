@@ -448,7 +448,26 @@ var InventoryDocumentExport = (function () {
         };
     }
 
-    function getLineTaxPercent(line, discounts) {
+    function getCombinedTaxRate(taxes, taxIds) {
+        if (window.InventoryTaxSelect && typeof InventoryTaxSelect.getCombinedRate === "function") {
+            return InventoryTaxSelect.getCombinedRate(taxes, taxIds);
+        }
+        var ids = Array.isArray(taxIds) ? taxIds : [];
+        return ids.reduce(function (sum, id) {
+            var tax = (taxes || []).find(function (item) {
+                return String(item.id) === String(id);
+            });
+            return sum + (tax ? Number(tax.value || 0) : 0);
+        }, 0);
+    }
+
+    function getLineTaxPercent(line, discounts, taxes) {
+        var taxIds = Array.isArray(line.sale_tax_ids) ? line.sale_tax_ids : [];
+        if (taxIds.length) {
+            var selectedRate = getCombinedTaxRate(taxes, taxIds);
+            if (selectedRate > 0) return selectedRate;
+        }
+
         discounts = discounts || getLineDiscountAmounts(line);
         var taxableBase = Number(discounts.afterDistributor || 0);
         if (taxableBase <= 0) return 0;
@@ -467,14 +486,92 @@ var InventoryDocumentExport = (function () {
         return formatted + "%";
     }
 
-    function buildInvoicePrintRows(sale) {
+    function formatTaxPercent(value) {
+        var num = Number(value || 0);
+        if (isNaN(num) || num <= 0) return "—";
+        return num.toFixed(2) + "%";
+    }
+
+    function getProductMergeKey(row) {
+        if (row.product_id != null && row.product_id !== "") {
+            return "p:" + row.product_id;
+        }
+        if (row.product_sku) {
+            return "sku:" + String(row.product_sku).trim().toLowerCase();
+        }
+        return "name:" + String(row.product_name || "").trim().toLowerCase();
+    }
+
+    function mergePrintRowsByProduct(rows) {
+        var mergedMap = {};
+        var order = [];
+
+        rows.forEach(function (row) {
+            var key = getProductMergeKey(row);
+            if (!mergedMap[key]) {
+                mergedMap[key] = {
+                    product_id: row.product_id,
+                    product_name: row.product_name,
+                    product_sku: row.product_sku,
+                    quantity: 0,
+                    unit: row.unit,
+                    priceWeightedSum: 0,
+                    simple_discount: 0,
+                    distributor_discount: 0,
+                    tax: 0,
+                    amount: 0
+                };
+                order.push(key);
+            }
+
+            var entry = mergedMap[key];
+            var qty = Number(row.quantity || 0);
+            entry.quantity += qty;
+            entry.priceWeightedSum += Number(row.price || 0) * qty;
+            entry.simple_discount = roundMoney(entry.simple_discount + Number(row.simple_discount || 0));
+            entry.distributor_discount = roundMoney(entry.distributor_discount + Number(row.distributor_discount || 0));
+            entry.tax = roundMoney(entry.tax + Number(row.tax || 0));
+            entry.amount = roundMoney(entry.amount + Number(row.amount || 0));
+            if (!entry.unit && row.unit) entry.unit = row.unit;
+        });
+
+        return order.map(function (key, index) {
+            var entry = mergedMap[key];
+            var qty = entry.quantity;
+            var price = qty > 0 ? roundMoney(entry.priceWeightedSum / qty) : 0;
+            var gross = price * qty;
+            var simplePercent = gross > 0 ? roundMoney((entry.simple_discount / gross) * 100) : 0;
+            var afterSimple = Math.max(0, gross - entry.simple_discount);
+            var distributorPercent = afterSimple > 0
+                ? roundMoney((entry.distributor_discount / afterSimple) * 100)
+                : 0;
+            var taxPercent = entry.amount > 0 ? roundMoney((entry.tax / entry.amount) * 100) : 0;
+
+            return {
+                serial: index + 1,
+                product_id: entry.product_id,
+                product_name: entry.product_name,
+                product_sku: entry.product_sku,
+                quantity: qty,
+                unit: entry.unit || "pcs",
+                batch_number: "",
+                expiry_date: null,
+                price: price,
+                simple_discount: entry.simple_discount,
+                simple_discount_percent: simplePercent,
+                distributor_discount: entry.distributor_discount,
+                distributor_discount_percent: distributorPercent,
+                tax: entry.tax,
+                tax_percent: taxPercent,
+                amount: entry.amount
+            };
+        });
+    }
+
+    function buildInvoicePrintRows(sale, taxes) {
         var rows = [];
-        var serial = 0;
 
         (sale.items || []).forEach(function (line) {
-            var batchLines = line.batch_lines && line.batch_lines.length
-                ? line.batch_lines
-                : [{ quantity: line.quantity, batch_number: "", expiry_date: null }];
             var lineQty = Number(line.quantity || 0);
             var lineTotal = Number(line.line_total || 0);
             var lineTax = Number(line.tax_amount || 0);
@@ -486,32 +583,24 @@ var InventoryDocumentExport = (function () {
                     : (line.unit_price || 0)
             );
 
-            batchLines.forEach(function (batchLine) {
-                serial += 1;
-                var batchQty = Number(batchLine.quantity || 0);
-                var ratio = lineQty > 0 ? batchQty / lineQty : 1;
-
-                rows.push({
-                    serial: serial,
-                    product_name: line.product_name,
-                    product_sku: line.product_sku,
-                    quantity: batchQty,
-                    unit: line.product_unit || "pcs",
-                    batch_number: batchLine.batch_number || "",
-                    expiry_date: batchLine.expiry_date,
-                    price: unitPrice,
-                    simple_discount: roundMoney(discounts.simplePerUnit * batchQty),
-                    simple_discount_percent: discounts.simplePercent,
-                    distributor_discount: roundMoney(discounts.distributorPerUnit * batchQty),
-                    distributor_discount_percent: discounts.distributorPercent,
-                    tax: roundMoney(lineTax * ratio),
-                    tax_percent: getLineTaxPercent(line, discounts),
-                    amount: roundMoney(lineNet * ratio)
-                });
+            rows.push({
+                product_id: line.product,
+                product_name: line.product_name,
+                product_sku: line.product_sku,
+                quantity: lineQty,
+                unit: line.product_unit || "pcs",
+                price: unitPrice,
+                simple_discount: roundMoney(discounts.simplePerUnit * lineQty),
+                simple_discount_percent: discounts.simplePercent,
+                distributor_discount: roundMoney(discounts.distributorPerUnit * lineQty),
+                distributor_discount_percent: discounts.distributorPercent,
+                tax: roundMoney(lineTax),
+                tax_percent: getLineTaxPercent(line, discounts, taxes),
+                amount: roundMoney(lineNet)
             });
         });
 
-        return rows;
+        return mergePrintRowsByProduct(rows);
     }
 
     function buildInvoiceLinesColgroup() {
@@ -534,8 +623,8 @@ var InventoryDocumentExport = (function () {
         );
     }
 
-    function buildInvoiceItemRowsHtml(sale) {
-        var printRows = buildInvoicePrintRows(sale);
+    function buildInvoiceItemRowsHtml(sale, taxes) {
+        var printRows = buildInvoicePrintRows(sale, taxes);
         if (!printRows.length) {
             return '<tr class="inv-empty-row"><td colspan="13">No products on this invoice</td></tr>';
         }
@@ -559,7 +648,7 @@ var InventoryDocumentExport = (function () {
                 '<td class="num inv-col-dist-amt">' + formatMoney(row.distributor_discount) + "</td>" +
                 '<td class="center inv-col-dist-pct">' + displayText(formatPercent(row.distributor_discount_percent)) + "</td>" +
                 '<td class="num inv-col-tax-amt">' + formatMoney(row.tax) + "</td>" +
-                '<td class="center inv-col-tax-pct">' + displayText(formatPercent(row.tax_percent)) + "</td>" +
+                '<td class="center inv-col-tax-pct">' + displayText(formatTaxPercent(row.tax_percent)) + "</td>" +
                 '<td class="num inv-col-amount">' + formatMoney(row.amount) + "</td>" +
                 "</tr>"
             );
@@ -694,7 +783,7 @@ var InventoryDocumentExport = (function () {
         return formatMoney(num);
     }
 
-    function buildSaleInvoiceHtml(sale) {
+    function buildSaleInvoiceHtml(sale, taxes) {
         var business = getBusinessDetails();
         var businessName = sale.business_name || business.business_name || business.name || "Business";
         var paymentInfo = getPaymentInfo(business);
@@ -709,7 +798,7 @@ var InventoryDocumentExport = (function () {
             totalAmount += Math.max(0, Number(line.line_total || 0) - Number(line.tax_amount || 0));
         });
 
-        var itemRows = buildInvoiceItemRowsHtml(sale);
+        var itemRows = buildInvoiceItemRowsHtml(sale, taxes);
 
         subtotal = roundMoney(subtotal);
         totalTax = roundMoney(totalTax);
@@ -772,10 +861,12 @@ var InventoryDocumentExport = (function () {
         return Math.round(Number(value || 0) * 100) / 100;
     }
 
-    function buildSalesDocumentHtml(sales) {
+    function buildSalesDocumentHtml(sales, options) {
+        options = options || {};
+        var taxes = options.taxes || [];
         var list = sales || [];
         var sections = list.map(function (sale) {
-            return buildSaleInvoiceHtml(sale);
+            return buildSaleInvoiceHtml(sale, taxes);
         }).join("");
 
         return (

@@ -51,10 +51,67 @@ var InventorySidebar = (function () {
         });
     }
 
+    function resetFlyoutPosition(group) {
+        var sub = group && group.querySelector(".inv-nav-sub");
+        if (sub) sub.style.top = "";
+    }
+
+    function ensureGroupFullyVisible(group) {
+        var nav = document.querySelector(".inv-sidebar-nav");
+        if (!nav || !group) return;
+
+        var sub = group.querySelector(".inv-nav-sub");
+        if (!sub) return;
+
+        function applyScroll() {
+            if (isCollapsedRail()) {
+                resetFlyoutPosition(group);
+                var padding = 12;
+                var subRect = sub.getBoundingClientRect();
+                var maxBottom = window.innerHeight - padding;
+
+                if (subRect.bottom > maxBottom) {
+                    sub.style.top = (maxBottom - subRect.bottom) + "px";
+                }
+
+                var navRect = nav.getBoundingClientRect();
+                var groupRect = group.getBoundingClientRect();
+                if (groupRect.top < navRect.top + padding) {
+                    nav.scrollTop -= navRect.top + padding - groupRect.top;
+                } else if (groupRect.bottom > navRect.bottom - padding) {
+                    nav.scrollTop += groupRect.bottom - navRect.bottom + padding;
+                }
+                return;
+            }
+
+            var navRect = nav.getBoundingClientRect();
+            var padding = 8;
+            var lastItem = sub.lastElementChild || sub;
+            var bottomRect = lastItem.getBoundingClientRect();
+            var topRect = group.getBoundingClientRect();
+
+            if (bottomRect.bottom > navRect.bottom - padding) {
+                nav.scrollTop += bottomRect.bottom - navRect.bottom + padding;
+            } else if (topRect.top < navRect.top + padding) {
+                nav.scrollTop -= navRect.top + padding - topRect.top;
+            }
+        }
+
+        requestAnimationFrame(function () {
+            requestAnimationFrame(applyScroll);
+        });
+        setTimeout(applyScroll, 480);
+    }
+
     function setGroupOpen(group, open) {
         var toggle = group.querySelector(".inv-nav-group-toggle");
         group.classList.toggle("inv-nav-group--open", open);
         if (toggle) toggle.setAttribute("aria-expanded", open ? "true" : "false");
+        if (open) {
+            ensureGroupFullyVisible(group);
+        } else {
+            resetFlyoutPosition(group);
+        }
     }
 
     function closeOtherGroups(except) {
@@ -80,6 +137,7 @@ var InventorySidebar = (function () {
             group.addEventListener("mouseenter", function () {
                 if (!group.querySelector(".inv-nav-sub")) return;
                 clearGroupTimers(group);
+                ensureGroupFullyVisible(group);
                 group._openTimer = setTimeout(function () {
                     group._openTimer = null;
                     closeOtherGroups(group);
@@ -89,6 +147,7 @@ var InventorySidebar = (function () {
 
             group.addEventListener("mouseleave", function () {
                 clearGroupTimers(group);
+                resetFlyoutPosition(group);
                 scheduleCloseGroup(group);
             });
 

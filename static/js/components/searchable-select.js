@@ -124,6 +124,7 @@ var InventorySearchableSelect = (function () {
     }
 
     function positionMenu(wrap) {
+        var select = wrap.querySelector("select");
         var trigger = wrap.querySelector(".inv-search-select-trigger");
         var menu = attachMenuForOpen(wrap);
         if (!trigger || !menu) return;
@@ -137,9 +138,14 @@ var InventorySearchableSelect = (function () {
         var openUp = spaceBelow < 140 && spaceAbove > spaceBelow;
         var inModal = isInModal(wrap);
 
+        var menuWidth = rect.width;
+        if (select && select.classList.contains("inv-item-barcode")) {
+            menuWidth = Math.max(menuWidth, 280);
+        }
+
         menu.style.position = "fixed";
         menu.style.left = rect.left + "px";
-        menu.style.width = rect.width + "px";
+        menu.style.width = menuWidth + "px";
         menu.style.right = "auto";
         menu.style.zIndex = inModal ? "10051" : "10050";
 

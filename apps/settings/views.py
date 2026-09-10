@@ -15,6 +15,7 @@ from core.base_response import ApiResponse
 from core.base_viewset import BaseViewSet
 from core.business_access import resolve_business_access, user_has_tab
 from core.business_viewset import BusinessScopedViewSetMixin
+from core.pagination import BarcodePagination
 from core.permissions import HasRole, IsAuthenticatedUser
 
 
@@ -99,6 +100,7 @@ class ProductBarcodeViewSet(BusinessScopedViewSetMixin, BaseViewSet):
     service_class = ProductBarcodeService
     serializer_class = ProductBarcodeSerializer
     write_serializer_class = ProductBarcodeWriteSerializer
+    pagination_class = BarcodePagination
     search_fields = ("value", "model_label", "product__name")
     ordering_default = ("model_label", "value")
     ordering_fields = {
@@ -133,14 +135,31 @@ class ProductBarcodeViewSet(BusinessScopedViewSetMixin, BaseViewSet):
     def _apply_query(self, queryset):
         from django.db.models import Q
 
+        from apps.products.models import Product
+
         product_id = (self.request.query_params.get("product_id") or "").strip()
+        sku = (self.request.query_params.get("sku") or "").strip()
         unassigned = (self.request.query_params.get("unassigned") or "").strip().lower()
+
         if unassigned in {"1", "true", "yes"}:
             queryset = queryset.filter(product_id__isnull=True)
-        elif product_id.isdigit():
+        elif sku:
             queryset = queryset.filter(
-                Q(product_id__isnull=True) | Q(product_id=int(product_id))
+                Q(product__sku__iexact=sku)
+                | Q(product__isnull=True, model_label__iexact=sku)
             )
+        elif product_id.isdigit():
+            pid = int(product_id)
+            product = Product.objects.filter(pk=pid, is_deleted=False).first()
+            if product and (product.sku or "").strip():
+                sku_value = product.sku.strip()
+                queryset = queryset.filter(
+                    Q(product_id=pid)
+                    | Q(product__isnull=True, model_label__iexact=sku_value)
+                )
+            else:
+                queryset = queryset.filter(product_id=pid)
+
         return super()._apply_query(queryset)
 
     def create(self, request):

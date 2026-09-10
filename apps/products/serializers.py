@@ -20,6 +20,7 @@ class ProductSerializer(BaseModelSerializer):
     tax_value = serializers.DecimalField(source="tax.value", max_digits=6, decimal_places=2, read_only=True)
     quantity = serializers.SerializerMethodField()
     opening_quantity = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
+    opening_added_at = serializers.DateTimeField(read_only=True)
     sold_quantity = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
     has_sales = serializers.SerializerMethodField()
 
@@ -53,6 +54,7 @@ class ProductSerializer(BaseModelSerializer):
             "sale_price",
             "quantity",
             "opening_quantity",
+            "opening_added_at",
             "sold_quantity",
             "has_sales",
             "is_active",
@@ -127,7 +129,10 @@ class ProductWriteSerializer(serializers.ModelSerializer):
         return Decimal(str(value or 0)).quantize(Decimal("0.01"))
 
     def validate_sku(self, value):
-        return (value or "").strip()
+        value = (value or "").strip()
+        if not value and self.instance is None:
+            raise serializers.ValidationError("SKU is required.")
+        return value
 
     class Meta:
         model = Product

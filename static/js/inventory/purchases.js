@@ -182,14 +182,15 @@ var InventoryPurchases = (function () {
 
     function exportSalesPrint(ids) {
         InventoryLoader.show();
-        fetchSalesDetails(ids)
-            .then(function (sales) {
+        Promise.all([fetchSalesDetails(ids), loadTaxes()])
+            .then(function (results) {
+                var sales = results[0];
                 InventoryLoader.hide();
                 if (!sales.length) {
                     InventoryToast.error("Unable to load selected sales.");
                     return;
                 }
-                var html = InventoryDocumentExport.buildSalesDocumentHtml(sales);
+                var html = InventoryDocumentExport.buildSalesDocumentHtml(sales, { taxes: taxes });
                 var printTitle = sales.length === 1
                     ? "Sale Invoice" + (sales[0].reference_no ? " - " + sales[0].reference_no : "")
                     : "Sales Invoices";

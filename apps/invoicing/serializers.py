@@ -142,6 +142,7 @@ class InventoryBatchSerializer(BaseModelSerializer):
     unit_profit = serializers.SerializerMethodField()
     business_name = serializers.CharField(source="business.business_name", read_only=True)
     invoice_number = serializers.SerializerMethodField()
+    invoice_date = serializers.SerializerMethodField()
 
     class Meta:
         model = InventoryBatch
@@ -163,6 +164,7 @@ class InventoryBatchSerializer(BaseModelSerializer):
             "manufacture_date",
             "expiry_date",
             "invoice_number",
+            "invoice_date",
             "is_active",
             "created_at",
             "updated_at",
@@ -180,3 +182,9 @@ class InventoryBatchSerializer(BaseModelSerializer):
         if item and item.purchase_invoice:
             return item.purchase_invoice.invoice_number
         return "Opening Stock"
+
+    def get_invoice_date(self, obj):
+        item = obj.purchase_invoice_item
+        if item and item.purchase_invoice:
+            return item.purchase_invoice.invoice_date
+        return None

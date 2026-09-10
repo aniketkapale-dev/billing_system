@@ -29,3 +29,8 @@ class StandardPagination(PageNumberPagination):
                 "errors": [],
             }
         )
+
+
+class BarcodePagination(StandardPagination):
+    page_size = 100
+    max_page_size = 5000

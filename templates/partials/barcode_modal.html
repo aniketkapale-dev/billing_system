@@ -10,9 +10,11 @@
         <div class="inv-modal-body">
             <div class="inv-mgmt-form-grid" style="padding:0;">
                 <div class="inv-mgmt-field">
-                    <label for="settings-barcode-model-number">Model Number</label>
-                    <input id="settings-barcode-model-number" class="inv-mgmt-input" type="text" placeholder="e.g. 1234 or AB12" required/>
-                    <p class="inv-field-hint">Barcode format: <strong>ModelNumber + <span id="settings-barcode-date-hint">DDMMYYYY</span> + RAND4</strong> (unique 4-digit suffix)</p>
+                    <label for="settings-barcode-product-sku">SKU No. <span class="inv-field-required">*</span></label>
+                    <select id="settings-barcode-product-sku" class="inv-mgmt-select" required>
+                        <option value="">Select SKU</option>
+                    </select>
+                    <p class="inv-field-hint">Barcode format: <strong><span id="settings-barcode-date-hint">YYYYMMDD</span> + RAND4</strong> (unique 4-digit suffix)</p>
                 </div>
                 <div class="inv-mgmt-field">
                     <label for="settings-barcode-quantity">Quantity</label>
@@ -26,3 +28,4 @@
         </div>
     </div>
 </div>
+

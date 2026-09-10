@@ -170,11 +170,11 @@ var InventoryStock = (function () {
                         }
                     },
                     {
-                        id: "received",
-                        label: "Received",
-                        sortKey: "created_at",
+                        id: "purchase_date",
+                        label: "Purchase Date",
+                        sortKey: "invoice_date",
                         cell: function (item) {
-                            return "<td>" + formatDate(String(item.created_at || "").slice(0, 10)) + "</td>";
+                            return "<td>" + formatDate(item.invoice_date) + "</td>";
                         }
                     }
                 ],

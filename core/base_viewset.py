@@ -106,7 +106,8 @@ class BaseViewSet(GenericViewSet):
     def _paginate(self, queryset):
         from core.pagination import StandardPagination
 
-        paginator = StandardPagination()
+        paginator_class = getattr(self, "pagination_class", None) or StandardPagination
+        paginator = paginator_class()
         page = paginator.paginate_queryset(queryset, self.request, view=self)
         serializer = self.serializer_class(page, many=True, context={"request": self.request})
         return paginator.get_paginated_response(serializer.data)

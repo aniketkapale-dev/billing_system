@@ -1,6 +1,6 @@
 {% extends "user_layout.html" %}
 {% load static %}
-{% block title %}{% if settings_section == 'tax' %}Tax Settings{% elif settings_section == 'invoice' %}Invoice Settings{% elif settings_section == 'barcode' %}Barcode Settings{% else %}Settings{% endif %} - Billing System{% endblock %}
+{% block title %}{% if settings_section == 'tax' %}Tax Settings{% elif settings_section == 'invoice' %}Invoice Settings{% elif settings_section == 'barcode' %}Generate Barcode{% else %}Settings{% endif %} - Billing System{% endblock %}
 
 {% block content %}
 <div class="inv-mgmt-page">
@@ -186,18 +186,18 @@
     </div>
 
     {% elif settings_section == 'barcode' %}
-    <div id="settings-barcode-list-panel" class="inv-mgmt-page-panel">
+    <div id="settings-barcode-list-panel" class="inv-mgmt-page-panel inv-hidden">
         <div class="inv-mgmt-header">
-            <h2 class="inv-dashboard-greeting">Barcode Settings</h2>
+            <h2 class="inv-dashboard-greeting">Barcode List</h2>
             <button id="settings-barcode-add-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">
                 <span class="material-symbols-outlined">barcode</span>
-                Generate Barcodes
+                Generate Barcode
             </button>
         </div>
 
         <div class="inv-mgmt-card">
             <div class="inv-mgmt-toolbar inv-mgmt-toolbar--filters">
-                <input type="search" id="settings-barcode-search" class="inv-mgmt-search" placeholder="Search product, model or barcode"/>
+                <input type="search" id="settings-barcode-search" class="inv-mgmt-search" placeholder="Search product, SKU or barcode"/>
             </div>
             <div class="inv-mgmt-table-wrap">
                 <table class="inv-mgmt-table inv-mgmt-table--settings-barcode">
@@ -210,7 +210,7 @@
                     <thead>
                         <tr>
                             <th>Product</th>
-                            <th>Model Number</th>
+                            <th>SKU</th>
                             <th>Barcode Value</th>
                             <th class="inv-mgmt-cell--action">Action</th>
                         </tr>
@@ -224,13 +224,13 @@
         </div>
     </div>
 
-    <div id="settings-barcode-form-panel" class="inv-mgmt-page-panel inv-hidden">
+    <div id="settings-barcode-form-panel" class="inv-mgmt-page-panel">
         <div class="inv-mgmt-panel-header">
-            <h2 id="settings-barcode-form-title" class="inv-dashboard-greeting">Generate Barcodes</h2>
-            <button type="button" class="inv-mgmt-btn inv-page-back-btn" data-page-back="settings-barcode-list-panel">
-                <span class="material-symbols-outlined">arrow_back</span>
-                Back to List
-            </button>
+            <h2 id="settings-barcode-form-title" class="inv-dashboard-greeting">Generate Barcode</h2>
+            <a href="/dashboard/settings/barcode/?view=list" class="inv-mgmt-btn inv-page-back-btn">
+                <span class="material-symbols-outlined">list</span>
+                Barcode List
+            </a>
         </div>
         <div class="inv-mgmt-card inv-mgmt-panel-card">
             <div class="inv-mgmt-panel-body">
@@ -241,8 +241,8 @@
                             <input id="settings-barcode-edit-product" class="inv-mgmt-input" type="text" readonly/>
                         </div>
                         <div class="inv-mgmt-field">
-                            <label>Model Number</label>
-                            <input id="settings-barcode-edit-model" class="inv-mgmt-input" type="text" readonly/>
+                            <label>SKU</label>
+                            <input id="settings-barcode-edit-sku" class="inv-mgmt-input" type="text" readonly/>
                         </div>
                         <div class="inv-mgmt-field inv-mgmt-field--full">
                             <label>Barcode Value</label>
@@ -252,35 +252,35 @@
                 </div>
                 <div id="settings-barcode-generate-view">
                     <div class="inv-barcode-tabs" role="tablist">
-                        <button type="button" class="inv-barcode-tab inv-barcode-tab--active" data-barcode-tab="bulk">Bulk Generate</button>
+                        <button type="button" class="inv-barcode-tab inv-barcode-tab--active" data-barcode-tab="generate">Generate Barcode</button>
                         <button type="button" class="inv-barcode-tab" data-barcode-tab="reprint">Reprint</button>
                     </div>
-                    <div id="settings-barcode-tab-bulk" class="inv-barcode-tab-panel">
+                    <div id="settings-barcode-tab-generate" class="inv-barcode-tab-panel">
                         <div class="inv-mgmt-form-grid" style="padding:0;margin-top:16px;">
                             <div class="inv-mgmt-field">
-                                <label for="settings-barcode-model-number">Model Number</label>
-                                <input id="settings-barcode-model-number" class="inv-mgmt-input" type="text" placeholder="e.g. 1234 or AB12" required/>
-                                <p class="inv-field-hint">Printed top text: <strong>ModelNumber</strong></p>
-                                <p class="inv-field-hint">Barcode value format: <strong>ModelNumber + <span id="settings-barcode-date-hint">DDMMYYYY</span> + RAND4</strong> (4-digit suffix is always unique)</p>
+                                <label for="settings-barcode-product-sku">SKU No. <span class="inv-field-required">*</span></label>
+                                <select id="settings-barcode-product-sku" class="inv-mgmt-select" required>
+                                    <option value="">Select SKU</option>
+                                </select>
+                                <p class="inv-field-hint">Barcode value format: <strong><span id="settings-barcode-date-hint">YYYYMMDD</span> + RAND4</strong> (4-digit suffix is always unique)</p>
                             </div>
                             <div class="inv-mgmt-field">
-                                <label for="settings-barcode-quantity">Quantity</label>
+                                <label for="settings-barcode-quantity">Quantity <span class="inv-field-required">*</span></label>
                                 <input id="settings-barcode-quantity" class="inv-mgmt-input" type="number" min="1" max="500" step="1" placeholder="e.g. 10" value="1" required/>
-                                <p class="inv-field-hint">Product can be assigned later when adding a purchase item.</p>
                             </div>
                         </div>
                     </div>
                     <div id="settings-barcode-tab-reprint" class="inv-barcode-tab-panel inv-hidden">
                         <div class="inv-mgmt-form-grid" style="padding:0;margin-top:16px;">
                             <div class="inv-mgmt-field">
-                                <label for="settings-barcode-reprint-model">Model Number</label>
-                                <input id="settings-barcode-reprint-model" class="inv-mgmt-input" type="text" placeholder="e.g. MODEL01" required/>
+                                <label for="settings-barcode-reprint-value">Barcode No. <span class="inv-field-required">*</span></label>
+                                <input id="settings-barcode-reprint-value" class="inv-mgmt-input" type="text" placeholder="e.g. 202609101234" required/>
+                                <p class="inv-field-hint">Enter the full barcode value to reprint labels.</p>
                             </div>
                             <div class="inv-mgmt-field">
-                                <label for="settings-barcode-reprint-product">Product <span class="inv-field-optional">(optional)</span></label>
-                                <select id="settings-barcode-reprint-product" class="inv-mgmt-select">
-                                    <option value="">All products</option>
-                                </select>
+                                <label for="settings-barcode-reprint-quantity">Quantity <span class="inv-field-required">*</span></label>
+                                <input id="settings-barcode-reprint-quantity" class="inv-mgmt-input" type="number" min="1" max="500" step="1" placeholder="e.g. 5" value="1" required/>
+                                <p class="inv-field-hint">Number of barcode labels to print.</p>
                             </div>
                         </div>
                     </div>
@@ -293,8 +293,8 @@
                     Generate &amp; Download
                 </button>
                 <button id="settings-barcode-reprint-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary inv-hidden">
-                    <span class="material-symbols-outlined">picture_as_pdf</span>
-                    Download PDF
+                    <span class="material-symbols-outlined">print</span>
+                    Print Barcode
                 </button>
             </div>
         </div>
@@ -317,8 +317,8 @@ InventoryPagePanel.init();
 InventorySettingsInvoice.init();
 </script>
 {% elif settings_section == 'barcode' %}
-<script src="{% static 'js/components/barcode-pdf.js' %}?v=20260309-barcode-gen"></script>
-<script src="{% static 'js/inventory/settings-barcode.js' %}?v=20260309-barcode-gen"></script>
+<script src="{% static 'js/components/barcode-pdf.js' %}?v=20260310-barcode-size"></script>
+<script src="{% static 'js/inventory/settings-barcode.js' %}?v=20260310-barcode-bulk"></script>
 <script>
 InventoryPagePanel.init();
 InventorySettingsBarcode.init();

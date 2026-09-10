@@ -120,6 +120,7 @@ class InventoryBatchViewSet(BusinessScopedViewSetMixin, BaseViewSet):
         "purchase_price": "purchase_price",
         "selling_price": "selling_price",
         "invoice_number": "purchase_invoice_item__purchase_invoice__invoice_number",
+        "invoice_date": "purchase_invoice_item__purchase_invoice__invoice_date",
     }
 
     def get_permissions(self):

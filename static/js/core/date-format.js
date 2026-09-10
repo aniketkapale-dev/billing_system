@@ -77,7 +77,7 @@ var InventoryDateFormat = (function () {
     function formatBarcodeDate(value) {
         var parts = parseDateParts(value || new Date().toISOString());
         if (!parts) return "";
-        return parts.day + parts.month + parts.year;
+        return parts.year + parts.month + parts.day;
     }
 
     return {

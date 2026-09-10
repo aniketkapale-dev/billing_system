@@ -12,7 +12,7 @@ class ProductViewSet(BusinessScopedViewSetMixin, BaseViewSet):
     serializer_class = ProductSerializer
     write_serializer_class = ProductWriteSerializer
     search_fields = ("name", "sku", "barcode", "description")
-    ordering_default = ("name",)
+    ordering_default = ("-created_at",)
     ordering_fields = {
         "name": "name",
         "sku": "sku",
@@ -21,6 +21,7 @@ class ProductViewSet(BusinessScopedViewSetMixin, BaseViewSet):
         "category": "category__name",
         "brand": "brand__name",
         "unit": "unit__short_name",
+        "created_at": "created_at",
     }
     required_roles = ["Business Owner", "Business Staff"]
     required_tab = "products"
