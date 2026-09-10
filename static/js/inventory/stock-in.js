@@ -348,41 +348,42 @@ var InventoryStockIn = (function () {
         return isNaN(num) ? 0 : num;
     }
 
-    function getProductMrp(product) {
+    function getProductHighestMrp(product) {
         if (!product) return 0;
-        var mrp = Number(product.mrp || 0);
-        return isNaN(mrp) || mrp < 0 ? 0 : mrp;
+        var batchMrp = Number(product.max_batch_mrp || 0);
+        var productMrp = Number(product.mrp || 0);
+        var highest = Math.max(
+            isNaN(batchMrp) ? 0 : batchMrp,
+            isNaN(productMrp) ? 0 : productMrp
+        );
+        return highest < 0 ? 0 : highest;
     }
 
     function updateRowMrpEditHint(row) {
         var productSelect = row.querySelector(".inv-item-product");
         var priceEl = row.querySelector(".inv-item-price-with-tax");
-        var editBtn = row.querySelector(".inv-item-mrp-edit");
-        if (!productSelect || !priceEl || !editBtn) return;
+        var mrpField = row.querySelector(".inv-stockin-mrp-field");
+        var mrpInput = row.querySelector(".inv-item-mrp");
+        var hint = row.querySelector(".inv-stockin-mrp-hint");
+        if (!productSelect || !priceEl) return;
 
         var product = getProduct(productSelect.value);
         var price = parseRowPrice(priceEl.value);
-        var show = !!(product && price > 0 && price > getProductMrp(product));
-        editBtn.classList.toggle("inv-hidden", !show);
-    }
+        var highestMrp = getProductHighestMrp(product);
+        var show = !!(product && price > 0 && price > highestMrp);
 
-    function openEditProductMrpModal(row) {
-        var productSelect = row.querySelector(".inv-item-product");
-        var priceEl = row.querySelector(".inv-item-price-with-tax");
-        var productId = productSelect ? productSelect.value : "";
-        if (!productId) {
-            InventoryToast.error("Select a product first.");
-            return;
+        if (mrpField) mrpField.classList.toggle("inv-hidden", !show);
+        if (show && mrpInput && mrpInput.value === "") {
+            mrpInput.value = String(price);
         }
-        var price = parseRowPrice(priceEl ? priceEl.value : 0);
-        if (window.InventoryProducts && typeof InventoryProducts.openEditModal === "function") {
-            InventoryProducts.openEditModal(productId, {
-                highlightMrp: true,
-                purchasePriceHint: price
-            });
-            return;
+        if (hint) {
+            if (show) {
+                hint.textContent =
+                    "Change the MRP — it should be greater than " + InventoryApi.formatMoney(price) + ".";
+            } else {
+                hint.textContent = "";
+            }
         }
-        InventoryToast.error("Product form is not available.");
     }
 
     function getBarcode(barcodeId) {
@@ -562,17 +563,6 @@ var InventoryStockIn = (function () {
         return html;
     }
 
-    function findBarcodeIdForLine(productId, batchNumber) {
-        if (!batchNumber || !productId) return "";
-        var product = getProduct(productId);
-        if (!product) return "";
-        var match = barcodes.find(function (item) {
-            return String(item.value) === String(batchNumber) &&
-                barcodeBelongsToProduct(item, product);
-        });
-        return match ? match.id : "";
-    }
-
     function renderRowBarcodeSelect(row, productId, selectedBarcodeId) {
         var select = row.querySelector(".inv-item-barcode");
         if (!select) return;
@@ -612,16 +602,6 @@ var InventoryStockIn = (function () {
             var selectedId = barcodeSelect ? barcodeSelect.value : "";
             renderRowBarcodeSelect(row, productId, selectedId);
         });
-    }
-
-    function syncBatchFromBarcode(row) {
-        var barcodeSelect = row.querySelector(".inv-item-barcode");
-        var batchEl = row.querySelector(".inv-item-batch");
-        if (!barcodeSelect || !batchEl) return;
-        var barcode = getBarcode(barcodeSelect.value);
-        if (barcode) {
-            batchEl.value = barcode.value;
-        }
     }
 
     function applyProductToRow(row, product, preferredBarcodeId) {
@@ -721,10 +701,11 @@ var InventoryStockIn = (function () {
             '<span class="material-symbols-outlined">add</span></button></div></div>' +
             '<div class="inv-mgmt-field"><label>Quantity</label><input class="inv-mgmt-input inv-item-qty" type="number" min="0.01" step="0.01" value="' + (data.quantity || 1) + '" required/></div>' +
             '<div class="inv-mgmt-field inv-stockin-price-field"><label>Actual Price with Tax (per product)</label>' +
-            '<div class="inv-field-inline inv-field-inline--price">' +
-            '<input class="inv-mgmt-input inv-item-price-with-tax" type="number" min="0" step="0.01" placeholder="0.00" value="' + (data.purchase_price != null ? data.purchase_price : "") + '"/>' +
-            '<button type="button" class="inv-inline-edit-btn inv-item-mrp-edit inv-hidden" title="Update product MRP" aria-label="Update product MRP">' +
-            '<span class="material-symbols-outlined">edit</span></button></div></div>' +
+            '<input class="inv-mgmt-input inv-item-price-with-tax" type="number" min="0" step="0.01" placeholder="0.00" value="' + (data.purchase_price != null ? data.purchase_price : "") + '"/></div>' +
+            '<div class="inv-mgmt-field inv-stockin-mrp-field inv-hidden">' +
+            '<label>Update the MRP</label>' +
+            '<input class="inv-mgmt-input inv-item-mrp" type="number" min="0" step="0.01" placeholder="0.00"/>' +
+            '<div class="inv-field-hint inv-stockin-mrp-hint"></div></div>' +
             '<div class="inv-mgmt-field"><label>Total Price</label><input class="inv-mgmt-input inv-item-total" type="text" readonly value="0.00"/></div>' +
             '<div class="inv-mgmt-field"><label>Barcode</label>' +
             '<div class="inv-field-inline">' +
@@ -745,7 +726,6 @@ var InventoryStockIn = (function () {
             applyProductToRow(row, getProduct(this.value));
         });
         row.querySelector(".inv-item-barcode").addEventListener("change", function () {
-            syncBatchFromBarcode(row);
             var productId = row.querySelector(".inv-item-product").value;
             if (productId && this.value) {
                 assignBarcodeToProduct(this.value, productId);
@@ -756,9 +736,6 @@ var InventoryStockIn = (function () {
         });
         row.querySelector(".inv-item-product-add").addEventListener("click", function () {
             openAddProductModal(row);
-        });
-        row.querySelector(".inv-item-mrp-edit").addEventListener("click", function () {
-            openEditProductMrpModal(row);
         });
         row.querySelector(".inv-item-vendor-add").addEventListener("click", function () {
             pendingVendorRow = row;
@@ -1036,7 +1013,7 @@ var InventoryStockIn = (function () {
                 purchase_price: line.purchase_price,
                 vendor_id: line.vendor,
                 batch_number: line.batch_number,
-                barcode_id: findBarcodeIdForLine(line.product, line.batch_number),
+                barcode_id: "",
                 expiry_date: line.expiry_date || ""
             }));
         });
@@ -1213,7 +1190,7 @@ var InventoryStockIn = (function () {
             var amounts = getRowLineAmounts(row);
             var vendorEl = row.querySelector(".inv-item-vendor");
             var vendorId = vendorEl ? vendorEl.value : "";
-            items.push({
+            var item = {
                 product_id: Number(productId),
                 quantity: qty,
                 purchase_price: unitPrice,
@@ -1221,7 +1198,16 @@ var InventoryStockIn = (function () {
                 vendor_id: vendorId ? Number(vendorId) : null,
                 batch_number: row.querySelector(".inv-item-batch").value.trim(),
                 expiry_date: expiry || null,
-            });
+            };
+            var mrpEl = row.querySelector(".inv-item-mrp");
+            var mrpField = row.querySelector(".inv-stockin-mrp-field");
+            if (mrpEl && mrpField && !mrpField.classList.contains("inv-hidden")) {
+                var mrpVal = parseRowPrice(mrpEl.value);
+                if (mrpVal > 0) {
+                    item.mrp = mrpVal;
+                }
+            }
+            items.push(item);
         });
         return items;
     }
@@ -1367,7 +1353,6 @@ var InventoryStockIn = (function () {
                 invalidateProductBarcodes(productId);
                 fetchBarcodesForProduct(productId).then(function () {
                     renderRowBarcodeSelect(focusRow, productId, barcode.id);
-                    syncBatchFromBarcode(focusRow);
                     if (productId) {
                         assignBarcodeToProduct(barcode.id, productId);
                     }

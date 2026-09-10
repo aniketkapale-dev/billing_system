@@ -114,6 +114,7 @@ class PurchaseInvoiceItemWriteSerializer(serializers.Serializer):
     batch_number = serializers.CharField(max_length=50, required=False, allow_blank=True, default="")
     vendor_id = serializers.IntegerField(required=False, allow_null=True)
     expiry_date = serializers.DateField(required=False, allow_null=True)
+    mrp = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, min_value=0, default=0)
 
 
 class PurchaseInvoiceWriteSerializer(serializers.Serializer):
@@ -157,6 +158,7 @@ class InventoryBatchSerializer(BaseModelSerializer):
             "product_sale_price",
             "batch_number",
             "purchase_price",
+            "mrp",
             "selling_price",
             "unit_profit",
             "purchased_quantity",

@@ -1,5 +1,7 @@
 from decimal import Decimal
 
+from django.db.models import Max
+
 from apps.invoicing.models import InventoryBatch
 from apps.inventory.models import MovementType, StockMovement
 from apps.inventory.repositories import InventoryStockRepository
@@ -16,6 +18,25 @@ class BatchInventoryService:
     def __init__(self):
         self.batch_repository = InventoryBatchRepository()
         self.stock_repository = InventoryStockRepository()
+
+    def get_max_batch_mrp(self, business_id, product_id):
+        result = InventoryBatch.objects.filter(
+            business_id=business_id,
+            product_id=product_id,
+            is_deleted=False,
+        ).aggregate(max_mrp=Max("mrp"))["max_mrp"]
+        return Decimal(str(result or 0))
+
+    def sync_product_mrp(self, product_id):
+        from apps.products.models import Product
+
+        max_mrp = InventoryBatch.objects.filter(
+            product_id=product_id,
+            is_deleted=False,
+        ).aggregate(max_mrp=Max("mrp"))["max_mrp"]
+        if max_mrp is None:
+            return
+        Product.objects.filter(pk=product_id).update(mrp=max_mrp)
 
     def get_total_available(self, business_id, product_id):
         return self.batch_repository.get_total_available(business_id, product_id)
@@ -42,6 +63,7 @@ class BatchInventoryService:
             quantity=quantity,
             purchase_price=Decimal("0"),
             selling_price=Decimal("0"),
+            mrp=Decimal("0"),
             batch_number="OPEN",
         )
 
@@ -52,6 +74,7 @@ class BatchInventoryService:
         quantity,
         purchase_price,
         selling_price,
+        mrp=None,
         batch_number="OPEN",
     ):
         return self._create_batch(
@@ -60,6 +83,7 @@ class BatchInventoryService:
             quantity=quantity,
             purchase_price=purchase_price,
             selling_price=selling_price,
+            mrp=mrp,
             batch_number=batch_number or "OPEN",
             reference_type=self.REF_OPENING,
             reference_id=product_id,
@@ -72,6 +96,7 @@ class BatchInventoryService:
         quantity,
         purchase_price,
         selling_price,
+        mrp=None,
         batch_number="",
         expiry_date=None,
         purchase_invoice_item=None,
@@ -83,12 +108,14 @@ class BatchInventoryService:
             quantity=quantity,
             purchase_price=purchase_price,
             selling_price=selling_price,
+            mrp=mrp,
             batch_number=batch_number,
             expiry_date=expiry_date,
             purchase_invoice_item=purchase_invoice_item,
             reference_type=self.REF_PURCHASE_INVOICE,
             reference_id=reference_id or (purchase_invoice_item.purchase_invoice_id if purchase_invoice_item else 0),
         )
+        self.sync_product_mrp(product_id)
         return batch
 
     def consume_fifo(
@@ -202,6 +229,7 @@ class BatchInventoryService:
         quantity,
         purchase_price,
         selling_price,
+        mrp=None,
         batch_number="",
         expiry_date=None,
         manufacture_date=None,
@@ -210,12 +238,14 @@ class BatchInventoryService:
         reference_id=0,
     ):
         qty = Decimal(str(quantity))
+        resolved_mrp = Decimal(str(mrp if mrp is not None else 0))
         batch = InventoryBatch.objects.create(
             business_id=business_id,
             product_id=product_id,
             purchase_invoice_item=purchase_invoice_item,
             batch_number=batch_number or "",
             purchase_price=Decimal(str(purchase_price or 0)),
+            mrp=resolved_mrp,
             selling_price=Decimal(str(selling_price or 0)),
             purchased_quantity=qty,
             available_quantity=qty,

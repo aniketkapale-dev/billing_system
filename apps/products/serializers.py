@@ -23,6 +23,7 @@ class ProductSerializer(BaseModelSerializer):
     opening_added_at = serializers.DateTimeField(read_only=True)
     sold_quantity = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
     has_sales = serializers.SerializerMethodField()
+    max_batch_mrp = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
 
     class Meta:
         model = Product
@@ -57,6 +58,7 @@ class ProductSerializer(BaseModelSerializer):
             "opening_added_at",
             "sold_quantity",
             "has_sales",
+            "max_batch_mrp",
             "is_active",
             "is_deleted",
             "created_at",

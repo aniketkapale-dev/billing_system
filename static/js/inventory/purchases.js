@@ -1036,9 +1036,13 @@ var InventoryPurchases = (function () {
 
     function getProductMrp(product) {
         if (!product) return 0;
-        var mrp = Number(product.mrp || 0);
-        if (isNaN(mrp) || mrp < 0) return 0;
-        return mrp;
+        var batchMrp = Number(product.max_batch_mrp || 0);
+        var productMrp = Number(product.mrp || 0);
+        var highest = Math.max(
+            isNaN(batchMrp) ? 0 : batchMrp,
+            isNaN(productMrp) ? 0 : productMrp
+        );
+        return highest < 0 ? 0 : highest;
     }
 
     function defaultSalePrice(product) {

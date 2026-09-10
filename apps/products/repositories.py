@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from django.db.models import OuterRef, Prefetch, Q, Subquery, Sum, Value, DecimalField
+from django.db.models import Max, OuterRef, Prefetch, Q, Subquery, Sum, Value, DecimalField
 from django.db.models.functions import Coalesce
 
 from apps.inventory.models import InventoryStock
@@ -46,5 +46,13 @@ class ProductRepository(BaseRepository):
                     output_field=DecimalField(max_digits=12, decimal_places=2),
                 ),
                 opening_added_at=Subquery(opening_batch_first_added[:1]),
+                max_batch_mrp=Coalesce(
+                    Max(
+                        "inventory_batches__mrp",
+                        filter=Q(inventory_batches__is_deleted=False),
+                    ),
+                    Value(Decimal("0")),
+                    output_field=DecimalField(max_digits=12, decimal_places=2),
+                ),
             )
         )

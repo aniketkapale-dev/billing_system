@@ -115,6 +115,7 @@ class InventoryBatch(BaseEntity):
     )
     batch_number = models.CharField(max_length=50, blank=True, default="")
     purchase_price = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0"))
+    mrp = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0"))
     selling_price = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0"))
     purchased_quantity = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0"))
     available_quantity = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0"))

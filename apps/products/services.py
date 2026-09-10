@@ -132,7 +132,9 @@ class ProductService(BaseService):
                 quantity=self._initial_quantity,
                 purchase_price=self._opening_purchase_price,
                 selling_price=self._opening_sale_price,
+                mrp=Decimal(str(instance.mrp or 0)),
             )
+            self.batch_service.sync_product_mrp(instance.id)
 
     def _get_sold_quantity(self, product_id):
         total = PurchaseItem.objects.filter(
@@ -154,8 +156,14 @@ class ProductService(BaseService):
         self._ensure_can_modify(instance)
         return self.repository.soft_delete(instance)
 
+    def _is_price_only_update(self, data):
+        allowed = {"mrp", "sale_price"}
+        keys = {key for key in data.keys() if key not in ("tax_ids",)}
+        return bool(keys) and keys <= allowed
+
     def before_update(self, instance, data):
-        self._ensure_can_modify(instance)
+        if self._get_sold_quantity(instance.id) > 0 and not self._is_price_only_update(data):
+            self._ensure_can_modify(instance)
         data.pop("owner_id", None)
         data.pop("business_id", None)
         qty = data.pop("quantity", None)
@@ -206,8 +214,10 @@ class ProductService(BaseService):
                 quantity=delta,
                 purchase_price=Decimal(str(instance.purchase_price or 0)),
                 selling_price=Decimal(str(instance.sale_price or 0)),
+                mrp=Decimal(str(instance.mrp or 0)),
                 batch_number="ADJ",
             )
+            self.batch_service.sync_product_mrp(instance.id)
             self.inventory_service.add_stock(business_id, instance.id, delta)
             return
 

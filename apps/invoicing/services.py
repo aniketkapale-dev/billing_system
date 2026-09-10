@@ -78,6 +78,14 @@ class PurchaseInvoiceService(BaseService):
                 raise NotFoundException(f"Product with id {product_id} not found.")
 
             selling_price = Decimal(str(product.sale_price or 0))
+            batch_mrp = Decimal(str(item.get("mrp") or 0))
+            if batch_mrp <= 0:
+                batch_mrp = Decimal(str(product.mrp or 0))
+            current_max_mrp = self.batch_service.get_max_batch_mrp(business_id, product.id)
+            if purchase_price > current_max_mrp and batch_mrp < purchase_price:
+                batch_mrp = purchase_price
+            if batch_mrp <= 0 and purchase_price > 0:
+                batch_mrp = purchase_price
             vendor = self._resolve_vendor(business_id, item.get("vendor_id"))
 
             line_total = (quantity * purchase_price) - discount
@@ -91,6 +99,7 @@ class PurchaseInvoiceService(BaseService):
                 "quantity": quantity,
                 "purchase_price": purchase_price,
                 "selling_price": selling_price,
+                "mrp": batch_mrp,
                 "discount": discount,
                 "tax": tax,
                 "batch_number": item.get("batch_number", "") or "",
@@ -128,6 +137,7 @@ class PurchaseInvoiceService(BaseService):
                 quantity=item["quantity"],
                 purchase_price=item["purchase_price"],
                 selling_price=item["selling_price"],
+                mrp=item["mrp"],
                 batch_number=item["batch_number"],
                 expiry_date=item["expiry_date"],
                 purchase_invoice_item=invoice_item,
