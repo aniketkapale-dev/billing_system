@@ -1,0 +1,48 @@
+<div id="sale-invoice-print-preview-modal" class="inv-modal inv-hidden" aria-hidden="true">
+    <div class="inv-modal-backdrop" data-modal-close></div>
+    <div class="inv-modal-dialog inv-modal-dialog--print-preview" role="dialog" aria-modal="true" aria-labelledby="sale-invoice-print-preview-title">
+        <div class="inv-modal-header">
+            <h3 id="sale-invoice-print-preview-title">Sale Invoice Preview</h3>
+            <button type="button" class="inv-modal-close" data-modal-close aria-label="Close">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="inv-modal-body inv-sale-print-preview-body">
+            <aside id="sale-print-preview-edit-panel" class="inv-sale-print-preview-edit inv-hidden">
+                <p class="inv-sale-print-preview-edit-note">
+                    Edit the terms for this print only. Invoice settings stay unchanged.
+                </p>
+                <div class="inv-mgmt-field">
+                    <label for="sale-print-terms-editor">Terms &amp; Conditions</label>
+                    <div class="inv-invoice-terms-editor">
+                        <div class="inv-invoice-terms-toolbar">
+                            <button type="button" id="sale-print-terms-bold" class="inv-invoice-terms-tool-btn" title="Bold (Ctrl+B)" aria-label="Bold">
+                                <span class="material-symbols-outlined">format_bold</span>
+                            </button>
+                            <span class="inv-invoice-terms-hint">Press Enter for the next numbered line</span>
+                        </div>
+                        <div
+                            id="sale-print-terms-editor"
+                            class="inv-invoice-terms-input inv-mgmt-input"
+                            contenteditable="true"
+                            role="textbox"
+                            aria-multiline="true"
+                            data-placeholder="Terms from invoice settings appear here"
+                        ></div>
+                    </div>
+                </div>
+                <button type="button" id="sale-print-terms-reset-btn" class="inv-mgmt-btn">Reset to invoice settings</button>
+            </aside>
+            <div class="inv-sale-print-preview-frame-wrap">
+                <iframe id="sale-print-preview-frame" class="inv-sale-print-preview-frame" title="Sale invoice preview"></iframe>
+            </div>
+        </div>
+        <div class="inv-modal-footer">
+            <button type="button" class="inv-mgmt-btn" data-modal-close>Cancel</button>
+            <button type="button" id="sale-print-preview-print-btn" class="inv-mgmt-btn inv-mgmt-btn--primary">
+                <span class="material-symbols-outlined">print</span>
+                Print
+            </button>
+        </div>
+    </div>
+</div>

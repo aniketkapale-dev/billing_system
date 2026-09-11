@@ -89,11 +89,31 @@ var InventoryPurchases = (function () {
         return store[String(saleId)] || null;
     }
 
+    function getSalePrintTermsOverrides(sale) {
+        var meta = loadSalePrintMeta(sale.id) || {};
+        var defaultBody = sale.invoice_terms_conditions || "";
+        return {
+            terms_conditions: Object.prototype.hasOwnProperty.call(meta, "terms_conditions")
+                ? meta.terms_conditions
+                : defaultBody
+        };
+    }
+
+    function saveSalePrintTermsOverrides(saleId, overrides) {
+        if (!saleId) return;
+        var store = readSalePrintMetaStore();
+        var key = String(saleId);
+        store[key] = Object.assign({}, store[key] || {}, {
+            terms_conditions: overrides.terms_conditions || ""
+        });
+        writeSalePrintMetaStore(store);
+    }
+
     function mergeSalePrintMeta(sale) {
         if (!sale || !sale.id) return sale;
         var meta = loadSalePrintMeta(sale.id);
         if (!meta) return sale;
-        return Object.assign({}, sale, {
+        var merged = Object.assign({}, sale, {
             invoice_transport: meta.transport || "",
             invoice_cartons: meta.cartons || "",
             invoice_eway_bill_no: meta.eway_bill_no || "",
@@ -101,6 +121,10 @@ var InventoryPurchases = (function () {
             is_paid: meta.is_paid === true || sale.is_paid === true,
             invoice_print_terms: meta.terms || ""
         });
+        if (Object.prototype.hasOwnProperty.call(meta, "terms_conditions")) {
+            merged.invoice_terms_conditions = meta.terms_conditions;
+        }
+        return merged;
     }
 
     function clearSalePrintMetaForm() {
@@ -188,6 +212,12 @@ var InventoryPurchases = (function () {
                 InventoryLoader.hide();
                 if (!sales.length) {
                     InventoryToast.error("Unable to load selected sales.");
+                    return;
+                }
+                if (window.InventorySalePrintPreview) {
+                    InventorySalePrintPreview.open(sales, taxes, {
+                        getInitialOverrides: getSalePrintTermsOverrides
+                    });
                     return;
                 }
                 var html = InventoryDocumentExport.buildSalesDocumentHtml(sales, { taxes: taxes });
@@ -3033,5 +3063,8 @@ var InventoryPurchases = (function () {
         }
     }
 
-    return { init: init };
+    return {
+        init: init,
+        saveSalePrintTermsOverrides: saveSalePrintTermsOverrides
+    };
 })();

@@ -667,3 +667,25 @@ body.inv-modal-open { overflow: hidden; }
 .inv-modal-dialog--wide {
     width: min(860px, calc(100vw - 32px));
 }
+
+.inv-modal-dialog--print-preview {
+    width: calc(100vw - 24px);
+    max-width: 1680px;
+    height: calc(100vh - 24px);
+    max-height: calc(100vh - 24px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.inv-modal-dialog--print-preview .inv-modal-body {
+    flex: 1;
+    min-height: 0;
+    min-width: 0;
+    padding: 16px 20px;
+    overflow: hidden;
+}
+
+.inv-modal-dialog--print-preview .inv-modal-footer {
+    flex-shrink: 0;
+}

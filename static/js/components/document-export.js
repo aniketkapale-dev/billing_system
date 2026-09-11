@@ -342,6 +342,10 @@ var InventoryDocumentExport = (function () {
             : formatMultiline(termsText);
     }
 
+    function getTermsCaption() {
+        return escapeHtml("Terms & Conditions");
+    }
+
     function buildTermsAndPaymentFooterSection(sale) {
         var termsBodyHtml = buildTermsBodyHtml(sale);
         var qrUrl = sale.invoice_qr_image_url && String(sale.invoice_qr_image_url).trim()
@@ -354,7 +358,7 @@ var InventoryDocumentExport = (function () {
             ? (
                 '<div class="inv-invoice-bottom-terms">' +
                 '<section class="inv-terms">' +
-                "<h3>Terms &amp; Conditions</h3>" +
+                "<h3>" + getTermsCaption() + "</h3>" +
                 '<div class="inv-terms-body">' + termsBodyHtml + "</div>" +
                 "</section></div>"
             )
@@ -861,6 +865,15 @@ var InventoryDocumentExport = (function () {
         return Math.round(Number(value || 0) * 100) / 100;
     }
 
+    function saleInvoicePreviewStyles() {
+        return (
+            "html,body{overflow-x:hidden;overflow-y:auto;}" +
+            "body{padding:12px 0;}" +
+            ".sale-invoice-preview-scale{display:flex;flex-direction:column;align-items:center;gap:16px;width:100%;}" +
+            ".sale-invoice-page{margin:0;transform-origin:top center;}"
+        );
+    }
+
     function buildSalesDocumentHtml(sales, options) {
         options = options || {};
         var taxes = options.taxes || [];
@@ -868,11 +881,15 @@ var InventoryDocumentExport = (function () {
         var sections = list.map(function (sale) {
             return buildSaleInvoiceHtml(sale, taxes);
         }).join("");
+        var previewStyles = options.preview ? saleInvoicePreviewStyles() : "";
+        var bodyClass = options.preview ? ' class="inv-sale-invoice-preview"' : "";
+        var wrapperStart = options.preview ? '<div class="sale-invoice-preview-scale">' : "";
+        var wrapperEnd = options.preview ? "</div>" : "";
 
         return (
             "<!DOCTYPE html><html><head><meta charset=\"utf-8\"/><title></title>" +
-            "<style>" + saleInvoiceStyles() + "</style></head><body>" +
-            sections +
+            "<style>" + saleInvoiceStyles() + previewStyles + "</style></head><body" + bodyClass + ">" +
+            wrapperStart + sections + wrapperEnd +
             "</body></html>"
         );
     }

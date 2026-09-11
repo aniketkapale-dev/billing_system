@@ -314,6 +314,7 @@
 {% include "partials/customer_modal.html" %}
 {% include "partials/tax_modal.html" %}
 {% include "partials/invoice_setting_modal.html" %}
+{% include "partials/sale_invoice_print_preview_modal.html" %}
 {% endblock %}
 
 {% block page_scripts %}
@@ -324,12 +325,20 @@
 <script src="{% static 'js/inventory/customers.js' %}"></script>
 <script src="{% static 'js/inventory/settings-tax.js' %}?v=20260309-sale-add-modals"></script>
 <script src="{% static 'js/inventory/settings-invoice.js' %}?v=20260309-sale-add-modals"></script>
-<script src="{% static 'js/inventory/purchases.js' %}?v=20260310-batch-mrp"></script>
+<script src="{% static 'js/components/sale-invoice-print-preview.js' %}?v=20260311-no-caption"></script>
+<script src="{% static 'js/inventory/purchases.js' %}?v=20260311-no-caption"></script>
 <script>
 InventoryPagePanel.init();
 InventoryCustomers.init();
 InventorySettingsTax.init();
 InventorySettingsInvoice.init();
+InventorySalePrintPreview.init({
+    onSaveOverrides: function (saleId, overrides) {
+        if (window.InventoryPurchases && typeof InventoryPurchases.saveSalePrintTermsOverrides === "function") {
+            InventoryPurchases.saveSalePrintTermsOverrides(saleId, overrides);
+        }
+    }
+});
 InventoryPurchases.init();
 </script>
 {% endblock %}
