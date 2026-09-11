@@ -260,6 +260,7 @@ var InventoryCustomers = (function () {
         document.getElementById("customer-name").value = "";
         document.getElementById("customer-mobile").value = "";
         document.getElementById("customer-email").value = "";
+        document.getElementById("customer-pin-code").value = "";
         document.getElementById("customer-address").value = "";
         document.getElementById("customer-company-name").value = "";
         document.getElementById("customer-company-mobile").value = "";
@@ -279,6 +280,7 @@ var InventoryCustomers = (function () {
         document.getElementById("customer-name").value = customer.name || "";
         document.getElementById("customer-mobile").value = customer.mobile || "";
         document.getElementById("customer-email").value = customer.email || "";
+        document.getElementById("customer-pin-code").value = customer.pin_code || "";
         document.getElementById("customer-address").value = customer.address || "";
         document.getElementById("customer-company-name").value = customer.company_name || "";
         document.getElementById("customer-company-mobile").value = customer.company_mobile || "";
@@ -295,10 +297,15 @@ var InventoryCustomers = (function () {
         return /^[0-9]{10}$/.test(String(value || "").trim());
     }
 
+    function isValidPinCode(value) {
+        return /^[0-9]{6}$/.test(String(value || "").trim());
+    }
+
     function collectPayload() {
         var name = document.getElementById("customer-name").value.trim();
         var mobile = document.getElementById("customer-mobile").value.trim();
         var email = document.getElementById("customer-email").value.trim();
+        var pinCode = document.getElementById("customer-pin-code").value.trim();
         var address = document.getElementById("customer-address").value.trim();
         var addBusiness = document.getElementById("customer-add-business").checked;
         var companyName = document.getElementById("customer-company-name").value.trim();
@@ -322,6 +329,21 @@ var InventoryCustomers = (function () {
             document.getElementById("customer-mobile").focus();
             return null;
         }
+        if (!pinCode) {
+            InventoryToast.error("Pin code is required.");
+            document.getElementById("customer-pin-code").focus();
+            return null;
+        }
+        if (!isValidPinCode(pinCode)) {
+            InventoryToast.error("Enter a valid 6-digit pin code.");
+            document.getElementById("customer-pin-code").focus();
+            return null;
+        }
+        if (!address) {
+            InventoryToast.error("Address is required.");
+            document.getElementById("customer-address").focus();
+            return null;
+        }
 
         if (addBusiness && !companyName) {
             InventoryToast.error("Company name is required when Add company is selected.");
@@ -338,6 +360,7 @@ var InventoryCustomers = (function () {
             name: name,
             mobile: mobile,
             email: email,
+            pin_code: pinCode,
             address: address,
             company_name: addBusiness ? companyName : "",
             company_mobile: addBusiness ? companyMobile : "",
@@ -375,6 +398,7 @@ var InventoryCustomers = (function () {
             { label: "Full Name", value: displayValue(customer.name), emphasis: true },
             { label: "Mobile", value: displayValue(customer.mobile) },
             { label: "Email", value: displayValue(customer.email) },
+            { label: "Pin Code", value: displayValue(customer.pin_code) },
             { label: "Address", value: displayValue(customer.address), full: true }
         ];
 
@@ -521,6 +545,13 @@ var InventoryCustomers = (function () {
 
         if (window.InventoryAuth && typeof InventoryAuth.wireMobileInput === "function") {
             InventoryAuth.wireMobileInput(document.getElementById("customer-mobile"));
+        }
+
+        var pinCodeEl = document.getElementById("customer-pin-code");
+        if (pinCodeEl) {
+            pinCodeEl.addEventListener("input", function () {
+                this.value = this.value.replace(/\D/g, "").slice(0, 6);
+            });
         }
 
         var addBusinessCheckbox = document.getElementById("customer-add-business");

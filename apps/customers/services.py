@@ -45,3 +45,13 @@ class CustomerService(BaseService):
             mobile = (data.get("mobile") or "").strip()
             validate_required(mobile, "Mobile number")
             data["mobile"] = validate_mobile_number(mobile)
+
+        if "address" in data:
+            validate_required((data.get("address") or "").strip(), "Address")
+
+        if "pin_code" in data:
+            pin_code = (data.get("pin_code") or "").strip()
+            validate_required(pin_code, "Pin code")
+            if not pin_code.isdigit() or len(pin_code) != 6:
+                raise ValidationException("Enter a valid 6-digit pin code.")
+            data["pin_code"] = pin_code

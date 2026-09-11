@@ -42,9 +42,9 @@ var InventoryProducts = (function () {
                     { id: "brand", label: "Brand", sortKey: "brand", headerClass: "inv-col-brand", cell: function (item) { return '<td class="inv-col-brand">' + cellText(item.brand_name) + "</td>"; } },
                     {
                         id: "price_with_tax",
-                        label: "Actual Price with Tax (per product)",
-                        cardLabel: "Actual Price\nwith Tax\n(per product)",
-                        headerHtml: 'Actual Price<br/>with Tax<br/><span class="inv-th-sub">(per product)</span>',
+                        label: "Cost Price with Tax (per product)",
+                        cardLabel: "Cost Price\nwith Tax\n(per product)",
+                        headerHtml: 'Cost Price<br/>with Tax<br/><span class="inv-th-sub">(per product)</span>',
                         sortKey: "purchase_price",
                         headerClass: "inv-col-price-with-tax inv-col-price-with-tax-hd inv-mgmt-cell--num",
                         cell: function (item) {
@@ -101,7 +101,7 @@ var InventoryProducts = (function () {
         if (!items.length) return;
         InventoryDocumentExport.downloadTablePdf(
             "Products",
-            ["Name", "SKU", "Category", "Brand", "Actual Price with Tax (per product)", "Qty", "Unit"],
+            ["Name", "SKU", "Category", "Brand", "Cost Price with Tax (per product)", "Qty", "Unit"],
             items.map(function (item) {
                 return [
                     item.name || "",
@@ -122,7 +122,7 @@ var InventoryProducts = (function () {
         if (!items.length) return;
         var html = InventoryDocumentExport.buildTableHtml(
             "Products",
-            ["Name", "SKU", "Category", "Brand", "Actual Price with Tax (per product)", "Qty", "Unit"],
+            ["Name", "SKU", "Category", "Brand", "Cost Price with Tax (per product)", "Qty", "Unit"],
             items.map(function (item) {
                 return [
                     item.name || "",
@@ -909,7 +909,7 @@ var InventoryProducts = (function () {
         if (field) field.classList.add("inv-mgmt-field--highlight");
         if (hint && options.purchasePriceHint != null && options.purchasePriceHint !== "") {
             hint.textContent =
-                "Actual Price with Tax (per product) on purchase: " +
+                "Cost Price with Tax (per product) on purchase: " +
                 InventoryApi.formatMoney(options.purchasePriceHint);
             hint.classList.remove("inv-hidden");
         }
@@ -973,7 +973,7 @@ var InventoryProducts = (function () {
             { label: "Category", value: displayValue(product.category_name) },
             { label: "Brand", value: displayValue(product.brand_name) },
             { label: "Manufacturer", value: displayValue(product.manufacturer_name) },
-            { label: "Actual Price with Tax (per product)", value: cellMoney(product.purchase_price || product.actual_price), num: true },
+            { label: "Cost Price with Tax (per product)", value: cellMoney(product.purchase_price || product.actual_price), num: true },
             { label: "MRP", value: cellMoney(product.mrp), num: true },
             { label: "Unit", value: displayValue(product.unit_short_name || product.unit_name) },
             { label: "Quantity", value: displayValue(formatQty(product.quantity)), num: true },
@@ -1101,14 +1101,14 @@ var InventoryProducts = (function () {
 
         var priceWithTax = parsePrice("product-price-with-tax");
         if (priceWithTax < 0) {
-            InventoryToast.error("Actual price with tax (per product) must be 0 or greater.");
+            InventoryToast.error("Cost price with tax (per product) must be 0 or greater.");
             return;
         }
         if (openingStock > 0) {
-            var requiredPrice = parseRequiredPrice("product-price-with-tax", "Actual price with tax (per product)");
+            var requiredPrice = parseRequiredPrice("product-price-with-tax", "Cost price with tax (per product)");
             if (requiredPrice === null) return;
             if (requiredPrice <= 0) {
-                InventoryToast.error("Actual price with tax (per product) must be greater than 0 when opening stock is added.");
+                InventoryToast.error("Cost price with tax (per product) must be greater than 0 when opening stock is added.");
                 return;
             }
             priceWithTax = requiredPrice;

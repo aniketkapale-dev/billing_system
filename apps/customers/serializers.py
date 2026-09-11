@@ -16,6 +16,7 @@ class CustomerSerializer(BaseModelSerializer):
             "name",
             "mobile",
             "email",
+            "pin_code",
             "company_name",
             "company_mobile",
             "gst_number",
@@ -40,6 +41,7 @@ class CustomerWriteSerializer(serializers.ModelSerializer):
             "name",
             "mobile",
             "email",
+            "pin_code",
             "company_name",
             "company_mobile",
             "gst_number",
@@ -69,6 +71,14 @@ class CustomerWriteSerializer(serializers.ModelSerializer):
             return value.strip().lower()
         return ""
 
+    def validate_pin_code(self, value):
+        value = (value or "").strip()
+        if not value:
+            raise serializers.ValidationError("Pin code is required.")
+        if not value.isdigit() or len(value) != 6:
+            raise serializers.ValidationError("Enter a valid 6-digit pin code.")
+        return value
+
     def validate_gst_number(self, value):
         return (value or "").strip()
 
@@ -90,7 +100,10 @@ class CustomerWriteSerializer(serializers.ModelSerializer):
         return (value or "").strip()
 
     def validate_address(self, value):
-        return (value or "").strip()
+        value = (value or "").strip()
+        if not value:
+            raise serializers.ValidationError("Address is required.")
+        return value
 
     def validate_place_of_supply(self, value):
         return (value or "").strip()

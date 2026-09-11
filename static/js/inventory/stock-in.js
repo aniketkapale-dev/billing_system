@@ -700,7 +700,7 @@ var InventoryStockIn = (function () {
             '<button type="button" class="inv-inline-add-btn inv-item-vendor-add" title="Add vendor" aria-label="Add vendor">' +
             '<span class="material-symbols-outlined">add</span></button></div></div>' +
             '<div class="inv-mgmt-field"><label>Quantity</label><input class="inv-mgmt-input inv-item-qty" type="number" min="0.01" step="0.01" value="' + (data.quantity || 1) + '" required/></div>' +
-            '<div class="inv-mgmt-field inv-stockin-price-field"><label>Actual Price with Tax (per product)</label>' +
+            '<div class="inv-mgmt-field inv-stockin-price-field"><label>Cost Price with Tax (per product)</label>' +
             '<input class="inv-mgmt-input inv-item-price-with-tax" type="number" min="0" step="0.01" placeholder="0.00" value="' + (data.purchase_price != null ? data.purchase_price : "") + '"/></div>' +
             '<div class="inv-mgmt-field inv-stockin-mrp-field inv-hidden">' +
             '<label>Update the MRP</label>' +
@@ -951,7 +951,7 @@ var InventoryStockIn = (function () {
             '<div class="inv-mgmt-table-wrap">' +
             '<table class="inv-mgmt-table">' +
             "<thead><tr>" +
-            "<th>Product</th><th>Vendor</th><th>SKU</th><th>Qty</th><th>Actual Price with Tax (per product)</th><th>Batch</th><th>Expiry</th><th>Total Price</th>" +
+            "<th>Product</th><th>Vendor</th><th>SKU</th><th>Qty</th><th>Cost Price with Tax (per product)</th><th>Batch</th><th>Expiry</th><th>Total Price</th>" +
             "</tr></thead><tbody>" +
             lines.map(function (line) {
                 return (

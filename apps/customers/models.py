@@ -13,6 +13,7 @@ class Customer(BaseEntity):
     name = models.CharField(max_length=150)
     mobile = models.CharField(max_length=20, blank=True, default="")
     email = models.EmailField(blank=True, default="")
+    pin_code = models.CharField(max_length=10, blank=True, default="")
     company_name = models.CharField(max_length=150, blank=True, default="")
     company_mobile = models.CharField(max_length=20, blank=True, default="")
     gst_number = models.CharField(max_length=30, blank=True, default="")
