@@ -533,13 +533,28 @@ var InventoryStockIn = (function () {
         });
     }
 
+    function getRowBarcodeId(row) {
+        return row && row.dataset.barcodeId ? String(row.dataset.barcodeId) : "";
+    }
+
+    function setRowBarcodeField(row, barcode) {
+        var input = row.querySelector(".inv-item-barcode");
+        if (!input) return;
+        if (!barcode) {
+            input.value = "";
+            delete row.dataset.barcodeId;
+            return;
+        }
+        input.value = formatBarcodeOptionLabel(barcode);
+        row.dataset.barcodeId = String(barcode.id);
+    }
+
     function assignBarcodesFromForm() {
         var rows = document.querySelectorAll("#stockin-items-container .inv-mgmt-item-row");
         var promises = [];
         rows.forEach(function (row) {
             var productId = row.querySelector(".inv-item-product").value;
-            var barcodeSelect = row.querySelector(".inv-item-barcode");
-            var barcodeId = barcodeSelect ? barcodeSelect.value : "";
+            var barcodeId = getRowBarcodeId(row);
             if (productId && barcodeId) {
                 promises.push(assignBarcodeToProduct(barcodeId, productId));
             }
@@ -549,58 +564,61 @@ var InventoryStockIn = (function () {
 
     function loadBarcodes() {
         resetBarcodeCache();
-        refreshAllRowBarcodeSelects();
+        refreshAllRowBarcodeFields();
         return Promise.resolve([]);
     }
 
-    function barcodeOptionsFromItems(items, selectedBarcodeId) {
-        var html = '<option value="">Select barcode</option>';
-        (items || []).forEach(function (item) {
-            var selected = String(item.id) === String(selectedBarcodeId) ? " selected" : "";
-            html += '<option value="' + item.id + '"' + selected + ">" +
-                InventoryApi.escapeHtml(formatBarcodeOptionLabel(item)) + "</option>";
-        });
-        return html;
-    }
-
-    function renderRowBarcodeSelect(row, productId, selectedBarcodeId) {
-        var select = row.querySelector(".inv-item-barcode");
-        if (!select) return;
+    function renderRowBarcodeField(row, productId, selectedBarcodeId, options) {
+        options = options || {};
+        var input = row.querySelector(".inv-item-barcode");
+        if (!input) return;
 
         if (!productId) {
-            select.disabled = false;
-            select.innerHTML = '<option value="">Select barcode</option>';
-            if (window.InventorySearchableSelect) {
-                InventorySearchableSelect.refresh(select);
-            }
+            input.disabled = false;
+            input.placeholder = "Auto-filled";
+            setRowBarcodeField(row, null);
             return;
         }
 
-        select.disabled = true;
-        select.innerHTML = '<option value="">Loading barcodes...</option>';
-        if (window.InventorySearchableSelect) {
-            InventorySearchableSelect.refresh(select);
-        }
+        input.disabled = true;
+        input.value = "";
+        input.placeholder = "Loading...";
+        delete row.dataset.barcodeId;
 
         fetchBarcodesForProduct(productId).then(function (items) {
-            if (!select.isConnected) return;
-            select.disabled = false;
-            select.innerHTML = barcodeOptionsFromItems(items, selectedBarcodeId);
+            if (!input.isConnected) return;
+            input.disabled = false;
+            input.placeholder = "Auto-filled";
+
+            var barcode = null;
             if (selectedBarcodeId) {
-                select.value = String(selectedBarcodeId);
+                barcode = items.find(function (item) {
+                    return String(item.id) === String(selectedBarcodeId);
+                }) || getBarcode(selectedBarcodeId);
             }
-            if (window.InventorySearchableSelect) {
-                InventorySearchableSelect.rebuild(select);
+            if (!barcode && options.autoSelectFirst && items.length) {
+                barcode = items[0];
+            }
+
+            if (barcode) {
+                setRowBarcodeField(row, barcode);
+                return;
+            }
+
+            setRowBarcodeField(row, null);
+            if (options.openModalIfEmpty) {
+                var product = getProduct(productId);
+                if (product && getProductSkuKey(product)) {
+                    openAddBarcodeModal(row);
+                }
             }
         });
     }
 
-    function refreshAllRowBarcodeSelects() {
+    function refreshAllRowBarcodeFields() {
         document.querySelectorAll("#stockin-items-container .inv-mgmt-item-row").forEach(function (row) {
             var productId = row.querySelector(".inv-item-product").value;
-            var barcodeSelect = row.querySelector(".inv-item-barcode");
-            var selectedId = barcodeSelect ? barcodeSelect.value : "";
-            renderRowBarcodeSelect(row, productId, selectedId);
+            renderRowBarcodeField(row, productId, getRowBarcodeId(row));
         });
     }
 
@@ -608,7 +626,7 @@ var InventoryStockIn = (function () {
         var priceEl = row.querySelector(".inv-item-price-with-tax");
         if (!product) {
             if (priceEl) priceEl.value = "";
-            renderRowBarcodeSelect(row, "", "");
+            renderRowBarcodeField(row, "", "");
             updateRowTotalPrice(row);
             updateRowMrpEditHint(row);
             return;
@@ -619,18 +637,17 @@ var InventoryStockIn = (function () {
                 : product.actual_price;
             priceEl.value = price != null && Number(price) > 0 ? price : "";
         }
-        var selectedBarcodeId = preferredBarcodeId || "";
-        if (!selectedBarcodeId) {
-            var barcodeSelect = row.querySelector(".inv-item-barcode");
-            selectedBarcodeId = barcodeSelect ? barcodeSelect.value : "";
-        }
+        var selectedBarcodeId = preferredBarcodeId || getRowBarcodeId(row);
         if (selectedBarcodeId) {
             var selectedBarcode = getBarcode(selectedBarcodeId);
             if (!selectedBarcode || !barcodeBelongsToProduct(selectedBarcode, product)) {
                 selectedBarcodeId = "";
             }
         }
-        renderRowBarcodeSelect(row, product.id, selectedBarcodeId);
+        renderRowBarcodeField(row, product.id, selectedBarcodeId, {
+            autoSelectFirst: true,
+            openModalIfEmpty: true
+        });
         updateRowTotalPrice(row);
         updateRowMrpEditHint(row);
     }
@@ -708,10 +725,7 @@ var InventoryStockIn = (function () {
             '<div class="inv-field-hint inv-stockin-mrp-hint"></div></div>' +
             '<div class="inv-mgmt-field"><label>Total Price</label><input class="inv-mgmt-input inv-item-total" type="text" readonly value="0.00"/></div>' +
             '<div class="inv-mgmt-field"><label>Barcode</label>' +
-            '<div class="inv-field-inline">' +
-            '<select class="inv-mgmt-select inv-item-barcode"><option value="">Select barcode</option></select>' +
-            '<button type="button" class="inv-inline-add-btn inv-item-barcode-add" title="Add barcode" aria-label="Add barcode">' +
-            '<span class="material-symbols-outlined">add</span></button></div></div>' +
+            '<input class="inv-mgmt-input inv-item-barcode" type="text" readonly placeholder="Auto-filled" value=""/></div>' +
             '<div class="inv-mgmt-field"><label>Batch No.</label><input class="inv-mgmt-input inv-item-batch" type="text" placeholder="B001" value="' + InventoryApi.escapeHtml(data.batch_number || "") + '"/></div>' +
             '<div class="inv-mgmt-field"><label>Expiry</label><input class="inv-mgmt-input inv-item-expiry" type="date" value="' + (data.expiry_date || "") + '"/></div>' +
             '<div class="inv-mgmt-item-row-remove">' +
@@ -724,15 +738,6 @@ var InventoryStockIn = (function () {
         });
         row.querySelector(".inv-item-product").addEventListener("change", function () {
             applyProductToRow(row, getProduct(this.value));
-        });
-        row.querySelector(".inv-item-barcode").addEventListener("change", function () {
-            var productId = row.querySelector(".inv-item-product").value;
-            if (productId && this.value) {
-                assignBarcodeToProduct(this.value, productId);
-            }
-        });
-        row.querySelector(".inv-item-barcode-add").addEventListener("click", function () {
-            openAddBarcodeModal(row);
         });
         row.querySelector(".inv-item-product-add").addEventListener("click", function () {
             openAddProductModal(row);
@@ -991,7 +996,7 @@ var InventoryStockIn = (function () {
 
     function setItemsEditable(editable) {
         document.querySelectorAll("#stockin-items-container .inv-mgmt-item-row").forEach(function (row) {
-            row.querySelectorAll("input, select, button.inv-item-product-add, button.inv-item-vendor-add, button.inv-item-barcode-add, button.inv-item-remove").forEach(function (el) {
+            row.querySelectorAll("input, select, button.inv-item-product-add, button.inv-item-vendor-add, button.inv-item-remove").forEach(function (el) {
                 el.disabled = !editable;
             });
         });
@@ -1352,7 +1357,7 @@ var InventoryStockIn = (function () {
                 var productId = focusRow.querySelector(".inv-item-product").value;
                 invalidateProductBarcodes(productId);
                 fetchBarcodesForProduct(productId).then(function () {
-                    renderRowBarcodeSelect(focusRow, productId, barcode.id);
+                    renderRowBarcodeField(focusRow, productId, barcode.id);
                     if (productId) {
                         assignBarcodeToProduct(barcode.id, productId);
                     }

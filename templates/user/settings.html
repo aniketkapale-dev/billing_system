@@ -262,20 +262,18 @@
                                 <select id="settings-barcode-product-sku" class="inv-mgmt-select" required>
                                     <option value="">Select SKU</option>
                                 </select>
-                                <p class="inv-field-hint">Barcode value format: <strong><span id="settings-barcode-date-hint">YYYYMMDD</span> + RAND4</strong> (4-digit suffix is always unique)</p>
-                            </div>
-                            <div class="inv-mgmt-field">
-                                <label for="settings-barcode-quantity">Quantity <span class="inv-field-required"></span></label>
-                                <input id="settings-barcode-quantity" class="inv-mgmt-input" type="number" min="1" max="500" step="1" placeholder="e.g. 10" value="1" required/>
+                                <p class="inv-field-hint">One barcode per SKU. Format: <strong><span id="settings-barcode-date-hint">YYYYMMDD</span> + RAND4</strong> (4-digit suffix is always unique)</p>
                             </div>
                         </div>
                     </div>
                     <div id="settings-barcode-tab-reprint" class="inv-barcode-tab-panel inv-hidden">
                         <div class="inv-mgmt-form-grid" style="padding:0;margin-top:16px;">
                             <div class="inv-mgmt-field">
-                                <label for="settings-barcode-reprint-value">Barcode No. <span class="inv-field-required"></span></label>
-                                <input id="settings-barcode-reprint-value" class="inv-mgmt-input" type="text" placeholder="e.g. 202609101234" required/>
-                                <p class="inv-field-hint">Enter the full barcode value to reprint labels.</p>
+                                <label for="settings-barcode-reprint-sku">SKU No. <span class="inv-field-required">*</span></label>
+                                <select id="settings-barcode-reprint-sku" class="inv-mgmt-select" required>
+                                    <option value="">Select SKU</option>
+                                </select>
+                                <p class="inv-field-hint">Reprints the existing barcode for this SKU. No new barcode is generated.</p>
                             </div>
                             <div class="inv-mgmt-field">
                                 <label for="settings-barcode-reprint-quantity">Quantity <span class="inv-field-required"></span></label>
@@ -318,7 +316,7 @@ InventorySettingsInvoice.init();
 </script>
 {% elif settings_section == 'barcode' %}
 <script src="{% static 'js/components/barcode-pdf.js' %}?v=20260310-barcode-size"></script>
-<script src="{% static 'js/inventory/settings-barcode.js' %}?v=20260310-barcode-bulk"></script>
+<script src="{% static 'js/inventory/settings-barcode.js' %}?v=20260311-barcode-no-delete"></script>
 <script>
 InventoryPagePanel.init();
 InventorySettingsBarcode.init();

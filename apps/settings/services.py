@@ -2,8 +2,10 @@ import random
 from decimal import Decimal
 
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 
+from apps.invoicing.models import PurchaseInvoiceItem
 from apps.products.models import Product
 from apps.settings.models import ProductBarcode
 
@@ -225,6 +227,43 @@ class ProductBarcodeService(BaseService):
     def __init__(self):
         super().__init__(repository=ProductBarcodeRepository())
 
+    def _related_product_ids(self, barcode):
+        product_ids = set()
+        if barcode.product_id:
+            product_ids.add(barcode.product_id)
+
+        sku = (barcode.model_label or "").strip()
+        if sku:
+            product_ids.update(
+                Product.objects.filter(
+                    business_id=barcode.business_id,
+                    sku__iexact=sku,
+                    is_deleted=False,
+                ).values_list("id", flat=True)
+            )
+        return product_ids
+
+    def is_used_in_purchase(self, barcode):
+        product_ids = self._related_product_ids(barcode)
+        if not product_ids:
+            return False
+
+        return PurchaseInvoiceItem.objects.filter(
+            product_id__in=product_ids,
+            is_deleted=False,
+            purchase_invoice__is_deleted=False,
+            purchase_invoice__business_id=barcode.business_id,
+        ).exists()
+
+    @transaction.atomic
+    def soft_delete(self, pk):
+        instance = self.repository.get_by_id(pk)
+        if self.is_used_in_purchase(instance):
+            raise ValidationException(
+                "This barcode cannot be deleted because the product was used in a purchase invoice."
+            )
+        return self.repository.soft_delete(instance)
+
     def before_create(self, data):
         user = get_current_user()
         if not user:
@@ -295,7 +334,6 @@ class ProductBarcodeService(BaseService):
             raise ValidationException("Business is required.")
 
         product_id = data.get("product_id")
-        quantity = data.get("quantity")
 
         product = Product.objects.filter(
             pk=product_id,
@@ -309,17 +347,19 @@ class ProductBarcodeService(BaseService):
         if not sku:
             raise ValidationException("Product SKU is required.")
 
-        try:
-            quantity = int(round(float(quantity)))
-        except (TypeError, ValueError):
-            raise ValidationException("Quantity must be a whole number.")
-        if quantity < 1 or quantity > 500:
-            raise ValidationException("Quantity must be between 1 and 500.")
+        existing = ProductBarcode.objects.filter(
+            business_id=business_id,
+            is_deleted=False,
+        ).filter(
+            Q(product_id=product.id) | Q(model_label=sku)
+        ).first()
+        if existing:
+            raise ValidationException("A barcode already exists for this SKU.")
 
         date_stamp = timezone.localdate().strftime("%Y%m%d")
         prefix = date_stamp
 
-        suffixes = self._allocate_unique_suffixes(prefix, business_id, quantity)
+        suffixes = self._allocate_unique_suffixes(prefix, business_id, 1)
         created = []
 
         with transaction.atomic():

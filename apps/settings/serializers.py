@@ -106,6 +106,7 @@ class ProductBarcodeSerializer(BaseModelSerializer):
     business_name = serializers.CharField(source="business.business_name", read_only=True)
     product_name = serializers.SerializerMethodField()
     product_sku = serializers.CharField(source="product.sku", read_only=True, default=None)
+    can_delete = serializers.SerializerMethodField()
 
     class Meta:
         model = ProductBarcode
@@ -120,6 +121,7 @@ class ProductBarcodeSerializer(BaseModelSerializer):
             "model_label",
             "is_active",
             "is_deleted",
+            "can_delete",
             "created_at",
             "updated_at",
         )
@@ -129,6 +131,11 @@ class ProductBarcodeSerializer(BaseModelSerializer):
         if obj.product_id and obj.product:
             return obj.product.name
         return None
+
+    def get_can_delete(self, obj):
+        from apps.settings.services import ProductBarcodeService
+
+        return not ProductBarcodeService().is_used_in_purchase(obj)
 
 
 class ProductBarcodeWriteSerializer(serializers.Serializer):
@@ -149,18 +156,8 @@ class ProductBarcodeWriteSerializer(serializers.Serializer):
 
 class ProductBarcodeBulkGenerateSerializer(serializers.Serializer):
     product_id = serializers.IntegerField()
-    quantity = serializers.IntegerField(min_value=1, max_value=500)
 
     def validate_product_id(self, value):
         if not value:
             raise serializers.ValidationError("SKU is required.")
         return value
-
-    def validate_quantity(self, value):
-        try:
-            rounded = int(round(float(value)))
-        except (TypeError, ValueError):
-            raise serializers.ValidationError("Quantity must be a whole number.")
-        if rounded < 1 or rounded > 500:
-            raise serializers.ValidationError("Quantity must be between 1 and 500.")
-        return rounded

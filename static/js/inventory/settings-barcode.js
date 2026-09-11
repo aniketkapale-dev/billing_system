@@ -89,14 +89,7 @@ var InventorySettingsBarcode = (function () {
         return normalized;
     }
 
-    function getProductStockQuantity(product) {
-        return normalizeBarcodeQuantity(product && product.quantity != null ? product.quantity : 0, 0);
-    }
-
-    function renderProductSkuSelect() {
-        var select = document.getElementById("settings-barcode-product-sku");
-        if (!select) return;
-
+    function buildProductSkuOptionsHtml() {
         var html = '<option value="">Select SKU</option>';
         products.forEach(function (item) {
             if (!item.sku) return;
@@ -104,7 +97,24 @@ var InventorySettingsBarcode = (function () {
                 InventoryApi.escapeHtml(item.sku) + " — " + InventoryApi.escapeHtml(item.name) +
                 "</option>";
         });
-        select.innerHTML = html;
+        return html;
+    }
+
+    function renderProductSkuSelect() {
+        var select = document.getElementById("settings-barcode-product-sku");
+        if (!select) return;
+
+        select.innerHTML = buildProductSkuOptionsHtml();
+        if (window.InventorySearchableSelect) {
+            InventorySearchableSelect.rebuild(select);
+        }
+    }
+
+    function renderReprintSkuSelect() {
+        var select = document.getElementById("settings-barcode-reprint-sku");
+        if (!select) return;
+
+        select.innerHTML = buildProductSkuOptionsHtml();
         if (window.InventorySearchableSelect) {
             InventorySearchableSelect.rebuild(select);
         }
@@ -116,30 +126,24 @@ var InventorySettingsBarcode = (function () {
         if (!modal || !skuEl) return;
 
         var prefillId = modal.dataset.prefillProductId || "";
-        if (!prefillId) {
-            updateQuantityFromSelectedSku();
-            return;
-        }
+        if (!prefillId) return;
 
         var hasOption = Array.prototype.some.call(skuEl.options, function (option) {
             return String(option.value) === String(prefillId);
         });
-        if (!hasOption) {
-            updateQuantityFromSelectedSku();
-            return;
-        }
+        if (!hasOption) return;
 
         skuEl.value = String(prefillId);
         if (window.InventorySearchableSelect) {
             InventorySearchableSelect.refresh(skuEl);
         }
-        updateQuantityFromSelectedSku();
     }
 
     function loadProducts() {
         return InventoryApi.request(PRODUCTS_API, "?page_size=500&ordering=-created_at").then(function (body) {
             products = body && body.isSuccess ? (body.data.items || []) : [];
             renderProductSkuSelect();
+            renderReprintSkuSelect();
             return products;
         });
     }
@@ -159,6 +163,12 @@ var InventorySettingsBarcode = (function () {
         }
 
         tbody.innerHTML = items.map(function (item) {
+            var deleteBtn = item.can_delete === false
+                ? ""
+                : (
+                    '<button type="button" class="inv-row-action-btn inv-row-action-btn--delete" data-barcode-delete="' + item.id + '" title="Delete" aria-label="Delete">' +
+                    '<span class="material-symbols-outlined">delete</span></button>'
+                );
             return (
                 "<tr>" +
                 "<td><strong>" + productLabel(item) + "</strong></td>" +
@@ -167,8 +177,7 @@ var InventorySettingsBarcode = (function () {
                 '<td class="inv-mgmt-cell--action"><div class="inv-row-actions">' +
                 '<button type="button" class="inv-row-action-btn inv-row-action-btn--edit" data-barcode-edit="' + item.id + '" title="View" aria-label="View">' +
                 '<span class="material-symbols-outlined">visibility</span></button>' +
-                '<button type="button" class="inv-row-action-btn inv-row-action-btn--delete" data-barcode-delete="' + item.id + '" title="Delete" aria-label="Delete">' +
-                '<span class="material-symbols-outlined">delete</span></button>' +
+                deleteBtn +
                 "</div></td></tr>"
             );
         }).join("");
@@ -206,10 +215,13 @@ var InventorySettingsBarcode = (function () {
     }
 
     function resetReprintForm() {
-        var valueEl = document.getElementById("settings-barcode-reprint-value");
+        var skuEl = document.getElementById("settings-barcode-reprint-sku");
         var qtyEl = document.getElementById("settings-barcode-reprint-quantity");
-        if (valueEl) valueEl.value = "";
+        if (skuEl) skuEl.value = "";
         if (qtyEl) qtyEl.value = "1";
+        if (window.InventorySearchableSelect && skuEl) {
+            InventorySearchableSelect.refresh(skuEl);
+        }
     }
 
     function setActiveTab(tab) {
@@ -238,39 +250,13 @@ var InventorySettingsBarcode = (function () {
     function resetGenerateForm() {
         editingId = null;
         var skuEl = document.getElementById("settings-barcode-product-sku");
-        var qtyEl = document.getElementById("settings-barcode-quantity");
         if (skuEl) skuEl.value = "";
-        if (qtyEl) qtyEl.value = "1";
         if (window.InventorySearchableSelect && skuEl) {
             InventorySearchableSelect.refresh(skuEl);
         }
         updateDateHint();
         resetReprintForm();
         setActiveTab("generate");
-    }
-
-    function updateQuantityFromSelectedSku() {
-        var skuEl = document.getElementById("settings-barcode-product-sku");
-        var qtyEl = document.getElementById("settings-barcode-quantity");
-        if (!skuEl || !qtyEl) return;
-
-        var productId = skuEl.value;
-        if (!productId) {
-            applyQuantityFieldValue(qtyEl, 1, 1);
-            return;
-        }
-
-        var product = products.find(function (item) {
-            return String(item.id) === String(productId);
-        });
-        applyQuantityFieldValue(qtyEl, getProductStockQuantity(product), 1);
-    }
-
-    function wireSkuQuantitySync() {
-        var skuEl = document.getElementById("settings-barcode-product-sku");
-        if (!skuEl || skuEl._barcodeQtyWired) return;
-        skuEl._barcodeQtyWired = true;
-        skuEl.addEventListener("change", updateQuantityFromSelectedSku);
     }
 
     function wireQuantityRounding(inputId) {
@@ -291,9 +277,7 @@ var InventorySettingsBarcode = (function () {
             editingId = null;
             if (isModalMode()) {
                 var skuEl = document.getElementById("settings-barcode-product-sku");
-                var qtyEl = document.getElementById("settings-barcode-quantity");
                 if (skuEl) skuEl.value = "";
-                if (qtyEl) qtyEl.value = "1";
                 updateDateHint();
 
                 InventoryModal.open("barcode-modal");
@@ -345,19 +329,12 @@ var InventorySettingsBarcode = (function () {
 
     function collectBulkPayload() {
         return {
-            product_id: Number(document.getElementById("settings-barcode-product-sku").value),
-            quantity: normalizeBarcodeQuantity(
-                document.getElementById("settings-barcode-quantity").value,
-                1
-            )
+            product_id: Number(document.getElementById("settings-barcode-product-sku").value)
         };
     }
 
     function validateBulkPayload(payload) {
         if (!payload.product_id) return "SKU is required.";
-        if (!payload.quantity || payload.quantity < 1 || payload.quantity > 500) {
-            return "Quantity must be between 1 and 500.";
-        }
         return null;
     }
 
@@ -400,14 +377,14 @@ var InventorySettingsBarcode = (function () {
     }
 
     function reprintBarcodes() {
-        var barcodeNo = (document.getElementById("settings-barcode-reprint-value").value || "").trim();
+        var productId = document.getElementById("settings-barcode-reprint-sku").value;
         var qty = normalizeBarcodeQuantity(
             document.getElementById("settings-barcode-reprint-quantity").value,
             1
         );
 
-        if (!barcodeNo) {
-            InventoryToast.error("Barcode number is required.");
+        if (!productId) {
+            InventoryToast.error("SKU is required.");
             return Promise.resolve(null);
         }
         if (qty < 1 || qty > 500) {
@@ -418,17 +395,15 @@ var InventorySettingsBarcode = (function () {
         var btn = document.getElementById("settings-barcode-reprint-btn");
         InventoryLoader.button(btn, true);
 
-        return request("?page_size=500&search=" + encodeURIComponent(barcodeNo))
+        return request("?product_id=" + encodeURIComponent(productId) + "&page_size=10&ordering=value")
             .then(function (body) {
                 if (!(body && body.isSuccess && body.data)) {
                     InventoryToast.error(body.message || "Failed to find barcode.");
                     return null;
                 }
-                var matched = (body.data.items || []).filter(function (item) {
-                    return String(item.value).toLowerCase() === barcodeNo.toLowerCase();
-                });
+                var matched = body.data.items || [];
                 if (!matched.length) {
-                    InventoryToast.error("Barcode not found.");
+                    InventoryToast.error("No barcode found for this SKU. Generate one first.");
                     return null;
                 }
                 var printItems = buildReprintLabels(matched[0], qty);
@@ -587,8 +562,6 @@ var InventorySettingsBarcode = (function () {
         if (generateBtn) generateBtn.addEventListener("click", handleGenerate);
         if (reprintBtn) reprintBtn.addEventListener("click", reprintBarcodes);
 
-        wireSkuQuantitySync();
-        wireQuantityRounding("settings-barcode-quantity");
         wireQuantityRounding("settings-barcode-reprint-quantity");
 
         if (searchEl) {
