@@ -241,6 +241,9 @@ var InventoryDocumentExport = (function () {
             buildHeaderAddressLines(companyAddress);
         if (hasCustomerCompany(sale)) {
             body += buildInlineDetailField("GST No", gstNo, true);
+            var companyContact = sale.company_mobile || sale.customer_mobile || "";
+            body += buildInlineDetailField("Mob. No.", companyContact, true);
+            body += buildInlineDetailField("Email", sale.customer_email, true);
         }
 
         return wrapHeaderPanel(body, "inv-header-panel--company");
@@ -254,7 +257,7 @@ var InventoryDocumentExport = (function () {
             buildInlineDetailField("Address", business.address, false);
 
         if (business.phone) {
-            body += buildInlineDetailField("Tel. No.", business.phone, true);
+            body += buildInlineDetailField("Mob. No.", business.phone, true);
         }
         if (business.email) {
             body += buildInlineDetailField("Email", business.email, true);

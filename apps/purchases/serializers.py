@@ -7,6 +7,11 @@ from apps.purchases.models import Purchase, PurchaseItem, PurchasePayment
 from core.base_serializer import BaseModelSerializer
 
 
+def _decimal_str(value):
+    amount = Decimal(value or 0)
+    return format(amount.quantize(Decimal("0.01")), "f")
+
+
 class OptionalDateField(serializers.DateField):
     def to_internal_value(self, data):
         if data in ("", None):
@@ -55,14 +60,14 @@ class PurchaseItemSerializer(BaseModelSerializer):
             for consumption in consumptions:
                 batch = consumption.inventory_batch
                 lines.append({
-                    "quantity": consumption.quantity_sold,
+                    "quantity": _decimal_str(consumption.quantity_sold),
                     "batch_number": (batch.batch_number or "").strip(),
                     "expiry_date": batch.expiry_date,
                 })
             return lines
 
         return [{
-            "quantity": obj.quantity,
+            "quantity": _decimal_str(obj.quantity),
             "batch_number": "",
             "expiry_date": None,
         }]
@@ -101,6 +106,7 @@ class PurchaseSerializer(BaseModelSerializer):
     customer_gst_number = serializers.CharField(source="customer.gst_number", read_only=True, default="")
     customer_address = serializers.CharField(source="customer.address", read_only=True, default="")
     company_name = serializers.CharField(source="customer.company_name", read_only=True, default="")
+    company_mobile = serializers.CharField(source="customer.company_mobile", read_only=True, default="")
     company_address = serializers.CharField(source="customer.business_address", read_only=True, default="")
     total_paid = serializers.SerializerMethodField()
     pending_bill = serializers.SerializerMethodField()
@@ -122,6 +128,7 @@ class PurchaseSerializer(BaseModelSerializer):
             "customer_gst_number",
             "customer_address",
             "company_name",
+            "company_mobile",
             "company_address",
             "supplier_name",
             "reference_no",
@@ -182,17 +189,17 @@ class PurchaseSerializer(BaseModelSerializer):
 
     def get_total_paid(self, obj):
         if obj.is_draft or obj.is_cancelled:
-            return Decimal("0")
-        return self._sum_payments(obj)
+            return "0.00"
+        return _decimal_str(self._sum_payments(obj))
 
     def get_pending_bill(self, obj):
         if obj.is_draft or obj.is_cancelled:
-            return Decimal("0")
+            return "0.00"
         total_amount = obj.total_amount or Decimal("0")
         pending = total_amount - self._sum_payments(obj)
         if pending < 0:
-            return Decimal("0")
-        return pending
+            return "0.00"
+        return _decimal_str(pending)
 
     def get_payment_status(self, obj):
         if obj.is_draft:

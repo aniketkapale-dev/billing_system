@@ -36,6 +36,12 @@ var InventoryCustomers = (function () {
                         cell: function (item) { return "<td>" + displayValue(item.name) + "</td>"; }
                     },
                     {
+                        id: "company",
+                        label: "Company",
+                        sortKey: "company_name",
+                        cell: function (item) { return "<td>" + displayValue(item.company_name) + "</td>"; }
+                    },
+                    {
                         id: "mobile",
                         label: "Mobile",
                         sortKey: "mobile",
@@ -90,9 +96,9 @@ var InventoryCustomers = (function () {
         if (!items.length) return;
         InventoryDocumentExport.downloadTablePdf(
             "Customers",
-            ["Full Name", "Mobile", "Email", "Address"],
+            ["Full Name", "Company", "Mobile", "Email", "Address"],
             items.map(function (item) {
-                return [item.name || "", item.mobile || "", item.email || "", item.address || ""];
+                return [item.name || "", item.company_name || "", item.mobile || "", item.email || "", item.address || ""];
             }),
             "customers.pdf"
         );
@@ -103,9 +109,9 @@ var InventoryCustomers = (function () {
         if (!items.length) return;
         var html = InventoryDocumentExport.buildTableHtml(
             "Customers",
-            ["Full Name", "Mobile", "Email", "Address"],
+            ["Full Name", "Company", "Mobile", "Email", "Address"],
             items.map(function (item) {
-                return [item.name || "", item.mobile || "", item.email || "", item.address || ""];
+                return [item.name || "", item.company_name || "", item.mobile || "", item.email || "", item.address || ""];
             })
         );
         InventoryDocumentExport.printHtml("Customers", html);

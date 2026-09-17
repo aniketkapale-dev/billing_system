@@ -12,10 +12,11 @@ class CustomerViewSet(BusinessScopedViewSetMixin, BaseViewSet):
     service_class = CustomerService
     serializer_class = CustomerSerializer
     write_serializer_class = CustomerWriteSerializer
-    search_fields = ("name", "mobile", "email", "pin_code")
+    search_fields = ("name", "company_name", "mobile", "email", "pin_code")
     ordering_default = ("name",)
     ordering_fields = {
         "name": "name",
+        "company_name": "company_name",
         "mobile": "mobile",
         "email": "email",
         "pin_code": "pin_code",
