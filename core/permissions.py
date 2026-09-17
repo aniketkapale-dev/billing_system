@@ -30,6 +30,8 @@ class HasRole(BasePermission):
             )
         )
         if user_roles.intersection(set(required)):
+            if self._requires_platform_admin_only(required):
+                return self._is_platform_admin(user)
             return True
 
         if "Business Staff" in required and "Business Staff" in user_roles:
@@ -44,3 +46,22 @@ class HasRole(BasePermission):
                     is_active=True,
                 ).exists()
         return False
+
+    @staticmethod
+    def _requires_platform_admin_only(required_roles):
+        admin_roles = {"Super Admin", "Admin", "superadmin"}
+        return bool(required_roles) and set(required_roles).issubset(admin_roles)
+
+    @staticmethod
+    def _is_platform_admin(user):
+        from apps.business_users.models import BusinessUser
+        from apps.users.querysets import user_has_platform_admin_role
+
+        if not user_has_platform_admin_role(user):
+            return False
+
+        return not BusinessUser.objects.filter(
+            user_id=user.id,
+            is_deleted=False,
+            is_active=True,
+        ).exists()

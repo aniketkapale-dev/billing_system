@@ -5,6 +5,7 @@ from apps.business_users.repositories import BusinessUserRepository
 from apps.roles.models import Role
 from apps.user_roles.models import UserRole
 from apps.users.models import User
+from apps.users.querysets import user_has_platform_admin_role
 from core.base_service import BaseService
 from core.exceptions import NotFoundException, ValidationException
 from core.middleware import get_current_user
@@ -115,6 +116,11 @@ class BusinessUserService(BaseService):
 
         existing_user = User.objects.filter(mobile_number=mobile_number).first()
         if existing_user:
+            if user_has_platform_admin_role(existing_user):
+                raise ValidationException(
+                    "This mobile number belongs to a platform administrator account "
+                    "and cannot be used for business staff."
+                )
             if existing_user.id == business.owner_id:
                 raise ValidationException("The business owner cannot be added as a staff user.")
             if self.repository.model.objects.filter(
@@ -169,6 +175,10 @@ class BusinessUserService(BaseService):
             raise NotFoundException("Business user not found.") from exc
 
         user = membership.user
+        if user_has_platform_admin_role(user):
+            raise ValidationException(
+                "Platform administrator accounts cannot be managed as business staff."
+            )
         if "full_name" in data and data.get("full_name") is not None:
             user.full_name = validate_required(data["full_name"].strip(), "Full name")
         if "email" in data:
@@ -182,7 +192,13 @@ class BusinessUserService(BaseService):
                 user.email = None
         if "mobile_number" in data and data.get("mobile_number") is not None:
             mobile_number = validate_mobile_number(data["mobile_number"])
-            if User.objects.filter(mobile_number=mobile_number).exclude(pk=user.id).exists():
+            conflict = User.objects.filter(mobile_number=mobile_number).exclude(pk=user.id).first()
+            if conflict:
+                if user_has_platform_admin_role(conflict):
+                    raise ValidationException(
+                        "This mobile number belongs to a platform administrator account "
+                        "and cannot be used for business staff."
+                    )
                 raise ValidationException("An account with this mobile number already exists.")
             user.mobile_number = mobile_number
         if data.get("password"):

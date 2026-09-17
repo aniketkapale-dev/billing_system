@@ -181,7 +181,12 @@
                     </div>
                     <div class="inv-mgmt-field">
                         <label id="business-user-password-label" for="business-user-password">Password</label>
-                        <input id="business-user-password" class="inv-mgmt-input" type="password" minlength="6" required/>
+                        <div class="inv-input-icon-wrap inv-input-icon-wrap--password">
+                            <input id="business-user-password" class="inv-mgmt-input inv-mgmt-input--trailing-icon" type="password" minlength="6" required autocomplete="new-password"/>
+                            <button type="button" id="business-user-password-toggle" class="inv-mgmt-password-toggle" aria-label="Show password">
+                                <span class="material-symbols-outlined">visibility</span>
+                            </button>
+                        </div>
                     </div>
                     <div class="inv-mgmt-field">
                         <label for="business-user-role">Role</label>

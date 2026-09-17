@@ -86,8 +86,13 @@ var InventoryOwnerProfile = (function () {
     }
 
     function roleLabel(user) {
-        if (user && user.roles && user.roles.length) return user.roles[0];
-        return "Business Owner";
+        if (!user || !user.roles || !user.roles.length) return "Business Owner";
+        var normalized = user.roles.map(function (role) {
+            return String(role || "").trim().toLowerCase();
+        });
+        if (normalized.indexOf("business staff") !== -1) return "Business Staff";
+        if (normalized.indexOf("business owner") !== -1) return "Business Owner";
+        return user.roles[0];
     }
 
     function paintAvatar(user) {

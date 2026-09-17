@@ -21,6 +21,8 @@ var InventoryStock = (function () {
     var cachedBatchItems = [];
     var summaryColumnCtrl = null;
     var batchColumnCtrl = null;
+    var batchExpiryFrom = "";
+    var batchExpiryTo = "";
 
     function getSummaryColumnCtrl() {
         if (!summaryColumnCtrl) {
@@ -268,10 +270,36 @@ var InventoryStock = (function () {
         if (searchEl) searchEl.value = "";
         if (unitFilter) unitFilter.value = "";
         if (inStockEl) inStockEl.checked = true;
+        batchExpiryFrom = "";
+        batchExpiryTo = "";
         if (window.InventorySearchableSelect && unitFilter) {
             InventorySearchableSelect.refresh(unitFilter);
         }
         loadBatches("", 1);
+    }
+
+    function applyFiltersFromUrl() {
+        if (!window.InventoryDashboardPeriod) return;
+
+        var filters = InventoryDashboardPeriod.parseUrlPeriodFilters();
+
+        if (filters.tab === "batches") {
+            activeTab = "batches";
+        }
+
+        if (filters.expiryFrom && filters.expiryTo) {
+            batchExpiryFrom = filters.expiryFrom;
+            batchExpiryTo = filters.expiryTo;
+            activeTab = "batches";
+            return;
+        }
+
+        if (filters.period && filters.tab === "batches") {
+            var range = InventoryDashboardPeriod.getExpiringDateRange(filters.period);
+            batchExpiryFrom = range.from;
+            batchExpiryTo = range.to;
+            activeTab = "batches";
+        }
     }
 
     function summaryRequest(path, opts) {
@@ -478,6 +506,12 @@ var InventoryStock = (function () {
         if (inStockEl && inStockEl.checked) {
             extra.in_stock = "true";
         }
+        if (batchExpiryFrom) {
+            extra.expiry_from = batchExpiryFrom;
+        }
+        if (batchExpiryTo) {
+            extra.expiry_to = batchExpiryTo;
+        }
 
         InventoryLoader.show();
         return batchRequest(buildQuery(batchSearch, batchPage, extra, "batch-pagination"))
@@ -536,6 +570,7 @@ var InventoryStock = (function () {
 
         function boot() {
             if (!InventoryBusiness.getActiveId()) return;
+            applyFiltersFromUrl();
             loadUnits().then(function () {
                 switchTab(activeTab);
             });

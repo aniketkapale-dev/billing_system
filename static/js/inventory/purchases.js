@@ -9,7 +9,7 @@ var InventoryPurchases = (function () {
     var INVOICE_SETTINGS_API = "/api/settings/invoice-settings";
     var PAGE_SIZE = (window.InventoryConstants && InventoryConstants.PAGE_SIZE) || 10;
     var currentPage = 1;
-    var currentOrdering = "-purchase_date";
+    var currentOrdering = "-created_at";
     var searchTimer = null;
     var products = [];
     var taxes = [];
@@ -133,6 +133,9 @@ var InventoryPurchases = (function () {
     var columnCtrl = null;
 
     function getColumnCtrl() {
+        if (!window.InventoryColumnCustomize) {
+            throw new Error("InventoryColumnCustomize is not loaded.");
+        }
         if (!columnCtrl) {
             columnCtrl = InventoryColumnCustomize.create({
                 tableKey: "purchases",
@@ -140,13 +143,13 @@ var InventoryPurchases = (function () {
                 toolbarSelector: "#purchases-list-panel .inv-mgmt-toolbar",
                 includeBulkCheck: false,
                 bulkHeaderHtml: '<th class="inv-col-check d-none"><input type="checkbox" class="inv-bulk-select-all" aria-label="Select all"/></th>',
-                sortDefault: "-purchase_date",
+                sortDefault: "-created_at",
                 onSortChange: function (ordering) {
                     currentOrdering = ordering;
                     loadPurchases(1);
                 },
                 columns: [
-                    { id: "date", label: "Date", locked: true, cell: function (p) { return "<td>" + InventoryApi.escapeHtml(InventoryApi.formatDisplayDate(p.purchase_date, "—")) + "</td>"; } },
+                    { id: "date", label: "Date", locked: true, sortKey: "purchase_date", cell: function (p) { return "<td>" + InventoryApi.escapeHtml(InventoryApi.formatDisplayDate(p.purchase_date, "—")) + "</td>"; } },
                     { id: "invoice_no", label: "Invoice No.", sortKey: "reference_no", cell: function (p) { return "<td>" + formatInvoiceNoCell(p) + "</td>"; } },
                     { id: "customer", label: "Customer", locked: true, sortKey: "customer_name", cell: function (p) { return "<td>" + formatCustomerDisplay(p) + "</td>"; } },
                     { id: "products", label: "Products Sold", cell: function (p) { return '<td class="inv-col-name">' + formatProductsSoldCell(p.items || [], p.id) + "</td>"; } },
@@ -2296,16 +2299,44 @@ var InventoryPurchases = (function () {
     function applyFiltersFromUrl() {
         var params = new URLSearchParams(window.location.search);
         var invoiceStatus = params.get("invoice_status");
-        if (!invoiceStatus) return;
+        var dateFrom = params.get("date_from");
+        var dateTo = params.get("date_to");
+        var period = params.get("period");
+        var dateFromEl = document.getElementById("purchases-date-from");
+        var dateToEl = document.getElementById("purchases-date-to");
 
-        var normalized = invoiceStatus.toLowerCase();
-        var allowed = { paid: true, pending: true, draft: true, cancelled: true };
-        if (!allowed[normalized]) return;
-
-        var invoiceStatusFilterEl = document.getElementById("purchases-invoice-status-filter");
-        if (invoiceStatusFilterEl) {
-            invoiceStatusFilterEl.value = normalized;
+        if (invoiceStatus) {
+            var normalized = invoiceStatus.toLowerCase();
+            var allowed = { finalized: true, paid: true, pending: true, draft: true, cancelled: true };
+            if (allowed[normalized]) {
+                var invoiceStatusFilterEl = document.getElementById("purchases-invoice-status-filter");
+                if (invoiceStatusFilterEl) {
+                    invoiceStatusFilterEl.value = normalized;
+                }
+            }
         }
+
+        if (dateFrom && dateTo) {
+            if (dateFromEl) dateFromEl.value = dateFrom;
+            if (dateToEl) dateToEl.value = dateTo;
+        } else if (period && window.InventoryDashboardPeriod) {
+            InventoryDashboardPeriod.applyDateRangeInputs(dateFromEl, dateToEl, period);
+        }
+    }
+
+    function preloadSaleFormData() {
+        return loadProducts().catch(function () {
+            products = [];
+        }).then(function () {
+            return Promise.all([
+                loadPaymentTypes(),
+                loadCustomers(),
+                loadTaxes(),
+                loadInvoiceSettings()
+            ]);
+        }).catch(function () {
+            /* Form preload failures must not block the sale list. */
+        });
     }
 
     function loadPurchases(page) {
@@ -2488,6 +2519,23 @@ var InventoryPurchases = (function () {
         return { due_date: dueDateEl.value.trim() };
     }
 
+    function validatePaidAmountWithinBill() {
+        if (!isPaidSegmentSelected()) return true;
+        var paidAmount = getPaidAmountValue();
+        if (paidAmount <= 0) return true;
+        var billAmount = getBillAmount();
+        if (paidAmount > billAmount + 0.0001) {
+            InventoryToast.error(
+                "Amount received (" + InventoryApi.formatMoney(paidAmount) +
+                ") cannot be greater than the bill amount (" + InventoryApi.formatMoney(billAmount) + ")."
+            );
+            var paidInput = document.getElementById("purchase-paid-amount");
+            if (paidInput) paidInput.focus();
+            return false;
+        }
+        return true;
+    }
+
     function validatePaymentFieldsForFinalize() {
         var isPaid = isFullPaymentReceived();
         if (shouldShowDueDateField()) {
@@ -2505,6 +2553,9 @@ var InventoryPurchases = (function () {
                 InventoryToast.error("Please enter the amount received.");
                 var paidInput = document.getElementById("purchase-paid-amount");
                 if (paidInput) paidInput.focus();
+                return null;
+            }
+            if (!validatePaidAmountWithinBill()) {
                 return null;
             }
         }
@@ -2699,6 +2750,7 @@ var InventoryPurchases = (function () {
         if (editingPurchaseId && editingPurchaseIsDraft) {
             var items = validateSaleItemsForSave();
             if (!items) return;
+            if (!validatePaidAmountWithinBill()) return;
 
             var draftBtn = document.getElementById("purchase-save-btn");
             InventoryLoader.button(draftBtn, true, "Updating...");
@@ -2813,30 +2865,38 @@ var InventoryPurchases = (function () {
             InventoryPagePanel.init();
         }
 
-        getColumnCtrl();
-
         function boot() {
             if (!InventoryBusiness.getActiveId()) return;
             applyFiltersFromUrl();
-            loadProducts().then(function () {
-                loadPaymentTypes();
-                loadCustomers();
-                loadTaxes();
-                loadInvoiceSettings();
-                loadPurchases(1);
-            });
+            loadPurchases(1);
+            preloadSaleFormData();
+        }
+
+        function initSaleTable() {
+            if (!window.InventoryColumnCustomize) return null;
+            try {
+                return getColumnCtrl();
+            } catch (err) {
+                console.error("Failed to initialize sale table columns.", err);
+                return null;
+            }
         }
 
         InventoryBusiness.whenReady(function () {
+            initSaleTable();
             boot();
             if (window.InventorySidebar && InventorySidebar.consumeAddAction()) {
                 var openSaleBtn = document.getElementById("purchase-open-modal-btn");
                 if (openSaleBtn) openSaleBtn.click();
             }
         });
-        window.addEventListener("inventory:business-changed", boot);
+        window.addEventListener("inventory:business-changed", function () {
+            initSaleTable();
+            boot();
+        });
 
-        document.getElementById("purchase-open-modal-btn").addEventListener("click", function () {
+        var openSaleBtnEl = document.getElementById("purchase-open-modal-btn");
+        if (openSaleBtnEl) openSaleBtnEl.addEventListener("click", function () {
             if (!InventoryBusiness.getActiveId()) {
                 InventoryToast.error("Select or create a business first.");
                 return;
@@ -2865,14 +2925,19 @@ var InventoryPurchases = (function () {
             });
         });
 
-        document.getElementById("purchase-add-item-btn").addEventListener("click", function () {
-            if (!hasAvailableProducts(null)) {
-                InventoryToast.warning("No products with remaining stock available.");
-                return;
-            }
-            addItemRow(null, true);
-        });
-        document.getElementById("purchase-save-btn").addEventListener("click", savePurchase);
+        var addItemBtnEl = document.getElementById("purchase-add-item-btn");
+        if (addItemBtnEl) {
+            addItemBtnEl.addEventListener("click", function () {
+                if (!hasAvailableProducts(null)) {
+                    InventoryToast.warning("No products with remaining stock available.");
+                    return;
+                }
+                addItemRow(null, true);
+            });
+        }
+
+        var saveBtnEl = document.getElementById("purchase-save-btn");
+        if (saveBtnEl) saveBtnEl.addEventListener("click", savePurchase);
         var draftBtn = document.getElementById("purchase-save-draft-btn");
         if (draftBtn) draftBtn.addEventListener("click", savePurchaseDraft);
         var finalizeBtn = document.getElementById("purchase-finalize-btn");

@@ -25,8 +25,9 @@ class PurchaseInvoiceViewSet(BusinessScopedViewSetMixin, BaseViewSet):
     filter_fields = ("invoice_number",)
     required_roles = ["Business Owner", "Business Staff"]
     required_tab = "stock-in"
-    ordering_default = ("-invoice_date", "-created_at")
+    ordering_default = ("-created_at",)
     ordering_fields = {
+        "created_at": "created_at",
         "invoice_date": "invoice_date",
         "invoice_number": "invoice_number",
         "subtotal": "subtotal",
@@ -145,4 +146,12 @@ class InventoryBatchViewSet(BusinessScopedViewSetMixin, BaseViewSet):
         unit_id = self.request.query_params.get("unit_id")
         if unit_id:
             queryset = queryset.filter(product__unit_id=unit_id)
+        expiry_from = self.request.query_params.get("expiry_from")
+        expiry_to = self.request.query_params.get("expiry_to")
+        if expiry_from:
+            queryset = queryset.filter(expiry_date__gte=expiry_from)
+        if expiry_to:
+            queryset = queryset.filter(expiry_date__lte=expiry_to)
+        if expiry_from or expiry_to:
+            queryset = queryset.filter(expiry_date__isnull=False)
         return queryset

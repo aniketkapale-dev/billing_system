@@ -172,6 +172,42 @@ var InventoryBusinessUsers = (function () {
             });
     }
 
+    function setPasswordVisible(visible) {
+        var input = document.getElementById("business-user-password");
+        var toggle = document.getElementById("business-user-password-toggle");
+        if (!input || !toggle) return;
+        var icon = toggle.querySelector(".material-symbols-outlined");
+        if (visible) {
+            input.type = "text";
+            if (icon) icon.textContent = "visibility_off";
+            toggle.setAttribute("aria-label", "Hide password");
+            toggle.setAttribute("aria-pressed", "true");
+        } else {
+            input.type = "password";
+            if (icon) icon.textContent = "visibility";
+            toggle.setAttribute("aria-label", "Show password");
+            toggle.setAttribute("aria-pressed", "false");
+        }
+    }
+
+    function resetPasswordVisibility() {
+        setPasswordVisible(false);
+    }
+
+    function wirePasswordToggle() {
+        var toggle = document.getElementById("business-user-password-toggle");
+        var input = document.getElementById("business-user-password");
+        if (!toggle || !input || toggle._wired) return;
+        toggle._wired = true;
+        toggle.setAttribute("aria-pressed", "false");
+        toggle.addEventListener("click", function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            setPasswordVisible(input.type === "password");
+            input.focus();
+        });
+    }
+
     function resetForm() {
         editingId = null;
         document.getElementById("business-user-form-title").textContent = "Add User";
@@ -181,6 +217,7 @@ var InventoryBusinessUsers = (function () {
         document.getElementById("business-user-password").value = "";
         document.getElementById("business-user-password-label").textContent = "Password";
         document.getElementById("business-user-password").required = true;
+        resetPasswordVisibility();
         toggleRolePanel(false);
         renderRoleSelect("");
     }
@@ -364,6 +401,8 @@ var InventoryBusinessUsers = (function () {
         if (window.InventoryAuth && typeof InventoryAuth.wireMobileInput === "function") {
             InventoryAuth.wireMobileInput(document.getElementById("business-user-mobile"));
         }
+
+        wirePasswordToggle();
     }
 
     function init() {

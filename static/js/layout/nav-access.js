@@ -45,6 +45,24 @@ var InventoryNavAccess = (function () {
             group.classList.toggle("inv-hidden", !visible);
         });
 
+        document.querySelectorAll("#inv-quick-access [data-nav-tab]").forEach(function (el) {
+            var tab = el.getAttribute("data-nav-tab");
+            var allowed = canViewTab(tab);
+            var item = el.closest("li") || el;
+            item.classList.toggle("inv-hidden", !allowed);
+        });
+
+        document.querySelectorAll("#inv-quick-access .inv-quick-access-col").forEach(function (col) {
+            var visibleItems = col.querySelectorAll(".inv-quick-access-list li:not(.inv-hidden)").length;
+            col.classList.toggle("inv-hidden", visibleItems === 0);
+        });
+
+        var quickAccessRoot = document.getElementById("inv-quick-access");
+        if (quickAccessRoot) {
+            var visibleCols = quickAccessRoot.querySelectorAll(".inv-quick-access-col:not(.inv-hidden)").length;
+            quickAccessRoot.classList.toggle("inv-hidden", visibleCols === 0);
+        }
+
         var addBusinessBtn = document.querySelector('[data-add-action="business"]');
         if (addBusinessBtn) {
             var owner = !access || access.is_owner;

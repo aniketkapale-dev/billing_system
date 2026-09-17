@@ -495,6 +495,12 @@ class PurchaseService(BaseService):
             return purchase
 
         if payment_amount is not None and Decimal(str(payment_amount)) > 0:
+            payment_amount = Decimal(str(payment_amount))
+            total_amount = purchase.total_amount or Decimal("0")
+            if payment_amount > total_amount + Decimal("0.0001"):
+                raise ValidationException(
+                    "Payment amount cannot exceed the bill amount."
+                )
             self._create_payment(
                 purchase,
                 amount=payment_amount,

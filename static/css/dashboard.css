@@ -59,6 +59,9 @@ body.inv-dashboard-body {
 }
 
 .inv-sidebar-nav {
+    --inv-nav-hover-duration: 0.4s;
+    --inv-nav-hover-ease: ease;
+    --inv-nav-submenu-duration: 0.6s;
     flex: 1;
     overflow-y: auto;
     list-style: none;
@@ -84,7 +87,8 @@ body.inv-dashboard-body {
     color: var(--inv-nav-text);
     font-size: 15px;
     font-weight: 600;
-    transition: background 0.15s, color 0.15s;
+    transition: background var(--inv-nav-hover-duration) var(--inv-nav-hover-ease),
+        color var(--inv-nav-hover-duration) var(--inv-nav-hover-ease);
 }
 
 .inv-nav-icon {
@@ -95,7 +99,7 @@ body.inv-dashboard-body {
     margin-right: 12px;
     font-size: 22px;
     color: var(--inv-nav-text);
-    transition: color 0.15s;
+    transition: color var(--inv-nav-hover-duration) var(--inv-nav-hover-ease);
 }
 
 .inv-nav-icon--sub {
@@ -106,6 +110,7 @@ body.inv-dashboard-body {
     margin-right: 12px;
     font-size: 22px;
     color: var(--inv-nav-text);
+    transition: color var(--inv-nav-hover-duration) var(--inv-nav-hover-ease);
 }
 
 .inv-nav-item:hover:not(.inv-nav-item--active) {
@@ -169,13 +174,16 @@ body.inv-dashboard-body {
     cursor: pointer;
     text-align: left;
     font-family: inherit;
+    transition: background var(--inv-nav-hover-duration) var(--inv-nav-hover-ease),
+        color var(--inv-nav-hover-duration) var(--inv-nav-hover-ease);
 }
 
 .inv-nav-group-toggle .inv-nav-group-chevron {
     margin-left: auto;
     margin-right: 0;
     font-size: 22px;
-    transition: transform 0.4s ease, color 0.15s;
+    transition: transform var(--inv-nav-submenu-duration) var(--inv-nav-hover-ease),
+        color var(--inv-nav-hover-duration) var(--inv-nav-hover-ease);
     color: var(--inv-nav-text);
 }
 
@@ -189,7 +197,7 @@ body.inv-dashboard-body {
     padding: 0 0 0 12px;
     max-height: 0;
     overflow: hidden;
-    transition: max-height 0.45s ease;
+    transition: max-height var(--inv-nav-submenu-duration) var(--inv-nav-hover-ease);
 }
 
 .inv-nav-group--open .inv-nav-sub {
@@ -238,7 +246,7 @@ body.inv-dashboard-body {
     align-items: center;
     gap: 0;
     border-radius: 8px;
-    transition: background 0.15s;
+    transition: background var(--inv-nav-hover-duration) var(--inv-nav-hover-ease);
 }
 
 .inv-nav-row > .inv-nav-item {
@@ -290,7 +298,10 @@ body.inv-dashboard-body {
     cursor: pointer;
     opacity: 0;
     text-decoration: none;
-    transition: opacity 0.2s, background 0.2s, color 0.2s, transform 0.15s;
+    transition: opacity var(--inv-nav-hover-duration) var(--inv-nav-hover-ease),
+        background var(--inv-nav-hover-duration) var(--inv-nav-hover-ease),
+        color var(--inv-nav-hover-duration) var(--inv-nav-hover-ease),
+        transform var(--inv-nav-hover-duration) var(--inv-nav-hover-ease);
 }
 
 .inv-nav-row:hover .inv-nav-add-btn {

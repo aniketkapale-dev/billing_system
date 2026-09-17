@@ -9,8 +9,8 @@
     <meta http-equiv="Expires" content="0"/>
     <title>{% block title %}Billing System - Dashboard{% endblock %}</title>
     {% include "partials/inventory_theme.html" %}
-    <link href="{% static 'css/dashboard.css' %}?v=20260310-sidebar-scroll" rel="stylesheet"/>
-    <link href="{% static 'css/inventory-mgmt.css' %}?v=20260308-pending-bill-color" rel="stylesheet"/>
+    <link href="{% static 'css/dashboard.css' %}?v=20260317-nav-hover" rel="stylesheet"/>
+    <link href="{% static 'css/inventory-mgmt.css' %}?v=20260317-password-toggle-v2" rel="stylesheet"/>
 </head>
 <body class="inv-auth-pending inv-dashboard-body inv-sidebar-collapsed">
 {% include "partials/inventory_ui.html" %}
@@ -231,11 +231,11 @@
                                 General
                             </h3>
                             <ul class="inv-quick-access-list">
-                                <li><a href="#" data-quick-action="business" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Business</a></li>
-                                <li><a href="/dashboard/products/?action=add" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Item</a></li>
-                                <li><a href="/dashboard/units/?action=add" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Unit</a></li>
-                                <li><a href="/dashboard/categories/?action=add" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Category</a></li>
-                                <li><a href="/dashboard/brands/?action=add" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Brand</a></li>
+                                <li><a href="#" data-quick-action="business" data-nav-tab="business" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Business</a></li>
+                                <li><a href="/dashboard/products/?action=add" data-nav-tab="products" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Item</a></li>
+                                <li><a href="/dashboard/units/?action=add" data-nav-tab="products-units" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Unit</a></li>
+                                <li><a href="/dashboard/categories/?action=add" data-nav-tab="products-categories" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Category</a></li>
+                                <li><a href="/dashboard/brands/?action=add" data-nav-tab="products-brands" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Brand</a></li>
                             </ul>
                         </div>
                         <div class="inv-quick-access-col">
@@ -244,8 +244,8 @@
                                 Sales
                             </h3>
                             <ul class="inv-quick-access-list">
-                                <li><a href="/dashboard/customers/?action=add" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Customer</a></li>
-                                <li><a href="/dashboard/purchases/?action=add" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Sale</a></li>
+                                <li><a href="/dashboard/customers/?action=add" data-nav-tab="customers" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Customer</a></li>
+                                <li><a href="/dashboard/purchases/?action=add" data-nav-tab="purchases" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Sale</a></li>
                             </ul>
                         </div>
                         <div class="inv-quick-access-col">
@@ -254,8 +254,8 @@
                                 Purchases
                             </h3>
                             <ul class="inv-quick-access-list">
-                                <li><a href="/dashboard/stock-in/?action=add" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Purchase (Stock In)</a></li>
-                                <li><a href="/dashboard/vendors/?action=add" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Vendor</a></li>
+                                <li><a href="/dashboard/stock-in/?action=add" data-nav-tab="stock-in" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Purchase (Stock In)</a></li>
+                                <li><a href="/dashboard/vendors/?action=add" data-nav-tab="stock-in-vendors" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Vendor</a></li>
                             </ul>
                         </div>
                         <div class="inv-quick-access-col">
@@ -264,8 +264,8 @@
                                 Inventory
                             </h3>
                             <ul class="inv-quick-access-list">
-                                <li><a href="/dashboard/inventory/" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> View Stock</a></li>
-                                <li><a href="/dashboard/stock-in/?action=add" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Purchase (Stock In)</a></li>
+                                <li><a href="/dashboard/inventory/" data-nav-tab="inventory" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> View Stock</a></li>
+                                <li><a href="/dashboard/purchases/?action=add" data-nav-tab="purchases" role="menuitem"><span class="inv-quick-access-plus" aria-hidden="true">+</span> Create Sale Invoice</a></li>
                             </ul>
                         </div>
                     </div>
@@ -410,19 +410,20 @@
 <script src="{% static 'js/components/page-panel.js' %}"></script>
 <script src="{% static 'js/components/modal.js' %}"></script>
 <script src="{% static 'js/core/date-format.js' %}?v=20260309-dd-mm-yyyy"></script>
+<script src="{% static 'js/core/dashboard-period.js' %}?v=20260317-sales-finalized"></script>
 <script src="{% static 'js/core/api.js' %}?v=20260309-dd-mm-yyyy"></script>
 <script src="{% static 'js/layout/business.js' %}"></script>
-<script src="{% static 'js/layout/nav-access.js' %}"></script>
+<script src="{% static 'js/layout/nav-access.js' %}?v=20260317-staff-access"></script>
 <script src="{% static 'js/components/bulk-select.js' %}"></script>
 <script src="{% static 'js/components/terms-html.js' %}"></script>
 <script src="{% static 'js/components/document-export.js' %}?v=20260317-mob-no"></script>
-<script src="{% static 'js/components/column-customize.js' %}"></script>
+<script src="{% static 'js/components/column-customize.js' %}?v=20260317-syntax-fix"></script>
 <script src="{% static 'js/components/searchable-select.js' %}?v=20260310-select-fix"></script>
 <script src="{% static 'js/components/table-cards.js' %}?v=20260308-action-hover"></script>
 <script src="{% static 'js/layout/sidebar.js' %}?v=20260310-sidebar-scroll"></script>
 <script src="{% static 'js/layout/quick-access.js' %}"></script>
 <script src="{% static 'js/layout/owner-profile.js' %}"></script>
-<script src="{% static 'js/auth/auth.js' %}"></script>
+<script src="{% static 'js/auth/auth.js' %}?v=20260317-staff-login"></script>
 <script>
 InventoryAuth.guardUser();
 InventoryBusiness.init().then(function () {

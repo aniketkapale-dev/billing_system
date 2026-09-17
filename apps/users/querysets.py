@@ -7,6 +7,21 @@ from apps.users.models import User
 ADMIN_ROLE_NAMES = ("Super Admin", "Admin", "superadmin")
 
 
+def user_has_platform_admin_role(user):
+    if not user or not getattr(user, "pk", None):
+        return False
+
+    admin_roles = Q()
+    for role_name in ADMIN_ROLE_NAMES:
+        admin_roles |= Q(role__role_name__iexact=role_name)
+
+    return UserRole.objects.filter(
+        user=user,
+        is_deleted=False,
+        role__is_deleted=False,
+    ).filter(admin_roles).exists()
+
+
 def business_owner_users_queryset():
     """Business owners visible in the superadmin user list (non-admin accounts)."""
     business_owner_assignment = UserRole.objects.filter(

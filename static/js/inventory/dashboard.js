@@ -196,11 +196,37 @@ var InventoryDashboard = (function () {
         return "week";
     }
 
+    function getStatCardLink(card) {
+        if (!window.InventoryDashboardPeriod) return card.link;
+        var period = getKpiPeriod(card.key);
+        if (card.key === "purchases") {
+            return InventoryDashboardPeriod.buildStockInLink(period);
+        }
+        if (card.key === "sales") {
+            return InventoryDashboardPeriod.buildSalesLink(period);
+        }
+        if (card.key === "expiring") {
+            return InventoryDashboardPeriod.buildInventoryExpiringLink(period);
+        }
+        return card.link;
+    }
+
+    function updateStatCardLinks() {
+        STAT_CARDS.forEach(function (card) {
+            var cardEl = document.querySelector('.inv-dashboard-stat-card[data-kpi="' + card.key + '"]');
+            if (!cardEl) return;
+            var linkEl = cardEl.querySelector("[data-stat-link]");
+            if (linkEl) {
+                linkEl.href = getStatCardLink(card);
+            }
+        });
+    }
+
     function buildInteractiveKpiCardHtml(card) {
         var period = getKpiPeriod(card.key);
         var caption = (KPI_CAPTIONS[card.key] && KPI_CAPTIONS[card.key][period]) || "";
         return (
-            '<div class="inv-dashboard-stat-card inv-dashboard-stat-card--' + card.tone + ' inv-dashboard-stat-card--interactive-kpi">' +
+            '<div class="inv-dashboard-stat-card inv-dashboard-stat-card--' + card.tone + ' inv-dashboard-stat-card--interactive-kpi" data-kpi="' + card.key + '">' +
             '<span class="inv-dashboard-stat-shine" aria-hidden="true"></span>' +
             '<span class="inv-dashboard-stat-icon-wrap">' +
             '<span class="material-symbols-outlined inv-dashboard-stat-icon">' + card.icon + "</span>" +
@@ -217,7 +243,7 @@ var InventoryDashboard = (function () {
             caption +
             "</div>" +
             "</div>" +
-            '<a href="' + card.link + '" class="inv-dashboard-stat-arrow inv-dashboard-stat-arrow--link" aria-label="View ' + card.label.toLowerCase() + '">' +
+            '<a href="' + getStatCardLink(card) + '" class="inv-dashboard-stat-arrow inv-dashboard-stat-arrow--link" data-stat-link="1" aria-label="View ' + card.label.toLowerCase() + '">' +
             '<span class="material-symbols-outlined" aria-hidden="true">arrow_outward</span>' +
             "</a>" +
             "</div>"
@@ -229,6 +255,7 @@ var InventoryDashboard = (function () {
         if (!grid) return;
 
         grid.innerHTML = STAT_CARDS.map(buildInteractiveKpiCardHtml).join("");
+        updateStatCardLinks();
     }
 
     function setKpiPeriod(key, period) {
@@ -253,6 +280,8 @@ var InventoryDashboard = (function () {
         if (labelEl && KPI_CAPTIONS[key]) {
             labelEl.textContent = KPI_CAPTIONS[key][period] || KPI_CAPTIONS[key].week;
         }
+
+        updateStatCardLinks();
     }
 
     function updateKpiCount(key, count) {

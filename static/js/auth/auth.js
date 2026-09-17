@@ -93,10 +93,14 @@ var InventoryAuth = (function () {
 
     function isSuperAdmin(user) {
         if (!user || !user.roles || !user.roles.length) return false;
-        return user.roles.some(function (r) {
-            var role = normalizeRole(r);
+        var roles = user.roles.map(normalizeRole);
+        var hasAdmin = roles.some(function (role) {
             return role === "super admin" || role === "superadmin" || role === "admin";
         });
+        if (!hasAdmin) return false;
+        // Business staff must use the business dashboard, not the platform admin panel.
+        if (roles.indexOf("business staff") !== -1) return false;
+        return true;
     }
 
     function getHomeRoute(user) {

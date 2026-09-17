@@ -135,8 +135,10 @@
     left: var(--inv-sidebar-current-width, var(--inv-sidebar-width));
     right: 0;
     z-index: 25;
+    display: flex;
+    align-items: center;
     margin: 0;
-    padding: 0 28px 8px;
+    padding: 0 28px 10px;
     background: var(--inv-chrome-page-bg);
     border-bottom: none;
     box-sizing: border-box;
@@ -144,7 +146,7 @@
 }
 
 .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-page-panel:not(.inv-hidden):has(> .inv-mgmt-tabs) {
-    --inv-mgmt-page-tabs-height: 2.5rem;
+    --inv-mgmt-page-tabs-height: 3rem;
     padding-top: calc(var(--inv-mgmt-chrome-gap) + var(--inv-mgmt-page-title-height) + var(--inv-mgmt-page-tabs-height));
 }
 
@@ -544,8 +546,38 @@
     margin-bottom: 0;
 }
 
-.inv-mgmt-toolbar--filters .inv-columns-btn-wrap {
+.inv-toolbar-list-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     margin-left: auto;
+    flex-shrink: 0;
+}
+
+.inv-list-sort-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.inv-list-sort-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--inv-secondary);
+    white-space: nowrap;
+}
+
+.inv-list-sort-select {
+    width: auto;
+    min-width: 168px;
+    max-width: 220px;
+    min-height: 40px;
+    padding: 8px 12px;
+    font-size: 13px;
+}
+
+.inv-mgmt-toolbar--filters .inv-columns-btn-wrap {
+    margin-left: 0;
 }
 
 .inv-mgmt-toolbar--filters .inv-mgmt-search {
@@ -2349,31 +2381,60 @@ body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sideb
 }
 
 .inv-mgmt-tabs {
-    display: flex;
-    gap: 8px;
+    display: inline-flex;
+    align-items: stretch;
+    gap: 0;
     margin-bottom: 16px;
+    padding: 3px;
+    border: var(--inv-border-width) solid var(--inv-input-border);
+    border-radius: var(--inv-radius-lg);
+    background: var(--inv-surface);
+    box-shadow: 0 1px 2px rgba(17, 24, 39, 0.06);
 }
 
 .inv-mgmt-tab {
-    padding: 8px 16px;
-    border-radius: 6px;
-    border: 1px solid var(--inv-outline-variant);
-    background: var(--inv-surface);
-    font-size: 13px;
+    appearance: none;
+    -webkit-appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    padding: 8px 20px;
+    border: 0;
+    border-radius: calc(var(--inv-radius-lg) - 2px);
+    background: transparent;
+    font-family: inherit;
+    font-size: 14px;
     font-weight: 600;
-    color: var(--inv-secondary);
+    line-height: 1.2;
+    color: var(--inv-charcoal);
+    white-space: nowrap;
     cursor: pointer;
-    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.inv-mgmt-tab + .inv-mgmt-tab {
+    margin-left: 2px;
 }
 
 .inv-mgmt-tab:hover:not(.inv-mgmt-tab--active) {
-    color: var(--inv-primary);
-    border-color: var(--inv-primary);
+    background: var(--inv-surface-bright);
+    color: var(--inv-primary-dark);
+}
+
+.inv-mgmt-tab:focus-visible {
+    outline: 2px solid var(--inv-accent);
+    outline-offset: 1px;
 }
 
 .inv-mgmt-tab--active {
     background: var(--inv-primary);
-    border-color: var(--inv-primary);
+    color: var(--inv-white);
+    box-shadow: 0 1px 3px rgba(68, 105, 0, 0.35);
+}
+
+.inv-mgmt-tab--active:hover {
+    background: var(--inv-primary-hover);
     color: var(--inv-white);
 }
 
@@ -3533,6 +3594,41 @@ body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sideb
 .inv-input-icon-wrap--textarea .inv-input-trailing-icon {
     top: 16px;
     transform: none;
+}
+
+.inv-input-icon-wrap--password .inv-mgmt-input--trailing-icon {
+    padding-right: 46px;
+}
+
+.inv-mgmt-password-toggle {
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    z-index: 2;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: #9CA3AF;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.inv-mgmt-password-toggle:hover {
+    background: var(--inv-surface-bright);
+    color: var(--inv-primary);
+}
+
+.inv-mgmt-password-toggle .material-symbols-outlined {
+    font-size: 20px;
+    line-height: 1;
+    pointer-events: none;
 }
 
 .inv-business-users-card {

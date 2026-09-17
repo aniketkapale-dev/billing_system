@@ -18,6 +18,7 @@
                 <input type="search" id="purchases-search" class="inv-mgmt-search" placeholder="Search customer, invoice no...."/>
                 <select id="purchases-invoice-status-filter" class="inv-mgmt-select inv-mgmt-filter-select" aria-label="Invoice status">
                     <option value="">All statuses</option>
+                    <option value="finalized">Finalized</option>
                     <option value="paid">Paid</option>
                     <option value="pending">Pending</option>
                     <option value="draft">Draft</option>
@@ -326,7 +327,7 @@
 <script src="{% static 'js/inventory/settings-tax.js' %}?v=20260309-sale-add-modals"></script>
 <script src="{% static 'js/inventory/settings-invoice.js' %}?v=20260309-sale-add-modals"></script>
 <script src="{% static 'js/components/sale-invoice-print-preview.js' %}?v=20260311-no-caption"></script>
-<script src="{% static 'js/inventory/purchases.js' %}?v=20260311-salon-price"></script>
+<script src="{% static 'js/inventory/purchases.js' %}?v=20260317-paid-amount-cap"></script>
 <script>
 InventoryPagePanel.init();
 InventoryCustomers.init();

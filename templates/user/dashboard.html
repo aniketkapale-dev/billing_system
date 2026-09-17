@@ -26,7 +26,7 @@
                         <button type="button" class="inv-dashboard-chart-filter" data-period="all" role="tab">All</button>
                     </div>
                 </div>
-                <a href="/dashboard/purchases/" class="inv-dashboard-recent-link">View all</a>
+                <a href="/dashboard/purchases/" id="dashboard-sales-view-all" class="inv-dashboard-recent-link">View all</a>
             </div>
             <div id="dashboard-sales-chart" class="inv-dashboard-chart">
                 <div class="inv-dashboard-chart-empty">Loading...</div>
@@ -43,7 +43,7 @@
                         <button type="button" class="inv-dashboard-chart-filter" data-period="month" role="tab">Month</button>
                     </div>
                 </div>
-                <a href="/dashboard/purchases/?invoice_status=pending" class="inv-dashboard-recent-link">View all</a>
+                <a href="/dashboard/purchases/?invoice_status=pending" id="dashboard-pending-view-all" class="inv-dashboard-recent-link">View all</a>
             </div>
             <div class="inv-mgmt-table-wrap inv-dashboard-pending-list-wrap">
                 <table class="inv-mgmt-table inv-dashboard-pending-table">
@@ -71,7 +71,7 @@
 
 {% block page_scripts %}
 {% load static %}
-<script src="{% static 'js/inventory/dashboard.js' %}?v=20260308-pending-scroll-all"></script>
+<script src="{% static 'js/inventory/dashboard.js' %}?v=20260317-view-all-unfiltered"></script>
 <script>
 InventoryDashboard.init();
 </script>

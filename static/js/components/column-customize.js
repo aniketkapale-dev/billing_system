@@ -302,6 +302,111 @@ var InventoryColumnCustomize = (function () {
         return "<th" + (col.headerClass ? ' class="' + col.headerClass + '"' : "") + ">" + col.label + "</th>";
     }
 
+    function sortOptionLabel(col, direction) {
+        var key = col.sortKey || "";
+        var isDesc = direction === "desc";
+        if (key === "created_at") {
+            return isDesc ? "Last added first" : "Oldest added first";
+        }
+        if (key === "invoice_date" || key === "purchase_date") {
+            return isDesc ? col.label + " (newest)" : col.label + " (oldest)";
+        }
+        if (
+            key.indexOf("amount") !== -1 ||
+            key.indexOf("total") !== -1 ||
+            key.indexOf("price") !== -1 ||
+            key === "subtotal" ||
+            key === "grand_total" ||
+            key === "quantity"
+        ) {
+            return isDesc ? col.label + " (high to low)" : col.label + " (low to high)";
+        }
+        return isDesc ? col.label + " (Z to A)" : col.label + " (A to Z)";
+    }
+
+    function buildSortOptions(ctrl) {
+        var options = [];
+        var seen = {};
+
+        function addOption(value, label) {
+            if (seen[value]) return;
+            seen[value] = true;
+            options.push({ value: value, label: label });
+        }
+
+        if (ctrl.includeCreatedAtSort !== false && ctrl.onSortChange) {
+            addOption("-created_at", "Last added first");
+            addOption("created_at", "Oldest added first");
+        }
+
+        ctrl.columns.forEach(function (col) {
+            if (!col.sortKey || col.sortKey === "created_at") return;
+            addOption("-" + col.sortKey, sortOptionLabel(col, "desc"));
+            addOption(col.sortKey, sortOptionLabel(col, "asc"));
+        });
+
+        return options;
+    }
+
+    function syncSortSelect(ctrl) {
+        if (!ctrl.sortSelectEl) return;
+        var value = ctrl.ordering || ctrl.sortDefault || "";
+        if (ctrl.sortSelectEl.value !== value) {
+            ctrl.sortSelectEl.value = value;
+        }
+    }
+
+    function ensureToolbarActions(toolbar) {
+        var actionsWrap = toolbar.querySelector(".inv-toolbar-list-actions");
+        if (!actionsWrap) {
+            actionsWrap = document.createElement("div");
+            actionsWrap.className = "inv-toolbar-list-actions";
+            toolbar.appendChild(actionsWrap);
+        }
+        return actionsWrap;
+    }
+
+    function mountSortSelect(ctrl, actionsWrap) {
+        if (!ctrl.onSortChange || ctrl.sortSelectEl) return;
+
+        var options = buildSortOptions(ctrl);
+        if (!options.length) return;
+
+        var wrap = document.createElement("div");
+        wrap.className = "inv-list-sort-wrap";
+
+        var selectId = "inv-list-sort-" + ctrl.tableKey;
+
+        var label = document.createElement("label");
+        label.className = "inv-list-sort-label";
+        label.setAttribute("for", selectId);
+        label.textContent = "Sort by";
+
+        var select = document.createElement("select");
+        select.id = selectId;
+        select.className = "inv-mgmt-select inv-list-sort-select";
+        select.setAttribute("aria-label", "Sort list");
+
+        options.forEach(function (opt) {
+            var option = document.createElement("option");
+            option.value = opt.value;
+            option.textContent = opt.label;
+            select.appendChild(option);
+        });
+
+        select.value = ctrl.ordering || ctrl.sortDefault || options[0].value;
+        select.addEventListener("change", function () {
+            ctrl.ordering = select.value;
+            ctrl.renderHeader();
+            ctrl.onSortChange(ctrl.ordering);
+        });
+
+        wrap.appendChild(label);
+        wrap.appendChild(select);
+        actionsWrap.insertBefore(wrap, actionsWrap.firstChild);
+        ctrl.sortSelectEl = select;
+    }
+
     function wireSortEvents(ctrl) {
         if (ctrl._sortWired || !ctrl.onSortChange) return;
         var row = document.querySelector(ctrl.theadSelector);
@@ -364,6 +469,7 @@ var InventoryColumnCustomize = (function () {
             }
 
             ctrl.renderHeader();
+            syncSortSelect(ctrl);
             ctrl.onSortChange(ctrl.ordering);
         };
 
@@ -403,6 +509,7 @@ var InventoryColumnCustomize = (function () {
             }
             row.innerHTML = html;
             syncColgroup(ctrl);
+            syncSortSelect(ctrl);
         };
 
         ctrl.renderRowCells = function (item) {
@@ -416,8 +523,12 @@ var InventoryColumnCustomize = (function () {
             var toolbar = document.querySelector(ctrl.toolbarSelector);
             if (!toolbar) return;
 
-            if (toolbar.querySelector(".inv-columns-btn")) {
+            var actionsWrap = ensureToolbarActions(toolbar);
+            mountSortSelect(ctrl, actionsWrap);
+
+            if (actionsWrap.querySelector(".inv-columns-btn")) {
                 ctrl.mounted = true;
+                wireSortEvents(ctrl);
                 return;
             }
 
@@ -434,7 +545,7 @@ var InventoryColumnCustomize = (function () {
             var wrap = document.createElement("div");
             wrap.className = "inv-columns-btn-wrap";
             wrap.appendChild(btn);
-            toolbar.appendChild(wrap);
+            actionsWrap.appendChild(wrap);
             ctrl.mounted = true;
             wireSortEvents(ctrl);
         };

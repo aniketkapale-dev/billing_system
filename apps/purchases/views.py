@@ -24,8 +24,9 @@ class PurchaseViewSet(BusinessScopedViewSetMixin, BaseViewSet):
     filter_fields = ("customer_name", "reference_no")
     required_roles = ["Business Owner", "Business Staff"]
     required_tab = "purchases"
-    ordering_default = ("-purchase_date", "-created_at")
+    ordering_default = ("-created_at",)
     ordering_fields = {
+        "created_at": "created_at",
         "purchase_date": "purchase_date",
         "reference_no": "reference_no",
         "customer_name": "customer_name",
@@ -45,7 +46,9 @@ class PurchaseViewSet(BusinessScopedViewSetMixin, BaseViewSet):
             queryset = queryset.filter(purchase_date__lte=date_to)
         if invoice_status:
             status_value = invoice_status.lower()
-            if status_value == "paid":
+            if status_value == "finalized":
+                queryset = queryset.filter(is_cancelled=False, is_draft=False)
+            elif status_value == "paid":
                 queryset = queryset.filter(is_cancelled=False, is_draft=False, is_paid=True)
             elif status_value == "pending":
                 queryset = queryset.filter(is_cancelled=False, is_draft=False, is_paid=False)

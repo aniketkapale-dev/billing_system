@@ -7,7 +7,7 @@ var InventoryStockIn = (function () {
     var CATALOG_API = "/api/catalog";
     var PAGE_SIZE = (window.InventoryConstants && InventoryConstants.PAGE_SIZE) || 10;
     var currentPage = 1;
-    var currentOrdering = "-invoice_date";
+    var currentOrdering = "-created_at";
     var searchTimer = null;
     var products = [];
     var vendors = [];
@@ -35,13 +35,13 @@ var InventoryStockIn = (function () {
                 toolbarSelector: "#stockin-list-panel .inv-mgmt-toolbar",
                 includeBulkCheck: false,
                 bulkHeaderHtml: '<th class="inv-col-check d-none"><input type="checkbox" class="inv-bulk-select-all" aria-label="Select all"/></th>',
-                sortDefault: "-invoice_date",
+                sortDefault: "-created_at",
                 onSortChange: function (ordering) {
                     currentOrdering = ordering;
                     loadInvoices(1);
                 },
                 columns: [
-                    { id: "date", label: "Date", locked: true, cell: function (item) { return "<td>" + InventoryApi.escapeHtml(formatDate(item.invoice_date)) + "</td>"; } },
+                    { id: "date", label: "Date", locked: true, sortKey: "invoice_date", cell: function (item) { return "<td>" + InventoryApi.escapeHtml(formatDate(item.invoice_date)) + "</td>"; } },
                     { id: "invoice_no", label: "Invoice No.", locked: true, sortKey: "invoice_number", cell: function (item) { return "<td><strong>" + InventoryApi.escapeHtml(item.invoice_number) + "</strong></td>"; } },
                     { id: "qty", label: "Qty", headerClass: "inv-mgmt-cell--num", cell: function (item) { return '<td class="inv-mgmt-cell--num">' + InventoryApi.escapeHtml(formatQty(item.total_quantity)) + "</td>"; } },
                     { id: "subtotal", label: "Total Amount", sortKey: "subtotal", locked: true, headerClass: "inv-mgmt-cell--num", cell: function (item) { return '<td class="inv-mgmt-cell--num"><strong>' + InventoryApi.formatMoney(item.subtotal) + "</strong></td>"; } },
@@ -1147,6 +1147,24 @@ var InventoryStockIn = (function () {
         loadInvoices(1);
     }
 
+    function applyFiltersFromUrl() {
+        if (!window.InventoryDashboardPeriod) return;
+
+        var filters = InventoryDashboardPeriod.parseUrlPeriodFilters();
+        var dateFromEl = document.getElementById("stockin-date-from");
+        var dateToEl = document.getElementById("stockin-date-to");
+
+        if (filters.dateFrom && filters.dateTo) {
+            if (dateFromEl) dateFromEl.value = filters.dateFrom;
+            if (dateToEl) dateToEl.value = filters.dateTo;
+            return;
+        }
+
+        if (filters.period) {
+            InventoryDashboardPeriod.applyDateRangeInputs(dateFromEl, dateToEl, filters.period);
+        }
+    }
+
     function loadInvoices(page) {
         currentPage = page || 1;
         InventoryLoader.show();
@@ -1313,6 +1331,7 @@ var InventoryStockIn = (function () {
 
         function boot() {
             if (!InventoryBusiness.getActiveId()) return;
+            applyFiltersFromUrl();
             loadProducts().then(function () {
                 return loadVendors();
             }).then(function () {

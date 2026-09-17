@@ -28,6 +28,7 @@ class TaxViewSet(BusinessScopedViewSetMixin, BaseViewSet):
     ordering_fields = {"key": "key", "value": "value"}
     required_roles = ["Business Owner", "Business Staff"]
     required_tab = "settings-tax"
+    read_access_tabs = ("purchases", "stock-in")
 
     def get_permissions(self):
         return [IsAuthenticatedUser(), HasRole()]
@@ -62,6 +63,7 @@ class InvoiceSettingViewSet(BusinessScopedViewSetMixin, BaseViewSet):
     }
     required_roles = ["Business Owner", "Business Staff"]
     required_tab = "settings-invoice"
+    read_access_tabs = ("purchases", "stock-in")
 
     def get_permissions(self):
         return [IsAuthenticatedUser(), HasRole()]
