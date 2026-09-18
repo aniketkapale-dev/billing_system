@@ -14,20 +14,10 @@ var InventoryCatalog = (function () {
                 { id: "name", label: "Unit Name", type: "text", required: true, placeholder: "e.g. Piece" },
                 { id: "short_name", label: "Short Name", type: "text", required: true, placeholder: "e.g. pcs" }
             ],
-            buildPayload: function () {
-                return {
-                    name: document.getElementById("catalog-field-name").value.trim(),
-                    short_name: document.getElementById("catalog-field-short_name").value.trim()
-                };
-            },
             validate: function (payload) {
                 if (!payload.name) return "Unit name is required.";
                 if (!payload.short_name) return "Unit short name is required.";
                 return null;
-            },
-            populate: function (item) {
-                document.getElementById("catalog-field-name").value = item.name || "";
-                document.getElementById("catalog-field-short_name").value = item.short_name || "";
             }
         },
         categories: {
@@ -41,19 +31,9 @@ var InventoryCatalog = (function () {
                 { id: "name", label: "Category Name", type: "text", required: true, placeholder: "Category name" },
                 { id: "description", label: "Description", type: "textarea", required: false, placeholder: "Optional description" }
             ],
-            buildPayload: function () {
-                return {
-                    name: document.getElementById("catalog-field-name").value.trim(),
-                    description: document.getElementById("catalog-field-description").value.trim()
-                };
-            },
             validate: function (payload) {
                 if (!payload.name) return "Category name is required.";
                 return null;
-            },
-            populate: function (item) {
-                document.getElementById("catalog-field-name").value = item.name || "";
-                document.getElementById("catalog-field-description").value = item.description || "";
             }
         },
         brands: {
@@ -65,17 +45,9 @@ var InventoryCatalog = (function () {
             fields: [
                 { id: "name", label: "Brand Name", type: "text", required: true, placeholder: "Brand name" }
             ],
-            buildPayload: function () {
-                return {
-                    name: document.getElementById("catalog-field-name").value.trim()
-                };
-            },
             validate: function (payload) {
                 if (!payload.name) return "Brand name is required.";
                 return null;
-            },
-            populate: function (item) {
-                document.getElementById("catalog-field-name").value = item.name || "";
             }
         },
         vendors: {
@@ -87,17 +59,9 @@ var InventoryCatalog = (function () {
             fields: [
                 { id: "name", label: "Vendor Name", type: "text", required: true, placeholder: "Vendor name" }
             ],
-            buildPayload: function () {
-                return {
-                    name: document.getElementById("catalog-field-name").value.trim()
-                };
-            },
             validate: function (payload) {
                 if (!payload.name) return "Vendor name is required.";
                 return null;
-            },
-            populate: function (item) {
-                document.getElementById("catalog-field-name").value = item.name || "";
             }
         }
     };
@@ -264,26 +228,224 @@ var InventoryCatalog = (function () {
         if (ctrl) ctrl.renderHeader();
     }
 
-    function renderFormFields() {
-        var wrap = document.getElementById(resource + "-form-fields");
-        if (!wrap || !config) return;
-        wrap.innerHTML = config.fields.map(function (field) {
+    function getCatalogFormRowsContainer() {
+        return document.getElementById("catalog-form-rows");
+    }
+
+    function getCatalogFormRows() {
+        var container = getCatalogFormRowsContainer();
+        if (!container) return [];
+        return Array.prototype.slice.call(container.querySelectorAll(".inv-catalog-form-row"));
+    }
+
+    function rowField(row, selector) {
+        return row ? row.querySelector(selector) : null;
+    }
+
+    function renderCatalogFieldInput(field, withId) {
+        var idAttr = withId ? ' id="catalog-field-' + field.id + '"' : "";
+        var className = "inv-catalog-field-" + field.id;
+        var placeholder = InventoryApi.escapeHtml(field.placeholder || "");
+        if (field.type === "textarea") {
+            return (
+                '<textarea' + idAttr + ' class="inv-mgmt-textarea ' + className + '" rows="3" placeholder="' +
+                placeholder + '"></textarea>'
+            );
+        }
+        return (
+            '<input' + idAttr + ' class="inv-mgmt-input ' + className + '" type="text" placeholder="' +
+            placeholder + '"' + (field.required ? " required" : "") + "/>"
+        );
+    }
+
+    function renderCatalogRowFieldsHtml(withId) {
+        return config.fields.map(function (field) {
             var fullClass = field.type === "textarea" ? " inv-mgmt-field--full" : "";
-            var input;
-            if (field.type === "textarea") {
-                input = '<textarea id="catalog-field-' + field.id + '" class="inv-mgmt-textarea" rows="3" placeholder="' +
-                    InventoryApi.escapeHtml(field.placeholder || "") + '"></textarea>';
-            } else {
-                input = '<input id="catalog-field-' + field.id + '" class="inv-mgmt-input" type="text" placeholder="' +
-                    InventoryApi.escapeHtml(field.placeholder || "") + '"' + (field.required ? " required" : "") + "/>";
-            }
+            var labelFor = withId ? ' for="catalog-field-' + field.id + '"' : "";
             return (
                 '<div class="inv-mgmt-field' + fullClass + '">' +
-                "<label for=\"catalog-field-" + field.id + "\">" + field.label + "</label>" +
-                input +
+                "<label" + labelFor + ">" + field.label + "</label>" +
+                renderCatalogFieldInput(field, withId) +
                 "</div>"
             );
         }).join("");
+    }
+
+    function renderFormFields() {
+        var wrap = document.getElementById(resource + "-form-fields");
+        if (!wrap || !config) return;
+        wrap.innerHTML =
+            '<div id="catalog-form-rows" class="inv-product-form-rows">' +
+            '<div class="inv-catalog-form-row inv-product-form-row" data-row-index="0">' +
+            '<div class="inv-mgmt-form-grid" style="padding:0;">' +
+            renderCatalogRowFieldsHtml(true) +
+            "</div></div></div>" +
+            '<template id="catalog-form-row-template">' +
+            '<div class="inv-catalog-form-row inv-product-form-row" data-row-index="">' +
+            '<div class="inv-mgmt-form-grid" style="padding:0;">' +
+            renderCatalogRowFieldsHtml(false) +
+            "</div></div></template>";
+    }
+
+    function collectPayloadFromRow(row) {
+        var payload = {};
+        config.fields.forEach(function (field) {
+            var el = rowField(row, ".inv-catalog-field-" + field.id);
+            payload[field.id] = el ? String(el.value || "").trim() : "";
+        });
+        return payload;
+    }
+
+    function clearCatalogRowFields(row) {
+        if (!row) return;
+        config.fields.forEach(function (field) {
+            var el = rowField(row, ".inv-catalog-field-" + field.id);
+            if (el) el.value = "";
+        });
+    }
+
+    function populateCatalogRow(row, item) {
+        if (!row || !item) return;
+        config.fields.forEach(function (field) {
+            var el = rowField(row, ".inv-catalog-field-" + field.id);
+            if (el) el.value = item[field.id] != null ? item[field.id] : "";
+        });
+    }
+
+    function removeExtraCatalogRows() {
+        var rows = getCatalogFormRows();
+        for (var i = rows.length - 1; i > 0; i--) {
+            rows[i].remove();
+        }
+        ensureCatalogRowHeads();
+    }
+
+    function ensureCatalogRowHeads() {
+        var rows = getCatalogFormRows();
+        var labelPrefix = config ? config.title : "Item";
+        if (rows.length <= 1) {
+            rows.forEach(function (row) {
+                var head = row.querySelector(".inv-product-form-row-head");
+                if (head) head.remove();
+            });
+            return;
+        }
+        rows.forEach(function (row, idx) {
+            var head = row.querySelector(".inv-product-form-row-head");
+            if (!head) {
+                head = document.createElement("div");
+                head.className = "inv-product-form-row-head";
+                row.insertBefore(head, row.firstChild);
+            }
+            var label = head.querySelector(".inv-product-form-row-label");
+            if (!label) {
+                label = document.createElement("span");
+                label.className = "inv-product-form-row-label";
+                head.appendChild(label);
+            }
+            label.textContent = labelPrefix + " " + (idx + 1);
+            var removeBtn = head.querySelector(".inv-product-row-remove");
+            if (idx > 0) {
+                if (!removeBtn) {
+                    removeBtn = document.createElement("button");
+                    removeBtn.type = "button";
+                    removeBtn.className = "inv-product-row-remove inv-mgmt-btn";
+                    removeBtn.innerHTML = '<span class="material-symbols-outlined">close</span> Remove';
+                    head.appendChild(removeBtn);
+                }
+            } else if (removeBtn) {
+                removeBtn.remove();
+            }
+        });
+    }
+
+    function updateCatalogSaveButtonLabel() {
+        var saveBtn = document.getElementById(resource + "-save-btn");
+        if (!saveBtn || editingId || !config) return;
+        var count = getCatalogFormRows().length;
+        if (count > 1) {
+            saveBtn.textContent = "Save " + count + " " + config.plural;
+        } else {
+            saveBtn.textContent = "Save " + config.title;
+        }
+    }
+
+    function toggleCatalogAddMoreButton(show) {
+        var btn = document.getElementById(resource + "-add-more-btn");
+        if (btn) btn.classList.toggle("inv-hidden", !show);
+    }
+
+    function addCatalogFormRow() {
+        if (editingId) return;
+        var tpl = document.getElementById("catalog-form-row-template");
+        var container = getCatalogFormRowsContainer();
+        if (!tpl || !container) return;
+
+        var rows = getCatalogFormRows();
+        var clone = tpl.content.firstElementChild.cloneNode(true);
+        clone.setAttribute("data-row-index", String(rows.length));
+        container.appendChild(clone);
+        ensureCatalogRowHeads();
+        updateCatalogSaveButtonLabel();
+        var firstField = rowField(clone, ".inv-catalog-field-" + config.fields[0].id);
+        if (firstField) firstField.focus();
+    }
+
+    function removeCatalogFormRow(row) {
+        if (editingId || !row) return;
+        if (getCatalogFormRows().length <= 1) return;
+        row.remove();
+        getCatalogFormRows().forEach(function (r, idx) {
+            r.setAttribute("data-row-index", String(idx));
+        });
+        ensureCatalogRowHeads();
+        updateCatalogSaveButtonLabel();
+    }
+
+    function validateCatalogPayload(payload, rowLabel) {
+        var err = config.validate(payload);
+        if (!err) return null;
+        return rowLabel ? err.replace(/\.$/, "") + " (" + rowLabel + ")." : err;
+    }
+
+    function saveCatalogItemsSequential(payloads, btn) {
+        InventoryLoader.button(btn, true, "Saving...");
+        var saved = 0;
+        var chain = Promise.resolve();
+
+        payloads.forEach(function (payload, index) {
+            chain = chain.then(function () {
+                return request("", { method: "POST", body: payload }).then(function (body) {
+                    if (body && body.isSuccess) {
+                        saved++;
+                        return;
+                    }
+                    var msg = body && body.message ? body.message : "Unable to save.";
+                    if (body && body.errors && body.errors.length) msg = body.errors.join(" • ");
+                    var rowNum = index + 1;
+                    throw new Error(msg + (payloads.length > 1 ? " (" + config.title + " " + rowNum + ")" : ""));
+                });
+            });
+        });
+
+        chain
+            .then(function () {
+                InventoryToast.success(
+                    saved === 1
+                        ? config.title + " added."
+                        : saved + " " + config.plural.toLowerCase() + " added."
+                );
+                InventoryPagePanel.showList(listPanelId);
+                loadList(1);
+            })
+            .catch(function (err) {
+                InventoryToast.error(err && err.message ? err.message : "Network error. Please try again.");
+                if (saved) loadList(1);
+            })
+            .finally(function () {
+                InventoryLoader.button(btn, false);
+                updateCatalogSaveButtonLabel();
+            });
     }
 
     function cellValue(item, key) {
@@ -351,12 +513,12 @@ var InventoryCatalog = (function () {
 
     function resetForm() {
         editingId = null;
-        config.fields.forEach(function (field) {
-            var el = document.getElementById("catalog-field-" + field.id);
-            if (el) el.value = "";
-        });
+        removeExtraCatalogRows();
+        var firstRow = getCatalogFormRows()[0];
+        if (firstRow) clearCatalogRowFields(firstRow);
         document.getElementById(resource + "-form-title").textContent = "Add " + config.title;
-        document.getElementById(resource + "-save-btn").textContent = "Save " + config.title;
+        toggleCatalogAddMoreButton(true);
+        updateCatalogSaveButtonLabel();
     }
 
     function openFormPanel() {
@@ -375,9 +537,11 @@ var InventoryCatalog = (function () {
                     return;
                 }
                 editingId = body.data.id;
-                config.populate(body.data);
+                removeExtraCatalogRows();
+                populateCatalogRow(getCatalogFormRows()[0], body.data);
                 document.getElementById(resource + "-form-title").textContent = "Edit " + config.title;
                 document.getElementById(resource + "-save-btn").textContent = "Update " + config.title;
+                toggleCatalogAddMoreButton(false);
                 InventoryPagePanel.showPanel(listPanelId, formPanelId);
             })
             .catch(function () {
@@ -389,37 +553,76 @@ var InventoryCatalog = (function () {
     }
 
     function saveItem() {
-        var payload = config.buildPayload();
-        var err = config.validate(payload);
-        if (err) {
-            InventoryToast.error(err);
+        var btn = document.getElementById(resource + "-save-btn");
+        var rows = getCatalogFormRows();
+
+        if (editingId) {
+            var editPayload = collectPayloadFromRow(rows[0]);
+            var editErr = validateCatalogPayload(editPayload, null);
+            if (editErr) {
+                InventoryToast.error(editErr);
+                return;
+            }
+            InventoryLoader.button(btn, true, "Updating...");
+            request(String(editingId) + "/", { method: "PATCH", body: editPayload })
+                .then(function (body) {
+                    if (body && body.isSuccess) {
+                        InventoryToast.success(config.title + " updated.");
+                        InventoryPagePanel.showList(listPanelId);
+                        loadList(currentPage);
+                    } else {
+                        var msg = body.message || "Unable to save.";
+                        if (body.errors && body.errors.length) msg = body.errors.join(" • ");
+                        InventoryToast.error(msg);
+                    }
+                })
+                .catch(function () {
+                    InventoryToast.error("Network error. Please try again.");
+                })
+                .finally(function () {
+                    InventoryLoader.button(btn, false);
+                });
             return;
         }
 
-        var btn = document.getElementById(resource + "-save-btn");
-        InventoryLoader.button(btn, true, editingId ? "Updating..." : "Saving...");
+        if (!rows.length) return;
 
-        request(editingId ? String(editingId) + "/" : "", {
-            method: editingId ? "PATCH" : "POST",
-            body: payload
-        })
-            .then(function (body) {
-                if (body && body.isSuccess) {
-                    InventoryToast.success(editingId ? config.title + " updated." : config.title + " added.");
-                    InventoryPagePanel.showList(listPanelId);
-                    loadList(editingId ? currentPage : 1);
-                } else {
-                    var msg = body.message || "Unable to save.";
-                    if (body.errors && body.errors.length) msg = body.errors.join(" • ");
-                    InventoryToast.error(msg);
-                }
-            })
-            .catch(function () {
-                InventoryToast.error("Network error. Please try again.");
-            })
-            .finally(function () {
-                InventoryLoader.button(btn, false);
-            });
+        var payloads = [];
+        for (var i = 0; i < rows.length; i++) {
+            var rowLabel = rows.length > 1 ? config.title + " " + (i + 1) : null;
+            var payload = collectPayloadFromRow(rows[i]);
+            var err = validateCatalogPayload(payload, rowLabel);
+            if (err) {
+                InventoryToast.error(err);
+                return;
+            }
+            payloads.push(payload);
+        }
+
+        if (payloads.length === 1) {
+            InventoryLoader.button(btn, true, "Saving...");
+            request("", { method: "POST", body: payloads[0] })
+                .then(function (body) {
+                    if (body && body.isSuccess) {
+                        InventoryToast.success(config.title + " added.");
+                        InventoryPagePanel.showList(listPanelId);
+                        loadList(1);
+                    } else {
+                        var singleMsg = body.message || "Unable to save.";
+                        if (body.errors && body.errors.length) singleMsg = body.errors.join(" • ");
+                        InventoryToast.error(singleMsg);
+                    }
+                })
+                .catch(function () {
+                    InventoryToast.error("Network error. Please try again.");
+                })
+                .finally(function () {
+                    InventoryLoader.button(btn, false);
+                });
+            return;
+        }
+
+        saveCatalogItemsSequential(payloads, btn);
     }
 
     function deleteItem(id, btn) {
@@ -495,6 +698,20 @@ var InventoryCatalog = (function () {
 
         if (openBtn) openBtn.addEventListener("click", openFormPanel);
         if (saveBtn) saveBtn.addEventListener("click", saveItem);
+
+        var addMoreBtn = document.getElementById(resource + "-add-more-btn");
+        if (addMoreBtn) addMoreBtn.addEventListener("click", addCatalogFormRow);
+
+        var formRowsContainer = getCatalogFormRowsContainer();
+        if (formRowsContainer) {
+            formRowsContainer.addEventListener("click", function (e) {
+                var removeBtn = e.target.closest(".inv-product-row-remove");
+                if (removeBtn) {
+                    var row = removeBtn.closest(".inv-catalog-form-row");
+                    if (row) removeCatalogFormRow(row);
+                }
+            });
+        }
 
         if (searchEl) {
             searchEl.addEventListener("input", function () {

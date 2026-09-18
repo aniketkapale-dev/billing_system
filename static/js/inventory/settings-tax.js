@@ -86,12 +86,133 @@ var InventorySettingsTax = (function () {
         return !!document.getElementById("settings-tax-table-body");
     }
 
-    function resetForm() {
-        editingId = null;
-        var keyEl = document.getElementById("settings-tax-key");
-        var valueEl = document.getElementById("settings-tax-value");
+    function getTaxFormRowsContainer() {
+        return document.getElementById("settings-tax-form-rows");
+    }
+
+    function getTaxFormRows() {
+        var container = getTaxFormRowsContainer();
+        if (!container) return [];
+        return Array.prototype.slice.call(container.querySelectorAll(".inv-product-form-row"));
+    }
+
+    function taxRowField(row, selector) {
+        return row ? row.querySelector(selector) : null;
+    }
+
+    function removeExtraTaxRows() {
+        var rows = getTaxFormRows();
+        for (var i = rows.length - 1; i > 0; i--) {
+            rows[i].remove();
+        }
+        ensureTaxRowHeads();
+    }
+
+    function clearTaxRowFields(row) {
+        if (!row) return;
+        var keyEl = taxRowField(row, ".inv-tax-field-key");
+        var valueEl = taxRowField(row, ".inv-tax-field-value");
         if (keyEl) keyEl.value = "";
         if (valueEl) valueEl.value = "";
+    }
+
+    function ensureTaxRowHeads() {
+        var rows = getTaxFormRows();
+        if (rows.length <= 1) {
+            rows.forEach(function (row) {
+                var head = row.querySelector(".inv-product-form-row-head");
+                if (head) head.remove();
+            });
+            return;
+        }
+        rows.forEach(function (row, idx) {
+            var head = row.querySelector(".inv-product-form-row-head");
+            if (!head) {
+                head = document.createElement("div");
+                head.className = "inv-product-form-row-head";
+                row.insertBefore(head, row.firstChild);
+            }
+            var label = head.querySelector(".inv-product-form-row-label");
+            if (!label) {
+                label = document.createElement("span");
+                label.className = "inv-product-form-row-label";
+                head.appendChild(label);
+            }
+            label.textContent = "Tax " + (idx + 1);
+            var removeBtn = head.querySelector(".inv-product-row-remove");
+            if (idx > 0) {
+                if (!removeBtn) {
+                    removeBtn = document.createElement("button");
+                    removeBtn.type = "button";
+                    removeBtn.className = "inv-product-row-remove inv-mgmt-btn";
+                    removeBtn.innerHTML = '<span class="material-symbols-outlined">close</span> Remove';
+                    head.appendChild(removeBtn);
+                }
+            } else if (removeBtn) {
+                removeBtn.remove();
+            }
+        });
+    }
+
+    function updateTaxSaveButtonLabel() {
+        var saveBtn = document.getElementById("settings-tax-save-btn");
+        if (!saveBtn || editingId || isModalMode()) return;
+        var count = getTaxFormRows().length;
+        saveBtn.textContent = count > 1 ? "Save " + count + " Taxes" : "Save Tax";
+    }
+
+    function toggleTaxAddMoreButton(show) {
+        var btn = document.getElementById("settings-tax-add-more-btn");
+        if (btn) btn.classList.toggle("inv-hidden", !show || isModalMode());
+    }
+
+    function addTaxFormRow() {
+        if (editingId || isModalMode()) return;
+        var tpl = document.getElementById("settings-tax-row-template");
+        var container = getTaxFormRowsContainer();
+        if (!tpl || !container) return;
+
+        var rows = getTaxFormRows();
+        var clone = tpl.content.firstElementChild.cloneNode(true);
+        clone.setAttribute("data-row-index", String(rows.length));
+        container.appendChild(clone);
+        ensureTaxRowHeads();
+        updateTaxSaveButtonLabel();
+        var keyEl = taxRowField(clone, ".inv-tax-field-key");
+        if (keyEl) keyEl.focus();
+    }
+
+    function removeTaxFormRow(row) {
+        if (editingId || isModalMode() || !row) return;
+        if (getTaxFormRows().length <= 1) return;
+        row.remove();
+        getTaxFormRows().forEach(function (r, idx) {
+            r.setAttribute("data-row-index", String(idx));
+        });
+        ensureTaxRowHeads();
+        updateTaxSaveButtonLabel();
+    }
+
+    function collectPayloadFromRow(row) {
+        return {
+            key: taxRowField(row, ".inv-tax-field-key").value.trim(),
+            value: taxRowField(row, ".inv-tax-field-value").value.trim()
+        };
+    }
+
+    function resetForm() {
+        editingId = null;
+        if (isModalMode()) {
+            var keyEl = document.getElementById("settings-tax-key");
+            var valueEl = document.getElementById("settings-tax-value");
+            if (keyEl) keyEl.value = "";
+            if (valueEl) valueEl.value = "";
+            return;
+        }
+        removeExtraTaxRows();
+        clearTaxRowFields(getTaxFormRows()[0]);
+        toggleTaxAddMoreButton(isListPage());
+        updateTaxSaveButtonLabel();
     }
 
     function openAddModal() {
@@ -118,6 +239,7 @@ var InventorySettingsTax = (function () {
             title.textContent = "Add Tax";
         } else {
             title.textContent = "Edit Tax";
+            toggleTaxAddMoreButton(false);
         }
 
         InventoryPagePanel.showPanel(LIST_PANEL, FORM_PANEL);
@@ -130,10 +252,17 @@ var InventorySettingsTax = (function () {
     }
 
     function collectPayload() {
-        return {
-            key: document.getElementById("settings-tax-key").value.trim(),
-            value: document.getElementById("settings-tax-value").value.trim()
-        };
+        if (isModalMode()) {
+            return {
+                key: (document.getElementById("settings-tax-key") || { value: "" }).value.trim(),
+                value: (document.getElementById("settings-tax-value") || { value: "" }).value.trim()
+            };
+        }
+        var firstRow = getTaxFormRows()[0];
+        if (!firstRow) {
+            return { key: "", value: "" };
+        }
+        return collectPayloadFromRow(firstRow);
     }
 
     function validatePayload(payload) {
@@ -145,46 +274,116 @@ var InventorySettingsTax = (function () {
         return null;
     }
 
-    function saveTax() {
-        var payload = collectPayload();
-        var error = validatePayload(payload);
-        if (error) {
-            InventoryToast.error(error);
-            return;
-        }
+    function saveTaxesSequential(payloads, btn) {
+        InventoryLoader.button(btn, true, "Saving...");
+        var saved = 0;
+        var chain = Promise.resolve();
 
-        var btn = document.getElementById("settings-tax-save-btn");
-        InventoryLoader.button(btn, true);
-
-        var path = editingId ? "/" + editingId + "/" : "/";
-        var method = editingId ? "PATCH" : "POST";
-
-        request(path, { method: method, body: payload })
-            .then(function (body) {
-                if (body && body.isSuccess) {
-                    InventoryToast.success(body.message || (editingId ? "Tax updated." : "Tax added."));
-                    if (isModalMode()) {
-                        InventoryModal.close("tax-modal");
-                        resetForm();
-                        if (body.data) {
-                            window.dispatchEvent(new CustomEvent("inventory:tax-created", {
-                                detail: { tax: body.data }
-                            }));
-                        }
-                    } else {
-                        closeForm();
-                        loadTaxes(editingId ? currentPage : 1);
+        payloads.forEach(function (payload, index) {
+            chain = chain.then(function () {
+                return request("/", { method: "POST", body: payload }).then(function (body) {
+                    if (body && body.isSuccess) {
+                        saved++;
+                        return;
                     }
-                } else {
-                    InventoryToast.error(body.message || "Failed to save tax.");
-                }
+                    var msg = body && body.message ? body.message : "Failed to save tax.";
+                    throw new Error(msg + (payloads.length > 1 ? " (Tax " + (index + 1) + ")" : ""));
+                });
+            });
+        });
+
+        chain
+            .then(function () {
+                InventoryToast.success(saved === 1 ? "Tax added." : saved + " taxes added.");
+                closeForm();
+                loadTaxes(1);
             })
-            .catch(function () {
-                InventoryToast.error("Network error while saving tax.");
+            .catch(function (err) {
+                InventoryToast.error(err && err.message ? err.message : "Network error while saving tax.");
+                if (saved) loadTaxes(1);
             })
             .finally(function () {
                 InventoryLoader.button(btn, false);
+                updateTaxSaveButtonLabel();
             });
+    }
+
+    function saveTax() {
+        var btn = document.getElementById("settings-tax-save-btn");
+        var rows = getTaxFormRows();
+
+        if (isModalMode() || editingId) {
+            var payload = collectPayload();
+            var error = validatePayload(payload);
+            if (error) {
+                InventoryToast.error(error);
+                return;
+            }
+            InventoryLoader.button(btn, true);
+            request(editingId ? "/" + editingId + "/" : "/", { method: editingId ? "PATCH" : "POST", body: payload })
+                .then(function (body) {
+                    if (body && body.isSuccess) {
+                        InventoryToast.success(body.message || (editingId ? "Tax updated." : "Tax added."));
+                        if (isModalMode()) {
+                            InventoryModal.close("tax-modal");
+                            resetForm();
+                            if (body.data) {
+                                window.dispatchEvent(new CustomEvent("inventory:tax-created", {
+                                    detail: { tax: body.data }
+                                }));
+                            }
+                        } else {
+                            closeForm();
+                            loadTaxes(editingId ? currentPage : 1);
+                        }
+                    } else {
+                        InventoryToast.error(body.message || "Failed to save tax.");
+                    }
+                })
+                .catch(function () {
+                    InventoryToast.error("Network error while saving tax.");
+                })
+                .finally(function () {
+                    InventoryLoader.button(btn, false);
+                });
+            return;
+        }
+
+        if (!rows.length) return;
+
+        var payloads = [];
+        for (var i = 0; i < rows.length; i++) {
+            var payload = collectPayloadFromRow(rows[i]);
+            var err = validatePayload(payload);
+            if (err) {
+                InventoryToast.error(err + (rows.length > 1 ? " (Tax " + (i + 1) + ")" : ""));
+                return;
+            }
+            payloads.push(payload);
+        }
+
+        if (payloads.length === 1) {
+            InventoryLoader.button(btn, true, "Saving...");
+            request("/", { method: "POST", body: payloads[0] })
+                .then(function (body) {
+                    if (body && body.isSuccess) {
+                        InventoryToast.success("Tax added.");
+                        closeForm();
+                        loadTaxes(1);
+                    } else {
+                        InventoryToast.error(body.message || "Failed to save tax.");
+                    }
+                })
+                .catch(function () {
+                    InventoryToast.error("Network error while saving tax.");
+                })
+                .finally(function () {
+                    InventoryLoader.button(btn, false);
+                });
+            return;
+        }
+
+        saveTaxesSequential(payloads, btn);
     }
 
     function editTax(id) {
@@ -193,6 +392,8 @@ var InventorySettingsTax = (function () {
             .then(function (body) {
                 if (body && body.isSuccess && body.data) {
                     editingId = id;
+                    removeExtraTaxRows();
+                    clearTaxRowFields(getTaxFormRows()[0]);
                     document.getElementById("settings-tax-key").value = body.data.key || "";
                     document.getElementById("settings-tax-value").value = body.data.value || "";
                     openForm(true);
@@ -258,6 +459,20 @@ var InventorySettingsTax = (function () {
         }
 
         if (saveBtn) saveBtn.addEventListener("click", saveTax);
+
+        var addMoreBtn = document.getElementById("settings-tax-add-more-btn");
+        if (addMoreBtn) addMoreBtn.addEventListener("click", addTaxFormRow);
+
+        var formRowsContainer = getTaxFormRowsContainer();
+        if (formRowsContainer) {
+            formRowsContainer.addEventListener("click", function (e) {
+                var removeBtn = e.target.closest(".inv-product-row-remove");
+                if (removeBtn) {
+                    var row = removeBtn.closest(".inv-product-form-row");
+                    if (row) removeTaxFormRow(row);
+                }
+            });
+        }
 
         var tableBody = document.getElementById("settings-tax-table-body");
         if (tableBody) {

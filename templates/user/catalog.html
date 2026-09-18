@@ -50,6 +50,10 @@
             </div>
             <div class="inv-mgmt-panel-footer">
                 <button type="button" class="inv-mgmt-btn" data-page-back="{{ catalog_resource }}-list-panel">Cancel</button>
+                <button id="{{ catalog_resource }}-add-more-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--secondary">
+                    <span class="material-symbols-outlined">add</span>
+                    Add More
+                </button>
                 <button id="{{ catalog_resource }}-save-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Save</button>
             </div>
         </div>
@@ -58,6 +62,6 @@
 {% endblock %}
 
 {% block page_scripts %}
-<script src="{% static 'js/inventory/catalog.js' %}?v=20260303"></script>
+<script src="{% static 'js/inventory/catalog.js' %}?v=20260318-catalog-add-more"></script>
 <script>InventoryCatalog.init();</script>
 {% endblock %}

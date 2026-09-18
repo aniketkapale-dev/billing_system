@@ -1,62 +1,131 @@
+<div id="customer-form-rows" class="inv-product-form-rows">
+<div class="inv-customer-form-row inv-product-form-row" data-row-index="0">
 <div class="inv-mgmt-form-grid inv-mgmt-form-grid--sale-top" style="padding:0;">
     <div class="inv-mgmt-field">
         <label for="customer-name">Full Name <span class="inv-field-required"></span></label>
-        <input id="customer-name" class="inv-mgmt-input" type="text" placeholder="Customer full name" required/>
+        <input id="customer-name" class="inv-mgmt-input inv-customer-field-name" type="text" placeholder="Customer full name" required/>
     </div>
     <div class="inv-mgmt-field">
         <label for="customer-mobile">Mobile Number <span class="inv-field-required"></span></label>
-        <input id="customer-mobile" class="inv-mgmt-input" type="text" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number" required/>
+        <input id="customer-mobile" class="inv-mgmt-input inv-customer-field-mobile" type="text" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number" required/>
     </div>
     <div class="inv-mgmt-field">
         <label for="customer-email">Email <span class="inv-field-optional">(optional)</span></label>
-        <input id="customer-email" class="inv-mgmt-input" type="email" placeholder="Email address"/>
+        <input id="customer-email" class="inv-mgmt-input inv-customer-field-email" type="email" placeholder="Email address"/>
     </div>
     <div class="inv-mgmt-field">
         <label for="customer-pin-code">Pin Code <span class="inv-field-required"></span></label>
-        <input id="customer-pin-code" class="inv-mgmt-input" type="text" inputmode="numeric" maxlength="6" placeholder="6-digit pin code" required/>
+        <input id="customer-pin-code" class="inv-mgmt-input inv-customer-field-pin-code" type="text" inputmode="numeric" maxlength="6" placeholder="6-digit pin code" required/>
     </div>
 </div>
 <div class="inv-mgmt-form-grid" style="padding:0;margin-top:16px;">
     <div class="inv-mgmt-field inv-mgmt-field--full">
         <label for="customer-address">Address <span class="inv-field-required"></span></label>
-        <textarea id="customer-address" class="inv-mgmt-textarea" rows="3" placeholder="Customer address" required></textarea>
+        <textarea id="customer-address" class="inv-mgmt-textarea inv-customer-field-address" rows="3" placeholder="Customer address" required></textarea>
     </div>
 </div>
 
 <div class="inv-customer-business-toggle" style="margin-top:20px;">
-    <label class="inv-mgmt-checkbox-label" for="customer-add-business">
-        <input id="customer-add-business" type="checkbox"/>
+    <label class="inv-mgmt-checkbox-label">
+        <input class="inv-customer-field-add-business" id="customer-add-business" type="checkbox"/>
         <span>Add company</span>
     </label>
 </div>
 
-<div id="customer-business-fields" class="inv-customer-business-fields inv-hidden" style="margin-top:16px;">
+<div class="inv-customer-business-fields inv-customer-field-business-panel inv-hidden" id="customer-business-fields" style="margin-top:16px;">
     <div class="inv-mgmt-form-grid inv-mgmt-form-grid--sale-top" style="padding:0;">
         <div class="inv-mgmt-field">
             <label for="customer-company-name">Company Name</label>
-            <input id="customer-company-name" class="inv-mgmt-input" type="text" placeholder="Company name"/>
+            <input id="customer-company-name" class="inv-mgmt-input inv-customer-field-company-name" type="text" placeholder="Company name"/>
         </div>
         <div class="inv-mgmt-field">
             <label for="customer-company-mobile">Company Mobile <span class="inv-field-optional">(optional)</span></label>
-            <input id="customer-company-mobile" class="inv-mgmt-input" type="text" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number"/>
+            <input id="customer-company-mobile" class="inv-mgmt-input inv-customer-field-company-mobile" type="text" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number"/>
         </div>
     </div>
     <div class="inv-mgmt-form-grid inv-mgmt-form-grid--sale-top" style="padding:0;margin-top:16px;">
         <div class="inv-mgmt-field">
             <label for="customer-gst">GST No <span class="inv-field-optional">(optional)</span></label>
-            <input id="customer-gst" class="inv-mgmt-input" type="text" placeholder="GST number" maxlength="30"/>
+            <input id="customer-gst" class="inv-mgmt-input inv-customer-field-gst" type="text" placeholder="GST number" maxlength="30"/>
         </div>
     </div>
     <div class="inv-mgmt-form-grid" style="padding:0;margin-top:16px;">
         <div class="inv-mgmt-field inv-mgmt-field--full">
             <label for="customer-business-address">Company Address <span class="inv-field-optional">(optional)</span></label>
-            <textarea id="customer-business-address" class="inv-mgmt-textarea" rows="3" placeholder="Company address"></textarea>
+            <textarea id="customer-business-address" class="inv-mgmt-textarea inv-customer-field-business-address" rows="3" placeholder="Company address"></textarea>
         </div>
     </div>
     <div class="inv-mgmt-form-grid" style="padding:0;margin-top:16px;">
         <div class="inv-mgmt-field inv-mgmt-field--full">
             <label for="customer-shipping-address">Shipping Address <span class="inv-field-optional">(optional)</span></label>
-            <textarea id="customer-shipping-address" class="inv-mgmt-textarea" rows="3" placeholder="Shipping address"></textarea>
+            <textarea id="customer-shipping-address" class="inv-mgmt-textarea inv-customer-field-shipping-address" rows="3" placeholder="Shipping address"></textarea>
         </div>
     </div>
 </div>
+</div>
+</div>
+
+<template id="customer-form-row-template">
+<div class="inv-customer-form-row inv-product-form-row" data-row-index="">
+<div class="inv-mgmt-form-grid inv-mgmt-form-grid--sale-top" style="padding:0;">
+    <div class="inv-mgmt-field">
+        <label>Full Name <span class="inv-field-required"></span></label>
+        <input class="inv-mgmt-input inv-customer-field-name" type="text" placeholder="Customer full name" required/>
+    </div>
+    <div class="inv-mgmt-field">
+        <label>Mobile Number <span class="inv-field-required"></span></label>
+        <input class="inv-mgmt-input inv-customer-field-mobile" type="text" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number" required/>
+    </div>
+    <div class="inv-mgmt-field">
+        <label>Email <span class="inv-field-optional">(optional)</span></label>
+        <input class="inv-mgmt-input inv-customer-field-email" type="email" placeholder="Email address"/>
+    </div>
+    <div class="inv-mgmt-field">
+        <label>Pin Code <span class="inv-field-required"></span></label>
+        <input class="inv-mgmt-input inv-customer-field-pin-code" type="text" inputmode="numeric" maxlength="6" placeholder="6-digit pin code" required/>
+    </div>
+</div>
+<div class="inv-mgmt-form-grid" style="padding:0;margin-top:16px;">
+    <div class="inv-mgmt-field inv-mgmt-field--full">
+        <label>Address <span class="inv-field-required"></span></label>
+        <textarea class="inv-mgmt-textarea inv-customer-field-address" rows="3" placeholder="Customer address" required></textarea>
+    </div>
+</div>
+<div class="inv-customer-business-toggle" style="margin-top:20px;">
+    <label class="inv-mgmt-checkbox-label">
+        <input class="inv-customer-field-add-business" type="checkbox"/>
+        <span>Add company</span>
+    </label>
+</div>
+<div class="inv-customer-business-fields inv-customer-field-business-panel inv-hidden" style="margin-top:16px;">
+    <div class="inv-mgmt-form-grid inv-mgmt-form-grid--sale-top" style="padding:0;">
+        <div class="inv-mgmt-field">
+            <label>Company Name</label>
+            <input class="inv-mgmt-input inv-customer-field-company-name" type="text" placeholder="Company name"/>
+        </div>
+        <div class="inv-mgmt-field">
+            <label>Company Mobile <span class="inv-field-optional">(optional)</span></label>
+            <input class="inv-mgmt-input inv-customer-field-company-mobile" type="text" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number"/>
+        </div>
+    </div>
+    <div class="inv-mgmt-form-grid inv-mgmt-form-grid--sale-top" style="padding:0;margin-top:16px;">
+        <div class="inv-mgmt-field">
+            <label>GST No <span class="inv-field-optional">(optional)</span></label>
+            <input class="inv-mgmt-input inv-customer-field-gst" type="text" placeholder="GST number" maxlength="30"/>
+        </div>
+    </div>
+    <div class="inv-mgmt-form-grid" style="padding:0;margin-top:16px;">
+        <div class="inv-mgmt-field inv-mgmt-field--full">
+            <label>Company Address <span class="inv-field-optional">(optional)</span></label>
+            <textarea class="inv-mgmt-textarea inv-customer-field-business-address" rows="3" placeholder="Company address"></textarea>
+        </div>
+    </div>
+    <div class="inv-mgmt-form-grid" style="padding:0;margin-top:16px;">
+        <div class="inv-mgmt-field inv-mgmt-field--full">
+            <label>Shipping Address <span class="inv-field-optional">(optional)</span></label>
+            <textarea class="inv-mgmt-textarea inv-customer-field-shipping-address" rows="3" placeholder="Shipping address"></textarea>
+        </div>
+    </div>
+</div>
+</div>
+</template>

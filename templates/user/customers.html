@@ -45,6 +45,10 @@
             </div>
             <div class="inv-mgmt-panel-footer">
                 <button type="button" class="inv-mgmt-btn" data-page-back="customers-list-panel">Cancel</button>
+                <button id="customer-add-more-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--secondary">
+                    <span class="material-symbols-outlined">add</span>
+                    Add More
+                </button>
                 <button id="customer-save-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Save Customer</button>
             </div>
         </div>
@@ -72,7 +76,7 @@
 
 {% block page_scripts %}
 <script src="{% static 'js/components/page-panel.js' %}"></script>
-<script src="{% static 'js/inventory/customers.js' %}?v=20260317-company-col"></script>
+<script src="{% static 'js/inventory/customers.js' %}?v=20260318-customer-add-more"></script>
 <script>
 InventoryPagePanel.init();
 InventoryCustomers.init();
