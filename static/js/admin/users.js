@@ -262,9 +262,113 @@ var InventoryUsers = (function () {
             });
     }
 
+    function resetCreateForm() {
+        var form = document.getElementById("user-create-form");
+        if (form) form.reset();
+    }
+
+    function openCreateModal() {
+        resetCreateForm();
+        InventoryModal.open("user-create-modal");
+        var nameInput = document.getElementById("user-create-full-name");
+        if (nameInput) nameInput.focus();
+    }
+
+    function readCreateForm() {
+        return {
+            full_name: (document.getElementById("user-create-full-name") || {}).value || "",
+            email: (document.getElementById("user-create-email") || {}).value || "",
+            mobile_number: (document.getElementById("user-create-mobile") || {}).value || "",
+            password: (document.getElementById("user-create-password") || {}).value || "",
+            confirm_password: (document.getElementById("user-create-confirm-password") || {}).value || ""
+        };
+    }
+
+    function validateCreateForm(values) {
+        var fullName = String(values.full_name || "").trim();
+        if (!fullName) {
+            InventoryToast.error("Full name is required.");
+            return null;
+        }
+
+        var mobile = String(values.mobile_number || "").replace(/\s|-/g, "");
+        if (!/^\d{10}$/.test(mobile)) {
+            InventoryToast.error("Enter a valid 10-digit mobile number.");
+            return null;
+        }
+
+        var password = values.password || "";
+        if (password.length < 8) {
+            InventoryToast.error("Password must be at least 8 characters.");
+            return null;
+        }
+
+        if (password !== values.confirm_password) {
+            InventoryToast.error("Passwords do not match.");
+            return null;
+        }
+
+        var payload = {
+            full_name: fullName,
+            mobile_number: mobile,
+            password: password,
+            is_active: true
+        };
+
+        var email = String(values.email || "").trim();
+        if (email) payload.email = email;
+
+        return payload;
+    }
+
+    function createBusinessOwner(btn) {
+        var payload = validateCreateForm(readCreateForm());
+        if (!payload) return Promise.resolve();
+
+        InventoryLoader.button(btn, true);
+        return request("/", { method: "POST", body: payload })
+            .then(function (body) {
+                if (body && body.isSuccess) {
+                    InventoryToast.success(body.message || "Business owner created successfully.");
+                    InventoryModal.close("user-create-modal");
+                    resetCreateForm();
+                    return loadUsers(currentSearch, 1);
+                }
+                InventoryToast.error(body.message || "Unable to create business owner.");
+            })
+            .catch(function () {
+                InventoryToast.error("Network error. Please try again.");
+            })
+            .finally(function () {
+                InventoryLoader.button(btn, false);
+            });
+    }
+
     function init() {
         var tbody = document.getElementById("users-table-body");
         var searchEl = document.getElementById("users-search");
+        var createOpenBtn = document.getElementById("user-create-open-btn");
+        var createSaveBtn = document.getElementById("user-create-save-btn");
+
+        InventoryModal.wire("user-create-modal");
+
+        if (createOpenBtn) {
+            createOpenBtn.addEventListener("click", openCreateModal);
+        }
+
+        if (createSaveBtn) {
+            createSaveBtn.addEventListener("click", function () {
+                createBusinessOwner(createSaveBtn);
+            });
+        }
+
+        var createForm = document.getElementById("user-create-form");
+        if (createForm) {
+            createForm.addEventListener("submit", function (e) {
+                e.preventDefault();
+                createBusinessOwner(createSaveBtn);
+            });
+        }
 
         loadUsers("", 1);
 

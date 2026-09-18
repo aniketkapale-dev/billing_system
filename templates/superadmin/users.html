@@ -7,6 +7,10 @@
     <div id="users-list-panel" class="inv-mgmt-page-panel">
         <div class="inv-mgmt-header">
             <h2 class="inv-dashboard-greeting">Users</h2>
+            <button id="user-create-open-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">
+                <span class="material-symbols-outlined">add</span>
+                Add Business Owner
+            </button>
         </div>
 
         <div class="inv-mgmt-card">
@@ -57,13 +61,52 @@
         </div>
     </div>
 </div>
+
+<div id="user-create-modal" class="inv-modal inv-hidden" aria-hidden="true">
+    <div class="inv-modal-backdrop" data-modal-close></div>
+    <div class="inv-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="user-create-modal-title">
+        <div class="inv-modal-header">
+            <h3 id="user-create-modal-title">Add Business Owner</h3>
+            <button type="button" class="inv-modal-close" data-modal-close aria-label="Close">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <form id="user-create-form" class="inv-modal-body" novalidate>
+            <div class="inv-mgmt-field">
+                <label for="user-create-full-name">Full Name</label>
+                <input id="user-create-full-name" class="inv-mgmt-input" type="text" autocomplete="name" required/>
+            </div>
+            <div class="inv-mgmt-field">
+                <label for="user-create-email">Email <span class="inv-field-optional">(optional)</span></label>
+                <input id="user-create-email" class="inv-mgmt-input" type="email" autocomplete="email" placeholder="Optional"/>
+            </div>
+            <div class="inv-mgmt-field">
+                <label for="user-create-mobile">Mobile Number</label>
+                <input id="user-create-mobile" class="inv-mgmt-input" type="text" inputmode="numeric" maxlength="10" autocomplete="tel" required/>
+            </div>
+            <div class="inv-mgmt-field">
+                <label for="user-create-password">Password</label>
+                <input id="user-create-password" class="inv-mgmt-input" type="password" autocomplete="new-password" minlength="8" required/>
+            </div>
+            <div class="inv-mgmt-field">
+                <label for="user-create-confirm-password">Confirm Password</label>
+                <input id="user-create-confirm-password" class="inv-mgmt-input" type="password" autocomplete="new-password" minlength="8" required/>
+            </div>
+        </form>
+        <div class="inv-modal-footer">
+            <button type="button" class="inv-mgmt-btn" data-modal-close>Cancel</button>
+            <button id="user-create-save-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Create Business Owner</button>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block page_scripts %}
 <link href="{% static 'css/users.css' %}" rel="stylesheet"/>
 <script src="{% static 'js/core/api.js' %}?v=20260308-session-expiry"></script>
+<script src="{% static 'js/components/modal.js' %}"></script>
 <script src="{% static 'js/components/page-panel.js' %}"></script>
-<script src="{% static 'js/admin/users.js' %}"></script>
+<script src="{% static 'js/admin/users.js' %}?v=20260318-create-business-owner"></script>
 <script>
 InventoryPagePanel.init();
 InventoryUsers.init();

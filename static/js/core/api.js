@@ -302,6 +302,28 @@ var InventoryApi = (function () {
         return value == null ? "" : String(value).slice(0, 10);
     }
 
+    function getDateInputValue(el) {
+        if (!el) return "";
+        if (typeof InventoryDateInput !== "undefined") {
+            return InventoryDateInput.getValue(el);
+        }
+        return (el.value || "").trim();
+    }
+
+    function setDateInputValue(el, iso) {
+        if (!el) return;
+        if (typeof InventoryDateInput !== "undefined") {
+            InventoryDateInput.setValue(el, iso);
+            return;
+        }
+        el.value = iso || "";
+    }
+
+    function setDateInputMin(el, iso) {
+        if (!el || typeof InventoryDateInput === "undefined") return;
+        InventoryDateInput.setMin(el, iso);
+    }
+
     return {
         buildUrl: buildUrl,
         request: request,
@@ -314,6 +336,9 @@ var InventoryApi = (function () {
         formatDisplayDate: formatDisplayDate,
         formatDateTime: formatDateTime,
         toInputDateValue: toInputDateValue,
+        getDateInputValue: getDateInputValue,
+        setDateInputValue: setDateInputValue,
+        setDateInputMin: setDateInputMin,
         renderViewGrid: renderViewGrid
     };
 })();

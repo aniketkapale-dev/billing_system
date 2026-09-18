@@ -1,8 +1,9 @@
 from django.urls import path
 
-from apps.purchases.views import PurchaseViewSet
+from apps.purchases.views import PurchaseViewSet, SaleDueSettingView
 
 urlpatterns = [
+    path("due-settings/", SaleDueSettingView.as_view(), name="purchase-due-settings"),
     path("", PurchaseViewSet.as_view({"get": "list", "post": "create"}), name="purchase-list"),
     path(
         "<int:pk>/",

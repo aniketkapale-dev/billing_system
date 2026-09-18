@@ -727,10 +727,15 @@ var InventoryStockIn = (function () {
             '<div class="inv-mgmt-field"><label>Barcode</label>' +
             '<input class="inv-mgmt-input inv-item-barcode" type="text" readonly placeholder="Auto-filled" value=""/></div>' +
             '<div class="inv-mgmt-field"><label>Batch No.</label><input class="inv-mgmt-input inv-item-batch" type="text" placeholder="B001" value="' + InventoryApi.escapeHtml(data.batch_number || "") + '"/></div>' +
-            '<div class="inv-mgmt-field"><label>Expiry</label><input class="inv-mgmt-input inv-item-expiry" type="date" value="' + (data.expiry_date || "") + '"/></div>' +
+            '<div class="inv-mgmt-field"><label>Expiry</label><input class="inv-mgmt-input inv-item-expiry inv-date-input" type="text" placeholder="dd/mm/yyyy" autocomplete="off" inputmode="numeric" value="' +
+            InventoryApi.escapeHtml(InventoryDateFormat.formatDisplayDate(data.expiry_date || "", "")) + '"/></div>' +
             '<div class="inv-mgmt-item-row-remove">' +
             '<button type="button" class="inv-row-action-btn inv-row-action-btn--delete inv-item-remove" title="Remove" aria-label="Remove product row">' +
             '<span class="material-symbols-outlined">delete</span></button></div>';
+
+        if (window.InventoryDateInput) {
+            InventoryDateInput.upgrade(row.querySelector(".inv-item-expiry"));
+        }
 
         row.querySelector(".inv-item-remove").addEventListener("click", function () {
             row.remove();
@@ -1007,7 +1012,7 @@ var InventoryStockIn = (function () {
         document.getElementById("stockin-remarks").value = invoice.remarks || "";
         setExistingAttachment(invoice);
         var dateEl = document.getElementById("stockin-invoice-date");
-        if (dateEl) dateEl.value = invoice.invoice_date || "";
+        if (dateEl) InventoryApi.setDateInputValue(dateEl, invoice.invoice_date || "");
 
         var container = document.getElementById("stockin-items-container");
         container.innerHTML = "";
@@ -1034,7 +1039,7 @@ var InventoryStockIn = (function () {
         toggleVendorPanel(false);
         pendingVendorRow = null;
         var dateEl = document.getElementById("stockin-invoice-date");
-        if (dateEl) dateEl.value = new Date().toISOString().slice(0, 10);
+        if (dateEl) InventoryApi.setDateInputValue(dateEl, new Date().toISOString().slice(0, 10));
         var container = document.getElementById("stockin-items-container");
         container.innerHTML = "";
         container.appendChild(createItemRow());
@@ -1124,11 +1129,11 @@ var InventoryStockIn = (function () {
         if (searchEl && searchEl.value.trim()) {
             params.set("search", searchEl.value.trim());
         }
-        if (dateFromEl && dateFromEl.value) {
-            params.set("date_from", dateFromEl.value);
+        if (dateFromEl && InventoryApi.getDateInputValue(dateFromEl)) {
+            params.set("date_from", InventoryApi.getDateInputValue(dateFromEl));
         }
-        if (dateToEl && dateToEl.value) {
-            params.set("date_to", dateToEl.value);
+        if (dateToEl && InventoryApi.getDateInputValue(dateToEl)) {
+            params.set("date_to", InventoryApi.getDateInputValue(dateToEl));
         }
         if (currentOrdering) {
             params.set("ordering", currentOrdering);
@@ -1142,8 +1147,8 @@ var InventoryStockIn = (function () {
         var dateFromEl = document.getElementById("stockin-date-from");
         var dateToEl = document.getElementById("stockin-date-to");
         if (searchEl) searchEl.value = "";
-        if (dateFromEl) dateFromEl.value = "";
-        if (dateToEl) dateToEl.value = "";
+        if (dateFromEl) InventoryApi.setDateInputValue(dateFromEl, "");
+        if (dateToEl) InventoryApi.setDateInputValue(dateToEl, "");
         loadInvoices(1);
     }
 
@@ -1155,8 +1160,8 @@ var InventoryStockIn = (function () {
         var dateToEl = document.getElementById("stockin-date-to");
 
         if (filters.dateFrom && filters.dateTo) {
-            if (dateFromEl) dateFromEl.value = filters.dateFrom;
-            if (dateToEl) dateToEl.value = filters.dateTo;
+            if (dateFromEl) InventoryApi.setDateInputValue(dateFromEl, filters.dateFrom);
+            if (dateToEl) InventoryApi.setDateInputValue(dateToEl, filters.dateTo);
             return;
         }
 
@@ -1207,7 +1212,7 @@ var InventoryStockIn = (function () {
         rows.forEach(function (row) {
             var productId = row.querySelector(".inv-item-product").value;
             if (!productId) return;
-            var expiry = row.querySelector(".inv-item-expiry").value;
+            var expiry = InventoryApi.getDateInputValue(row.querySelector(".inv-item-expiry"));
             var qty = row.querySelector(".inv-item-qty").value;
             var unitPrice = getRowUnitPrice(row);
             var amounts = getRowLineAmounts(row);
@@ -1250,7 +1255,7 @@ var InventoryStockIn = (function () {
 
         var payload = {
             invoice_number: invoiceNumber,
-            invoice_date: document.getElementById("stockin-invoice-date").value || undefined,
+            invoice_date: InventoryApi.getDateInputValue(document.getElementById("stockin-invoice-date")) || undefined,
             remarks: document.getElementById("stockin-remarks").value.trim()
         };
 

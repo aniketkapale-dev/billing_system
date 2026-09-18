@@ -138,3 +138,31 @@ class PurchasePayment(BaseEntity):
 
     def __str__(self):
         return f"Payment {self.amount} for {self.purchase_id}"
+
+
+class SaleDueSetting(BaseEntity):
+    business = models.ForeignKey(
+        "businesses.Business",
+        on_delete=models.CASCADE,
+        related_name="sale_due_settings",
+        db_column="business_id",
+    )
+    default_due_days_after_sale = models.PositiveIntegerField(
+        default=7,
+        help_text="Default payment due days after sale date when due date is not entered.",
+    )
+
+    class Meta:
+        db_table = "sale_due_settings"
+        verbose_name = "Sale Due Setting"
+        verbose_name_plural = "Sale Due Settings"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["business"],
+                condition=models.Q(is_deleted=False),
+                name="uniq_active_business_sale_due_setting",
+            )
+        ]
+
+    def __str__(self):
+        return f"Sale due after {self.default_due_days_after_sale} day(s)"

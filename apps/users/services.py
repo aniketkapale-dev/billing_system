@@ -1,8 +1,13 @@
 from django.db import transaction
+from django.utils import timezone
 
+from apps.roles.models import Role
+from apps.user_roles.models import UserRole
+from apps.users.models import User
 from apps.users.repositories import UserRepository
 from apps.users.purge_service import purge_business_owner_user
 from core.base_service import BaseService
+from core.exceptions import ValidationException
 from core.validators import (
     ensure_unique,
     validate_email_format,
@@ -45,6 +50,45 @@ class UserService(BaseService):
             from django.contrib.auth.hashers import make_password
 
             data["password"] = make_password(raw)
+
+    @transaction.atomic
+    def create_business_owner(self, data):
+        full_name = data["full_name"].strip()
+        email = data.get("email")
+        mobile_number = validate_mobile_number(data["mobile_number"])
+        password = data.get("password") or ""
+        is_active = data.get("is_active", True)
+
+        if len(password) < 8:
+            raise ValidationException("Password must be at least 8 characters.")
+
+        if User.all_objects.filter(mobile_number=mobile_number).exists():
+            raise ValidationException("An account with this mobile number already exists.")
+
+        if email:
+            email = validate_email_format(email).lower()
+            if User.all_objects.filter(email__iexact=email).exists():
+                raise ValidationException("An account with this email already exists.")
+        else:
+            email = None
+
+        user = User.objects.create(
+            full_name=full_name,
+            email=email,
+            mobile_number=mobile_number,
+            is_active=is_active,
+            approved_at=timezone.now() if is_active else None,
+        )
+        user.set_password(password)
+        user.save(update_fields=["password", "updated_at"])
+
+        role, _ = Role.objects.get_or_create(
+            role_name="Business Owner",
+            defaults={"description": "Business owner account"},
+        )
+        UserRole.objects.get_or_create(user=user, role=role)
+
+        return user
 
     @transaction.atomic
     def hard_delete_business_owner(self, pk):

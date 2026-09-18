@@ -70,3 +70,32 @@ class UserWriteSerializer(serializers.ModelSerializer):
             "full_name", "email", "mobile_number",
             "password", "profile_image", "is_active",
         )
+
+
+class BusinessOwnerCreateSerializer(serializers.Serializer):
+    full_name = serializers.CharField(max_length=255)
+    email = serializers.EmailField(required=False, allow_blank=True, allow_null=True)
+    mobile_number = serializers.CharField(max_length=15)
+    password = serializers.CharField(write_only=True, min_length=8)
+    is_active = serializers.BooleanField(required=False, default=True)
+
+    def validate_full_name(self, value):
+        cleaned = (value or "").strip()
+        if not cleaned:
+            raise serializers.ValidationError("Full name is required.")
+        return cleaned
+
+    def validate_email(self, value):
+        if value is None or not str(value).strip():
+            return None
+        return str(value).strip()
+
+    def validate(self, attrs):
+        email = attrs.get("email")
+        if email:
+            from core.validators import validate_email_format
+
+            attrs["email"] = validate_email_format(email).lower()
+        else:
+            attrs["email"] = None
+        return attrs

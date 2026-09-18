@@ -35,6 +35,13 @@
     margin-bottom: 12px;
 }
 
+.inv-mgmt-header-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
 /* Page title — fixed below chrome header */
 .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-page-panel:not(.inv-hidden) > .inv-mgmt-header {
     position: fixed;
@@ -601,6 +608,205 @@
     max-width: 11rem;
     flex: 0 0 11rem;
     margin: 0;
+}
+
+.inv-date-field {
+    position: relative;
+    display: block;
+    width: 100%;
+}
+
+.inv-date-field .inv-date-input {
+    width: 100%;
+    min-width: 9.5rem;
+    padding-right: 2.5rem;
+}
+
+.inv-date-field__btn {
+    position: absolute;
+    top: 1px;
+    right: 1px;
+    bottom: 1px;
+    width: 2.25rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-left: 1px solid var(--inv-border, #dbe3ef);
+    border-radius: 0 8px 8px 0;
+    background: #f8fafc;
+    color: #64748b;
+    cursor: pointer;
+    padding: 0;
+}
+
+.inv-date-field__btn:hover {
+    background: #eef2f7;
+    color: #334155;
+}
+
+.inv-date-field__btn .material-symbols-outlined {
+    font-size: 1.1rem;
+}
+
+.inv-date-input--invalid {
+    border-color: #c62828;
+}
+
+.inv-input-readonly {
+    background: #f8fafc;
+    color: #475569;
+    cursor: default;
+}
+
+.inv-date-picker {
+    position: fixed;
+    z-index: 10050;
+    width: 18.75rem;
+    padding: 12px;
+    border: 1px solid var(--inv-border, #dbe3ef);
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14);
+}
+
+.inv-date-picker__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.inv-date-picker__selects {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+}
+
+.inv-date-picker__month,
+.inv-date-picker__year {
+    flex: 1;
+    min-width: 0;
+    height: 2rem;
+    border: 1px solid var(--inv-border, #dbe3ef);
+    border-radius: 8px;
+    background: #fff;
+    color: #0f172a;
+    font-size: 0.82rem;
+    font-weight: 600;
+    padding: 0 8px;
+    cursor: pointer;
+}
+
+.inv-date-picker__year {
+    flex: 0 0 5.5rem;
+}
+
+.inv-date-picker__nav {
+    width: 2rem;
+    height: 2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--inv-border, #dbe3ef);
+    border-radius: 8px;
+    background: #fff;
+    color: #475569;
+    cursor: pointer;
+    padding: 0;
+}
+
+.inv-date-picker__nav:hover {
+    background: #f8fafc;
+}
+
+.inv-date-picker__weekdays,
+.inv-date-picker__grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+}
+
+.inv-date-picker__weekdays {
+    margin-bottom: 6px;
+}
+
+.inv-date-picker__weekday {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #64748b;
+    text-align: center;
+}
+
+.inv-date-picker__day {
+    height: 2rem;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: #0f172a;
+    font-size: 0.86rem;
+    cursor: pointer;
+}
+
+.inv-date-picker__day:hover:not(.is-disabled):not(.inv-date-picker__day--empty) {
+    background: #eef2ff;
+}
+
+.inv-date-picker__day.is-today {
+    border: 1px solid #6366f1;
+}
+
+.inv-date-picker__day.is-selected {
+    background: #1e293b;
+    color: #fff;
+}
+
+.inv-date-picker__day.is-selected.is-today {
+    border-color: #1e293b;
+}
+
+.inv-date-picker__day.is-disabled {
+    color: #cbd5e1;
+    cursor: not-allowed;
+}
+
+.inv-date-picker__day--empty {
+    pointer-events: none;
+}
+
+.inv-date-picker__footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #eef2f7;
+}
+
+.inv-date-picker__today,
+.inv-date-picker__clear {
+    border: none;
+    background: transparent;
+    color: #334155;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+}
+
+.inv-date-picker__today:hover,
+.inv-date-picker__clear:hover {
+    color: #0f172a;
+}
+
+.inv-mgmt-toolbar--filters .inv-date-field {
+    width: 11rem;
+    min-width: 11rem;
+    max-width: 11rem;
+    flex: 0 0 11rem;
 }
 
 .inv-mgmt-toolbar--filters .inv-mgmt-filter-select {
@@ -5395,4 +5601,32 @@ body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sideb
     .inv-sale-print-preview-edit {
         max-height: 280px;
     }
+}
+
+/* WhatsApp settings — scroll full page so all recipient cards stay visible */
+.inv-mgmt-page:not(.inv-dashboard-page):not(.inv-business-page) .inv-mgmt-page-panel.inv-whatsapp-settings-panel:not(.inv-hidden) {
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 24px;
+}
+
+.inv-mgmt-page-panel.inv-whatsapp-settings-panel:not(.inv-hidden) > .inv-mgmt-panel-card:has(.inv-mgmt-panel-footer):not(:has(.inv-product-view-grid)),
+.inv-mgmt-page-panel.inv-whatsapp-settings-panel:not(.inv-hidden) > .inv-whatsapp-results-card {
+    flex: none;
+    min-height: auto;
+    overflow: visible;
+}
+
+.inv-mgmt-page-panel.inv-whatsapp-settings-panel:not(.inv-hidden) > .inv-mgmt-panel-card:has(.inv-mgmt-panel-footer):not(:has(.inv-product-view-grid)) .inv-mgmt-panel-body {
+    flex: none;
+    min-height: auto;
+    overflow: visible;
+}
+
+.inv-whatsapp-results-card .inv-whatsapp-results-body .inv-mgmt-table-wrap {
+    flex: none;
+    min-height: auto;
+    max-height: none;
+    overflow: visible;
 }

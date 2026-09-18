@@ -2,6 +2,7 @@ var InventoryPurchases = (function () {
     "use strict";
 
     var API = "/api/purchases";
+    var saleDueDefaultDays = 7;
     var PRODUCTS_API = "/api/products";
     var CATALOG_API = "/api/catalog";
     var CUSTOMERS_API = "/api/customers";
@@ -53,7 +54,7 @@ var InventoryPurchases = (function () {
             transport: transportEl ? transportEl.value.trim() : "",
             cartons: cartonsEl ? cartonsEl.value.trim() : "",
             eway_bill_no: ewayEl ? ewayEl.value.trim() : "",
-            due_date: dueDateEl ? dueDateEl.value.trim() : "",
+            due_date: dueDateEl ? InventoryApi.getDateInputValue(dueDateEl) : "",
             terms: termsEl ? termsEl.value.trim() : "",
             is_paid: isFullPaymentReceived()
         };
@@ -72,7 +73,7 @@ var InventoryPurchases = (function () {
         if (transportEl) transportEl.value = meta.transport || "";
         if (cartonsEl) cartonsEl.value = meta.cartons || "";
         if (ewayEl) ewayEl.value = meta.eway_bill_no || "";
-        if (dueDateEl) dueDateEl.value = meta.due_date || "";
+        if (dueDateEl) InventoryApi.setDateInputValue(dueDateEl, meta.due_date || "");
         if (termsEl) termsEl.value = meta.terms || "";
     }
 
@@ -984,7 +985,10 @@ var InventoryPurchases = (function () {
 
         var showDueDate = shouldShowDueDateField();
         if (dueWrap) dueWrap.classList.toggle("inv-hidden", !showDueDate);
-        if (!showDueDate && dueInput) dueInput.value = "";
+        if (!showDueDate && dueInput) InventoryApi.setDateInputValue(dueInput, "");
+        if (showDueDate && dueInput && !InventoryApi.getDateInputValue(dueInput) && !editingPurchaseId) {
+            applyDefaultDueDateToForm();
+        }
     }
 
     function formatQty(value) {
@@ -1483,7 +1487,7 @@ var InventoryPurchases = (function () {
             document.getElementById("purchase-billing-address").value = purchase.billing_address || "";
             document.getElementById("purchase-shipping-address").value = purchase.shipping_address || "";
         });
-        document.getElementById("purchase-date").value = purchase.purchase_date || "";
+        InventoryApi.setDateInputValue(document.getElementById("purchase-date"), purchase.purchase_date || "");
         loadPaymentTypes(purchase.payment_type || "");
         setSalePrintMetaForm(loadSalePrintMeta(purchase.id), purchase);
         if (purchase.is_draft) {
@@ -1720,12 +1724,13 @@ var InventoryPurchases = (function () {
         var dueEl = document.getElementById("purchase-add-payment-next-due");
         if (!dateEl || !dueEl) return;
 
-        var paymentDate = dateEl.value.trim();
+        var paymentDate = InventoryApi.getDateInputValue(dateEl);
         if (!paymentDate) return;
 
-        dueEl.min = paymentDate;
-        if (dueEl.value && dueEl.value < paymentDate) {
-            dueEl.value = paymentDate;
+        InventoryApi.setDateInputMin(dueEl, paymentDate);
+        var dueDate = InventoryApi.getDateInputValue(dueEl);
+        if (dueDate && dueDate < paymentDate) {
+            InventoryApi.setDateInputValue(dueEl, paymentDate);
         }
     }
 
@@ -1740,13 +1745,16 @@ var InventoryPurchases = (function () {
         var showDue = amount > 0 && amount + 0.0001 < pendingAmount;
         dueWrap.classList.toggle("inv-hidden", !showDue);
         if (!showDue && dueEl) {
-            dueEl.value = "";
+            InventoryApi.setDateInputValue(dueEl, "");
             return;
         }
         syncAddPaymentNextDueMin();
-        if (showDue && dueEl && !dueEl.value) {
-            var paymentDate = dateEl ? dateEl.value.trim() : "";
-            dueEl.value = paymentDate || dueEl.min || "";
+        if (showDue && dueEl && !InventoryApi.getDateInputValue(dueEl)) {
+            var paymentDate = dateEl ? InventoryApi.getDateInputValue(dateEl) : "";
+            InventoryApi.setDateInputValue(
+                dueEl,
+                paymentDate || (window.InventoryDateInput ? InventoryDateInput.getMin(dueEl) : "") || ""
+            );
         }
     }
 
@@ -1777,15 +1785,18 @@ var InventoryPurchases = (function () {
             defaultPaymentDate = minPaymentDate;
         }
         if (dateEl) {
-            dateEl.min = minPaymentDate || "";
-            dateEl.value = defaultPaymentDate;
+            InventoryApi.setDateInputMin(dateEl, minPaymentDate || "");
+            InventoryApi.setDateInputValue(dateEl, defaultPaymentDate);
         }
         if (notesEl) notesEl.value = "";
         if (dueEl) {
-            var paymentDate = dateEl ? dateEl.value.trim() : defaultPaymentDate;
+            var paymentDate = dateEl ? InventoryApi.getDateInputValue(dateEl) : defaultPaymentDate;
             var existingDue = purchase.due_date || "";
-            dueEl.min = paymentDate;
-            dueEl.value = existingDue && existingDue >= paymentDate ? existingDue : paymentDate;
+            InventoryApi.setDateInputMin(dueEl, paymentDate);
+            InventoryApi.setDateInputValue(
+                dueEl,
+                existingDue && existingDue >= paymentDate ? existingDue : paymentDate
+            );
         }
 
         fillPaymentTypeSelect(
@@ -1853,7 +1864,7 @@ var InventoryPurchases = (function () {
             return;
         }
 
-        var paymentDate = dateEl ? dateEl.value.trim() : "";
+        var paymentDate = dateEl ? InventoryApi.getDateInputValue(dateEl) : "";
         if (!paymentDate) {
             InventoryToast.error("Please select a payment date.");
             if (dateEl) dateEl.focus();
@@ -1874,7 +1885,7 @@ var InventoryPurchases = (function () {
 
         var clearsBill = amount + 0.0001 >= pending;
         if (!clearsBill) {
-            var nextDue = dueEl ? dueEl.value.trim() : "";
+            var nextDue = dueEl ? InventoryApi.getDateInputValue(dueEl) : "";
             if (!nextDue) {
                 InventoryToast.error("Please enter the next due date for the remaining balance.");
                 if (dueEl) dueEl.focus();
@@ -2171,7 +2182,7 @@ var InventoryPurchases = (function () {
         var dueDateEl = document.getElementById("purchase-invoice-due-date");
         var payload = {
             is_paid: !!isPaid,
-            due_date: isPaid ? null : (dueDateEl && dueDateEl.value.trim() ? dueDateEl.value.trim() : null)
+            due_date: isPaid ? null : (InventoryApi.getDateInputValue(dueDateEl) || null)
         };
         if (isPaidSegmentSelected()) {
             var paidAmount = getPaidAmountValue();
@@ -2393,11 +2404,11 @@ var InventoryPurchases = (function () {
         if (invoiceStatusFilterEl && invoiceStatusFilterEl.value) {
             params.set("invoice_status", invoiceStatusFilterEl.value);
         }
-        if (dateFromEl && dateFromEl.value) {
-            params.set("date_from", dateFromEl.value);
+        if (dateFromEl && InventoryApi.getDateInputValue(dateFromEl)) {
+            params.set("date_from", InventoryApi.getDateInputValue(dateFromEl));
         }
-        if (dateToEl && dateToEl.value) {
-            params.set("date_to", dateToEl.value);
+        if (dateToEl && InventoryApi.getDateInputValue(dateToEl)) {
+            params.set("date_to", InventoryApi.getDateInputValue(dateToEl));
         }
         if (currentOrdering) {
             params.set("ordering", currentOrdering);
@@ -2413,8 +2424,8 @@ var InventoryPurchases = (function () {
         var dateToEl = document.getElementById("purchases-date-to");
         if (searchEl) searchEl.value = "";
         if (invoiceStatusFilterEl) invoiceStatusFilterEl.value = "";
-        if (dateFromEl) dateFromEl.value = "";
-        if (dateToEl) dateToEl.value = "";
+        if (dateFromEl) InventoryApi.setDateInputValue(dateFromEl, "");
+        if (dateToEl) InventoryApi.setDateInputValue(dateToEl, "");
         loadPurchases(1);
     }
 
@@ -2439,11 +2450,117 @@ var InventoryPurchases = (function () {
         }
 
         if (dateFrom && dateTo) {
-            if (dateFromEl) dateFromEl.value = dateFrom;
-            if (dateToEl) dateToEl.value = dateTo;
+            if (dateFromEl) InventoryApi.setDateInputValue(dateFromEl, dateFrom);
+            if (dateToEl) InventoryApi.setDateInputValue(dateToEl, dateTo);
         } else if (period && window.InventoryDashboardPeriod) {
             InventoryDashboardPeriod.applyDateRangeInputs(dateFromEl, dateToEl, period);
         }
+    }
+
+    function addDaysToIsoDate(isoDate, days) {
+        if (!isoDate) return "";
+        var parts = isoDate.split("-");
+        if (parts.length !== 3) return "";
+        var dt = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+        dt.setDate(dt.getDate() + (Number(days) || 0));
+        var y = dt.getFullYear();
+        var m = String(dt.getMonth() + 1).padStart(2, "0");
+        var d = String(dt.getDate()).padStart(2, "0");
+        return y + "-" + m + "-" + d;
+    }
+
+    function loadSaleDueSetting() {
+        return request("/due-settings/")
+            .then(function (body) {
+                if (body && body.isSuccess && body.data) {
+                    saleDueDefaultDays = body.data.default_due_days_after_sale != null
+                        ? Number(body.data.default_due_days_after_sale)
+                        : 7;
+                }
+            })
+            .catch(function () {
+                /* Non-blocking: sale list still works with default days. */
+            });
+    }
+
+    function applyDefaultDueDateToForm() {
+        if (editingPurchaseId) return;
+        if (!shouldShowDueDateField()) return;
+        var saleDateEl = document.getElementById("purchase-date");
+        var dueDateEl = document.getElementById("purchase-invoice-due-date");
+        if (!saleDateEl || !dueDateEl) return;
+        var saleDate = InventoryApi.getDateInputValue(saleDateEl);
+        if (!saleDate) return;
+        InventoryApi.setDateInputValue(dueDateEl, addDaysToIsoDate(saleDate, saleDueDefaultDays));
+    }
+
+    function fillDueSettingModal(data) {
+        var input = document.getElementById("purchase-default-due-days");
+        if (input) {
+            input.value = data && data.default_due_days_after_sale != null
+                ? data.default_due_days_after_sale
+                : 7;
+        }
+    }
+
+    function openDueSettingModal() {
+        if (!InventoryBusiness.getActiveId()) {
+            InventoryToast.error("Select or create a business first.");
+            return;
+        }
+        request("/due-settings/")
+            .then(function (body) {
+                if (!body || !body.isSuccess) {
+                    InventoryToast.error((body && body.message) || "Failed to load due date settings.");
+                    return;
+                }
+                fillDueSettingModal(body.data || {});
+                if (window.InventoryModal) {
+                    InventoryModal.open("purchase-due-setting-modal");
+                }
+            })
+            .catch(function () {
+                InventoryToast.error("Network error. Please try again.");
+            });
+    }
+
+    function saveDueSetting() {
+        var btn = document.getElementById("purchase-due-setting-save-btn");
+        var input = document.getElementById("purchase-default-due-days");
+        if (!input) return;
+        var days = Number(input.value);
+        if (!days || days < 1) {
+            InventoryToast.error("Default due days must be at least 1.");
+            input.focus();
+            return;
+        }
+        InventoryLoader.button(btn, true, "Saving...");
+        request("/due-settings/", {
+            method: "PATCH",
+            body: {
+                default_due_days_after_sale: days,
+                apply_pending: true
+            }
+        })
+            .then(function (body) {
+                if (!body || !body.isSuccess) {
+                    InventoryToast.error((body && body.message) || "Failed to save due date settings.");
+                    return;
+                }
+                saleDueDefaultDays = days;
+                applyDefaultDueDateToForm();
+                if (window.InventoryModal) {
+                    InventoryModal.close("purchase-due-setting-modal");
+                }
+                InventoryToast.success(body.message || "Due date settings saved.");
+                loadPurchases(currentPage);
+            })
+            .catch(function () {
+                InventoryToast.error("Network error. Please try again.");
+            })
+            .finally(function () {
+                InventoryLoader.button(btn, false);
+            });
     }
 
     function preloadSaleFormData() {
@@ -2454,7 +2571,8 @@ var InventoryPurchases = (function () {
                 loadPaymentTypes(),
                 loadCustomers(),
                 loadTaxes(),
-                loadInvoiceSettings()
+                loadInvoiceSettings(),
+                loadSaleDueSetting()
             ]);
         }).catch(function () {
             /* Form preload failures must not block the sale list. */
@@ -2581,7 +2699,10 @@ var InventoryPurchases = (function () {
         setFormMode("add");
         loadInvoiceSettings("");
         loadCustomers("");
-        document.getElementById("purchase-date").value = new Date().toISOString().slice(0, 10);
+        InventoryApi.setDateInputValue(
+            document.getElementById("purchase-date"),
+            new Date().toISOString().slice(0, 10)
+        );
         applyCustomerAddressesFromSelection("", false);
         document.getElementById("purchase-payment-type").value = "";
         togglePaymentTypePanel(false);
@@ -2592,6 +2713,7 @@ var InventoryPurchases = (function () {
             paidInput.dataset.manual = "0";
         }
         setSalePaidToggle(false);
+        applyDefaultDueDateToForm();
         document.getElementById("purchase-items-container").innerHTML = "";
         addItemRow(null, isSilent !== false);
         updateSaleTotals();
@@ -2603,7 +2725,7 @@ var InventoryPurchases = (function () {
         var customerId = document.getElementById("purchase-customer").value;
         var payload = {
             customer_id: customerId ? Number(customerId) : null,
-            purchase_date: document.getElementById("purchase-date").value || undefined,
+            purchase_date: InventoryApi.getDateInputValue(document.getElementById("purchase-date")) || undefined,
             billing_address: document.getElementById("purchase-billing-address").value.trim(),
             shipping_address: document.getElementById("purchase-shipping-address").value.trim(),
             payment_type_id: paymentTypeId ? Number(paymentTypeId) : null
@@ -2637,8 +2759,9 @@ var InventoryPurchases = (function () {
         var dueWrap = document.getElementById("purchase-due-date-wrap");
         if (!dueWrap || dueWrap.classList.contains("inv-hidden")) return {};
         var dueDateEl = document.getElementById("purchase-invoice-due-date");
-        if (!dueDateEl || !dueDateEl.value.trim()) return null;
-        return { due_date: dueDateEl.value.trim() };
+        var dueDate = InventoryApi.getDateInputValue(dueDateEl);
+        if (!dueDate) return null;
+        return { due_date: dueDate };
     }
 
     function validatePaidAmountWithinBill() {
@@ -2662,7 +2785,7 @@ var InventoryPurchases = (function () {
         var isPaid = isFullPaymentReceived();
         if (shouldShowDueDateField()) {
             var dueDateEl = document.getElementById("purchase-invoice-due-date");
-            if (!dueDateEl || !dueDateEl.value.trim()) {
+            if (!dueDateEl || !InventoryApi.getDateInputValue(dueDateEl)) {
                 InventoryToast.error("Please enter a due date until the full bill amount is received.");
                 if (dueDateEl) dueDateEl.focus();
                 return null;
@@ -2759,8 +2882,7 @@ var InventoryPurchases = (function () {
     function readDueDateFromForm() {
         var dueDateEl = document.getElementById("purchase-invoice-due-date");
         if (!dueDateEl) return null;
-        var dueDate = dueDateEl.value.trim();
-        return dueDate || null;
+        return InventoryApi.getDateInputValue(dueDateEl) || null;
     }
 
     function readPaymentIntentFromForm() {
@@ -3016,6 +3138,25 @@ var InventoryPurchases = (function () {
             initSaleTable();
             boot();
         });
+
+        var setDueDateBtn = document.getElementById("purchases-set-due-date-btn");
+        if (setDueDateBtn) setDueDateBtn.addEventListener("click", openDueSettingModal);
+
+        var dueSettingSaveBtn = document.getElementById("purchase-due-setting-save-btn");
+        if (dueSettingSaveBtn) dueSettingSaveBtn.addEventListener("click", saveDueSetting);
+
+        var purchaseDateEl = document.getElementById("purchase-date");
+        if (purchaseDateEl) {
+            purchaseDateEl.addEventListener("change", function () {
+                if (!editingPurchaseId) {
+                    applyDefaultDueDateToForm();
+                }
+            });
+        }
+
+        if (window.InventoryModal) {
+            InventoryModal.wire("purchase-due-setting-modal");
+        }
 
         var openSaleBtnEl = document.getElementById("purchase-open-modal-btn");
         if (openSaleBtnEl) openSaleBtnEl.addEventListener("click", function () {

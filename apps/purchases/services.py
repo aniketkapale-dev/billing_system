@@ -1,12 +1,14 @@
+from datetime import timedelta
 from decimal import Decimal
 
 from django.db import transaction
 from django.db.models import Sum
+from django.utils import timezone
 
 from apps.inventory.batch_service import BatchInventoryService
 from apps.inventory.services import InventoryStockService
 from apps.products.models import Product
-from apps.purchases.models import Purchase, PurchaseItem, PurchasePayment
+from apps.purchases.models import Purchase, PurchaseItem, PurchasePayment, SaleDueSetting
 from apps.purchases.repositories import PurchaseRepository
 from core.base_service import BaseService
 from core.exceptions import NotFoundException, ValidationException
@@ -576,7 +578,11 @@ class PurchaseService(BaseService):
             data["is_paid"] = False
             parsed_due_date = self._parse_optional_date(due_date)
             if not is_draft and not parsed_due_date:
-                raise ValidationException("Due date is required for unpaid sales.")
+                sale_date = data.get("purchase_date") or timezone.localdate()
+                parsed_due_date = SaleDueSettingService().default_due_date_for_sale(
+                    business_id,
+                    sale_date,
+                )
             data["due_date"] = parsed_due_date
 
         data["is_draft"] = is_draft
@@ -855,3 +861,65 @@ class PurchaseService(BaseService):
             ]
         )
         return purchase
+
+
+class SaleDueSettingService:
+    def get_or_create_for_business(self, business_id):
+        setting = (
+            SaleDueSetting.objects.filter(
+                business_id=business_id,
+                is_deleted=False,
+            )
+            .select_related("business")
+            .first()
+        )
+        if setting:
+            return setting
+        return SaleDueSetting.objects.create(
+            business_id=business_id,
+            default_due_days_after_sale=7,
+            is_active=True,
+        )
+
+    def update(self, business_id, default_due_days_after_sale):
+        if default_due_days_after_sale is None or default_due_days_after_sale == "":
+            raise ValidationException("Default due days after sale is required.")
+        try:
+            numeric = int(default_due_days_after_sale)
+        except (TypeError, ValueError) as exc:
+            raise ValidationException("Default due days after sale must be a whole number.") from exc
+        if numeric < 1:
+            raise ValidationException("Default due days after sale must be at least 1 day.")
+
+        setting = self.get_or_create_for_business(business_id)
+        setting.default_due_days_after_sale = numeric
+        setting.save(update_fields=["default_due_days_after_sale", "updated_at"])
+        return setting
+
+    @transaction.atomic
+    def apply_to_pending_sales(self, business_id):
+        setting = self.get_or_create_for_business(business_id)
+        sales = Purchase.objects.filter(
+            business_id=business_id,
+            is_deleted=False,
+            is_draft=False,
+            is_cancelled=False,
+            is_paid=False,
+            due_date__isnull=True,
+        )
+        updated = 0
+        for sale in sales:
+            if not sale.purchase_date:
+                continue
+            sale.due_date = sale.purchase_date + timedelta(
+                days=setting.default_due_days_after_sale
+            )
+            sale.save(update_fields=["due_date", "updated_at"])
+            updated += 1
+        return updated
+
+    def default_due_date_for_sale(self, business_id, sale_date):
+        if not sale_date:
+            return None
+        setting = self.get_or_create_for_business(business_id)
+        return sale_date + timedelta(days=setting.default_due_days_after_sale)

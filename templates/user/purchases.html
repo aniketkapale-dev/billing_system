@@ -7,10 +7,16 @@
     <div id="purchases-list-panel" class="inv-mgmt-page-panel">
         <div class="inv-mgmt-header">
             <h2 class="inv-dashboard-greeting">Sale</h2>
-            <button id="purchase-open-modal-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">
-                <span class="material-symbols-outlined">add</span>
-                Add Sale
-            </button>
+            <div class="inv-mgmt-header-actions">
+                <button id="purchases-set-due-date-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--secondary">
+                    <span class="material-symbols-outlined">event</span>
+                    Set Due Date
+                </button>
+                <button id="purchase-open-modal-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">
+                    <span class="material-symbols-outlined">add</span>
+                    Add Sale
+                </button>
+            </div>
         </div>
 
         <div class="inv-mgmt-card">
@@ -25,9 +31,9 @@
                     <option value="cancelled">Cancelled</option>
                 </select>
                 <div class="inv-mgmt-filter-dates">
-                    <input type="date" id="purchases-date-from" class="inv-mgmt-input inv-mgmt-filter-date" aria-label="From date"/>
+                    <input type="text" id="purchases-date-from" class="inv-mgmt-input inv-mgmt-filter-date inv-date-input" placeholder="dd/mm/yyyy" autocomplete="off" inputmode="numeric" aria-label="From date"/>
                     <span class="inv-mgmt-filter-sep">to</span>
-                    <input type="date" id="purchases-date-to" class="inv-mgmt-input inv-mgmt-filter-date" aria-label="To date"/>
+                    <input type="text" id="purchases-date-to" class="inv-mgmt-input inv-mgmt-filter-date inv-date-input" placeholder="dd/mm/yyyy" autocomplete="off" inputmode="numeric" aria-label="To date"/>
                 </div>
                 <button type="button" id="purchases-clear-filters" class="inv-mgmt-btn">Clear</button>
             </div>
@@ -80,7 +86,7 @@
                     </div>
                     <div class="inv-mgmt-field">
                         <label for="purchase-date">Sale Date</label>
-                        <input id="purchase-date" class="inv-mgmt-input" type="date"/>
+                        <input id="purchase-date" class="inv-mgmt-input inv-date-input" type="text" placeholder="dd/mm/yyyy" autocomplete="off" inputmode="numeric"/>
                     </div>
                     <div class="inv-mgmt-field">
                         <label for="purchase-payment-type">Payment Type <span class="inv-field-optional">(optional)</span></label>
@@ -177,7 +183,7 @@
                             </div>
                             <div id="purchase-due-date-wrap" class="inv-sale-payment-due inv-hidden">
                                 <label for="purchase-invoice-due-date">Due Date</label>
-                                <input id="purchase-invoice-due-date" class="inv-mgmt-input" type="date"/>
+                                <input id="purchase-invoice-due-date" class="inv-mgmt-input inv-date-input" type="text" placeholder="dd/mm/yyyy" autocomplete="off" inputmode="numeric"/>
                             </div>
                             <div id="purchase-paid-amount-wrap" class="inv-sale-payment-due inv-hidden">
                                 <label for="purchase-paid-amount">Amount Received</label>
@@ -251,11 +257,11 @@
                     <div class="inv-add-payment-dates">
                         <div class="inv-add-payment-date-col">
                             <label for="purchase-add-payment-date">Payment Date</label>
-                            <input id="purchase-add-payment-date" class="inv-mgmt-input" type="date"/>
+                            <input id="purchase-add-payment-date" class="inv-mgmt-input inv-date-input" type="text" placeholder="dd/mm/yyyy" autocomplete="off" inputmode="numeric"/>
                         </div>
                         <div id="purchase-add-payment-next-due-wrap" class="inv-add-payment-date-col inv-hidden">
                             <label for="purchase-add-payment-next-due">Next Due Date</label>
-                            <input id="purchase-add-payment-next-due" class="inv-mgmt-input" type="date"/>
+                            <input id="purchase-add-payment-next-due" class="inv-mgmt-input inv-date-input" type="text" placeholder="dd/mm/yyyy" autocomplete="off" inputmode="numeric"/>
                         </div>
                     </div>
                 </div>
@@ -316,6 +322,29 @@
 {% include "partials/tax_modal.html" %}
 {% include "partials/invoice_setting_modal.html" %}
 {% include "partials/sale_invoice_print_preview_modal.html" %}
+
+<div id="purchase-due-setting-modal" class="inv-modal inv-hidden" aria-hidden="true">
+    <div class="inv-modal-backdrop" data-modal-close></div>
+    <div class="inv-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="purchase-due-setting-title">
+        <div class="inv-modal-header">
+            <h2 id="purchase-due-setting-title" class="inv-dashboard-greeting">Set Due Date</h2>
+            <button type="button" class="inv-modal-close" data-modal-close aria-label="Close">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="inv-modal-body">
+            <div class="inv-mgmt-field">
+                <label for="purchase-default-due-days">Default due days after sale</label>
+                <input id="purchase-default-due-days" class="inv-mgmt-input" type="number" min="1" step="1" placeholder="e.g. 7" value="7" required/>
+                <p class="inv-field-hint">Payment due date = sale date + these days. Applies to new unpaid sales and pending invoices without a due date when you save.</p>
+            </div>
+        </div>
+        <div class="inv-modal-footer">
+            <button type="button" class="inv-mgmt-btn" data-modal-close>Cancel</button>
+            <button id="purchase-due-setting-save-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Save</button>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block page_scripts %}
@@ -325,9 +354,9 @@
 <script src="{% static 'js/components/tax-select.js' %}"></script>
 <script src="{% static 'js/inventory/customers.js' %}"></script>
 <script src="{% static 'js/inventory/settings-tax.js' %}?v=20260309-sale-add-modals"></script>
-<script src="{% static 'js/inventory/settings-invoice.js' %}?v=20260309-sale-add-modals"></script>
+<script src="{% static 'js/inventory/settings-invoice.js' %}?v=20260318-form-date-input"></script>
 <script src="{% static 'js/components/sale-invoice-print-preview.js' %}?v=20260311-no-caption"></script>
-<script src="{% static 'js/inventory/purchases.js' %}?v=20260318-sale-details-totals"></script>
+<script src="{% static 'js/inventory/purchases.js' %}?v=20260318-form-date-input"></script>
 <script>
 InventoryPagePanel.init();
 InventoryCustomers.init();

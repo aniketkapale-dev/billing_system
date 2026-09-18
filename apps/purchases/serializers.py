@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.db.models import Sum
 from rest_framework import serializers
 
-from apps.purchases.models import Purchase, PurchaseItem, PurchasePayment
+from apps.purchases.models import Purchase, PurchaseItem, PurchasePayment, SaleDueSetting
 from core.base_serializer import BaseModelSerializer
 
 
@@ -313,3 +313,29 @@ class PurchaseHeaderWriteSerializer(serializers.Serializer):
     shipping_address = serializers.CharField(required=False, allow_blank=True)
     payment_type_id = serializers.IntegerField(required=False, allow_null=True)
     due_date = OptionalDateField(required=False, allow_null=True)
+
+
+class SaleDueSettingSerializer(BaseModelSerializer):
+    class Meta:
+        model = SaleDueSetting
+        fields = (
+            "id",
+            "default_due_days_after_sale",
+            "created_at",
+            "updated_at",
+        )
+
+
+class SaleDueSettingWriteSerializer(serializers.ModelSerializer):
+    apply_pending = serializers.BooleanField(required=False, default=True)
+
+    class Meta:
+        model = SaleDueSetting
+        fields = ("default_due_days_after_sale", "apply_pending")
+
+    def validate_default_due_days_after_sale(self, value):
+        if value is None:
+            raise serializers.ValidationError("Default due days after sale is required.")
+        if value < 1:
+            raise serializers.ValidationError("Default due days after sale must be at least 1 day.")
+        return value

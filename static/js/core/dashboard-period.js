@@ -116,6 +116,11 @@ var InventoryDashboardPeriod = (function () {
     function applyDateRangeInputs(fromEl, toEl, period) {
         if (!fromEl || !toEl) return;
         var range = getKpiDateRange(period);
+        if (typeof InventoryApi !== "undefined") {
+            InventoryApi.setDateInputValue(fromEl, range.from);
+            InventoryApi.setDateInputValue(toEl, range.to);
+            return;
+        }
         fromEl.value = range.from;
         toEl.value = range.to;
     }

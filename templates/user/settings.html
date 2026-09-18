@@ -1,6 +1,6 @@
 {% extends "user_layout.html" %}
 {% load static %}
-{% block title %}{% if settings_section == 'tax' %}Tax Settings{% elif settings_section == 'invoice' %}Invoice Settings{% elif settings_section == 'barcode' %}Generate Barcode{% else %}Settings{% endif %} - Billing System{% endblock %}
+{% block title %}{% if settings_section == 'tax' %}Tax Settings{% elif settings_section == 'invoice' %}Invoice Settings{% elif settings_section == 'barcode' %}Generate Barcode{% elif settings_section == 'whatsapp' %}WhatsApp Message Send{% else %}Settings{% endif %} - Billing System{% endblock %}
 
 {% block content %}
 <div class="inv-mgmt-page">
@@ -159,7 +159,7 @@
                     </div>
                     <div class="inv-mgmt-field">
                         <label for="settings-invoice-end-counter">End Counter</label>
-                        <input id="settings-invoice-end-counter" class="inv-mgmt-input" type="date"/>
+                        <input id="settings-invoice-end-counter" class="inv-mgmt-input inv-date-input" type="text" placeholder="dd/mm/yyyy" autocomplete="off" inputmode="numeric"/>
                     </div>
                     <div class="inv-invoice-terms-qr-row">
                         <div class="inv-mgmt-field inv-invoice-terms-field">
@@ -319,6 +319,76 @@
             </div>
         </div>
     </div>
+
+    {% elif settings_section == 'whatsapp' %}
+    <div id="settings-whatsapp-form-panel" class="inv-mgmt-page-panel inv-whatsapp-settings-panel">
+        <div class="inv-mgmt-header">
+            <h2 class="inv-dashboard-greeting">WhatsApp Message Send</h2>
+            <button id="settings-whatsapp-recipients-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--secondary">
+                <span class="material-symbols-outlined">group</span>
+                Message Recipients
+            </button>
+        </div>
+
+        <div class="inv-mgmt-card inv-mgmt-panel-card">
+            <div class="inv-mgmt-panel-body">
+                <p class="inv-field-hint" style="margin-bottom:1rem;">
+                    Configure when payment reminder messages should be sent, then use the button below to send reminders for each pending invoice.
+                </p>
+                <div class="inv-mgmt-form-grid" style="padding:0;">
+                    <div class="inv-mgmt-field">
+                        <label for="settings-whatsapp-first-days">When to send first message (days after sale date)</label>
+                        <input id="settings-whatsapp-first-days" class="inv-mgmt-input" type="number" min="0" step="1" placeholder="e.g. 1" value="1" required/>
+                        <p class="inv-field-hint">Send the first reminder this many days after the sale date of each pending invoice.</p>
+                    </div>
+                    <div class="inv-mgmt-field">
+                        <label for="settings-whatsapp-repeat-days">Repeat every (days after first message)</label>
+                        <input id="settings-whatsapp-repeat-days" class="inv-mgmt-input" type="number" min="1" step="1" placeholder="e.g. 7" value="7" required/>
+                        <p class="inv-field-hint">How many days after the first message to send follow-up reminders.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="inv-mgmt-panel-footer">
+                <button id="settings-whatsapp-save-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Save Settings</button>
+                <button id="settings-whatsapp-send-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--secondary">
+                    <span class="material-symbols-outlined">send</span>
+                    Send Message to All Pending Customers
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="settings-whatsapp-recipients-panel" class="inv-mgmt-page-panel inv-whatsapp-settings-panel inv-hidden">
+        <div class="inv-mgmt-header">
+            <h2 class="inv-dashboard-greeting">Message Recipients (First Time Sent)</h2>
+            <button type="button" class="inv-mgmt-btn inv-page-back-btn" data-page-back="settings-whatsapp-form-panel">
+                <span class="material-symbols-outlined">arrow_back</span>
+                Back to Settings
+            </button>
+        </div>
+
+        <div class="inv-mgmt-card inv-whatsapp-results-card">
+            <div class="inv-mgmt-table-wrap">
+                <table class="inv-mgmt-table inv-mgmt-table--whatsapp-recipients">
+                    <thead>
+                        <tr>
+                            <th>Invoice No.</th>
+                            <th>Customer</th>
+                            <th>Mobile</th>
+                            <th class="inv-mgmt-cell--num">Total Amount</th>
+                            <th class="inv-mgmt-cell--num">Pending Amount</th>
+                            <th>First Message Date</th>
+                            <th>Sent At</th>
+                        </tr>
+                    </thead>
+                    <tbody id="settings-whatsapp-logs-body">
+                        <tr><td colspan="7" class="inv-mgmt-empty">Loading sent messages...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="settings-whatsapp-logs-pagination" class="inv-pagination"></div>
+        </div>
+    </div>
     {% endif %}
 </div>
 {% endblock %}
@@ -331,7 +401,7 @@ InventoryPagePanel.init();
 InventorySettingsTax.init();
 </script>
 {% elif settings_section == 'invoice' %}
-<script src="{% static 'js/inventory/settings-invoice.js' %}"></script>
+<script src="{% static 'js/inventory/settings-invoice.js' %}?v=20260318-form-date-input"></script>
 <script>
 InventoryPagePanel.init();
 InventorySettingsInvoice.init();
@@ -342,6 +412,12 @@ InventorySettingsInvoice.init();
 <script>
 InventoryPagePanel.init();
 InventorySettingsBarcode.init();
+</script>
+{% elif settings_section == 'whatsapp' %}
+<script src="{% static 'js/inventory/settings-whatsapp.js' %}?v=20260318-whatsapp-per-invoice"></script>
+<script>
+InventoryPagePanel.init();
+InventorySettingsWhatsApp.init();
 </script>
 {% endif %}
 {% endblock %}

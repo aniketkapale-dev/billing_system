@@ -26,6 +26,7 @@ from apps.page_views import (
     user_settings_tax,
     user_settings_invoice,
     user_settings_barcode,
+    user_settings_whatsapp,
 )
 
 urlpatterns = [
@@ -49,6 +50,7 @@ urlpatterns = [
     path("dashboard/settings/tax/", user_settings_tax, name="user-settings-tax"),
     path("dashboard/settings/invoice/", user_settings_invoice, name="user-settings-invoice"),
     path("dashboard/settings/barcode/", user_settings_barcode, name="user-settings-barcode"),
+    path("dashboard/settings/whatsapp/", user_settings_whatsapp, name="user-settings-whatsapp"),
     path("api/auth/", include("apps.accounts.urls")),
     path("api/users/", include("apps.users.urls")),
     path("api/businesses/", include("apps.businesses.urls")),

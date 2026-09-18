@@ -149,3 +149,12 @@ def user_settings_barcode(request):
         "settings_title": "Barcode",
     })
 
+
+@never_cache
+def user_settings_whatsapp(request):
+    return render(request, "user/settings.html", {
+        "active_nav": "settings-whatsapp",
+        "settings_section": "whatsapp",
+        "settings_title": "WhatsApp Message Send",
+    })
+

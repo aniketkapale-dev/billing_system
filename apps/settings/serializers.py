@@ -1,6 +1,12 @@
 from rest_framework import serializers
 
-from apps.settings.models import InvoiceSetting, ProductBarcode, Tax
+from apps.settings.models import (
+    InvoiceSetting,
+    ProductBarcode,
+    Tax,
+    WhatsAppMessageLog,
+    WhatsAppMessageSetting,
+)
 from core.base_serializer import BaseModelSerializer
 
 
@@ -161,3 +167,63 @@ class ProductBarcodeBulkGenerateSerializer(serializers.Serializer):
         if not value:
             raise serializers.ValidationError("SKU is required.")
         return value
+
+
+class WhatsAppMessageSettingSerializer(BaseModelSerializer):
+    business_name = serializers.CharField(source="business.business_name", read_only=True)
+
+    class Meta:
+        model = WhatsAppMessageSetting
+        fields = (
+            "id",
+            "business",
+            "business_name",
+            "first_message_after_days",
+            "repeat_every_days",
+            "is_active",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = ("business",)
+
+
+class WhatsAppMessageSettingWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WhatsAppMessageSetting
+        fields = ("first_message_after_days", "repeat_every_days", "is_active")
+
+    def validate_first_message_after_days(self, value):
+        if value is None:
+            raise serializers.ValidationError("Days after sale date for first message is required.")
+        if value < 0:
+            raise serializers.ValidationError("Days after sale date cannot be negative.")
+        return value
+
+    def validate_repeat_every_days(self, value):
+        if value is None:
+            raise serializers.ValidationError("Repeat frequency is required.")
+        if value < 1:
+            raise serializers.ValidationError("Repeat frequency must be at least 1 day.")
+        return value
+
+class WhatsAppMessageLogSerializer(BaseModelSerializer):
+    business_name = serializers.CharField(source="business.business_name", read_only=True)
+
+    class Meta:
+        model = WhatsAppMessageLog
+        fields = (
+            "id",
+            "business",
+            "business_name",
+            "sale",
+            "invoice_no",
+            "customer",
+            "customer_name",
+            "mobile",
+            "total_amount",
+            "pending_amount",
+            "first_message_sent_at",
+            "sent_at",
+            "is_first_send",
+            "created_at",
+        )

@@ -10,7 +10,7 @@
     <title>{% block title %}Billing System - Dashboard{% endblock %}</title>
     {% include "partials/inventory_theme.html" %}
     <link href="{% static 'css/dashboard.css' %}?v=20260317-nav-hover" rel="stylesheet"/>
-    <link href="{% static 'css/inventory-mgmt.css' %}?v=20260318-product-add-more-fix" rel="stylesheet"/>
+    <link href="{% static 'css/inventory-mgmt.css' %}?v=20260318-date-picker-nav" rel="stylesheet"/>
 </head>
 <body class="inv-auth-pending inv-dashboard-body inv-sidebar-collapsed">
 {% include "partials/inventory_ui.html" %}
@@ -161,8 +161,8 @@
                 </button>
             </div>
         </li>
-        <li class="inv-nav-group{% if active_nav == 'settings-tax' or active_nav == 'settings-invoice' or active_nav == 'settings-barcode' %} inv-nav-group--has-active-child{% endif %}{% if active_nav == 'settings-tax' or active_nav == 'settings-invoice' or active_nav == 'settings-barcode' %} inv-nav-group--open{% endif %}" data-nav-group="settings-tax settings-invoice settings-barcode">
-            <button type="button" class="inv-nav-item inv-nav-group-toggle" aria-expanded="{% if active_nav == 'settings-tax' or active_nav == 'settings-invoice' or active_nav == 'settings-barcode' %}true{% else %}false{% endif %}">
+        <li class="inv-nav-group{% if active_nav == 'settings-tax' or active_nav == 'settings-invoice' or active_nav == 'settings-barcode' or active_nav == 'settings-whatsapp' %} inv-nav-group--has-active-child{% endif %}{% if active_nav == 'settings-tax' or active_nav == 'settings-invoice' or active_nav == 'settings-barcode' or active_nav == 'settings-whatsapp' %} inv-nav-group--open{% endif %}" data-nav-group="settings-tax settings-invoice settings-barcode settings-whatsapp">
+            <button type="button" class="inv-nav-item inv-nav-group-toggle" aria-expanded="{% if active_nav == 'settings-tax' or active_nav == 'settings-invoice' or active_nav == 'settings-barcode' or active_nav == 'settings-whatsapp' %}true{% else %}false{% endif %}">
                 <span class="material-symbols-outlined inv-nav-icon">tune</span>
                 Settings
                 <span class="material-symbols-outlined inv-nav-group-chevron">expand_more</span>
@@ -198,6 +198,14 @@
                         </a>
                         <a class="inv-nav-add-btn" href="/dashboard/settings/barcode/?action=add" title="Add barcode" aria-label="Add barcode">
                             <span class="material-symbols-outlined">add</span>
+                        </a>
+                    </div>
+                </li>
+                <li data-nav-tab="settings-whatsapp">
+                    <div class="inv-nav-row{% if active_nav == 'settings-whatsapp' %} inv-nav-row--active{% endif %}">
+                        <a class="inv-nav-item inv-nav-item--sub{% if active_nav == 'settings-whatsapp' %} inv-nav-item--active{% endif %}" href="/dashboard/settings/whatsapp/">
+                            <span class="material-symbols-outlined inv-nav-icon inv-nav-icon--sub">chat</span>
+                            WhatsApp Message Send
                         </a>
                     </div>
                 </li>
@@ -409,9 +417,10 @@
 <script src="{% static 'js/core/pagination.js' %}?v=20260308-pagination-native"></script>
 <script src="{% static 'js/components/page-panel.js' %}"></script>
 <script src="{% static 'js/components/modal.js' %}"></script>
-<script src="{% static 'js/core/date-format.js' %}?v=20260309-dd-mm-yyyy"></script>
+<script src="{% static 'js/core/date-format.js' %}?v=20260318-dd-slash-mm-yyyy"></script>
+<script src="{% static 'js/components/date-input.js' %}?v=20260318-date-picker-nav"></script>
 <script src="{% static 'js/core/dashboard-period.js' %}?v=20260317-sales-finalized"></script>
-<script src="{% static 'js/core/api.js' %}?v=20260309-dd-mm-yyyy"></script>
+<script src="{% static 'js/core/api.js' %}?v=20260318-form-date-input"></script>
 <script src="{% static 'js/layout/business.js' %}"></script>
 <script src="{% static 'js/layout/nav-access.js' %}?v=20260317-staff-access"></script>
 <script src="{% static 'js/components/bulk-select.js' %}"></script>

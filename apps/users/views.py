@@ -1,5 +1,12 @@
+from rest_framework import status
+
 from apps.users.querysets import business_owner_users_queryset
-from apps.users.serializers import UserDetailSerializer, UserSerializer, UserWriteSerializer
+from apps.users.serializers import (
+    BusinessOwnerCreateSerializer,
+    UserDetailSerializer,
+    UserSerializer,
+    UserWriteSerializer,
+)
 from apps.users.services import UserService
 from core.base_response import ApiResponse
 from core.base_viewset import BaseViewSet
@@ -25,6 +32,17 @@ class UserViewSet(BaseViewSet):
         instance = self.get_service().get(pk, include_deleted=True)
         data = UserDetailSerializer(instance, context={"request": request}).data
         return ApiResponse.success(data=data, message="User details fetched")
+
+    def create(self, request):
+        serializer = BusinessOwnerCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        instance = self.get_service().create_business_owner(serializer.validated_data)
+        data = UserSerializer(instance, context={"request": request}).data
+        return ApiResponse.success(
+            data=data,
+            message="Business owner created successfully.",
+            status_code=status.HTTP_201_CREATED,
+        )
 
     def destroy(self, request, pk=None):
         self.get_service().hard_delete_business_owner(pk)

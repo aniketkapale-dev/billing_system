@@ -1,6 +1,13 @@
 from django.urls import path
 
-from apps.settings.views import InvoiceSettingViewSet, ProductBarcodeViewSet, TaxViewSet
+from apps.settings.views import (
+    InvoiceSettingViewSet,
+    ProductBarcodeViewSet,
+    TaxViewSet,
+    WhatsAppMessageLogListView,
+    WhatsAppMessageSendView,
+    WhatsAppMessageSettingView,
+)
 
 urlpatterns = [
     path("taxes/", TaxViewSet.as_view({"get": "list", "post": "create"}), name="tax-list"),
@@ -63,5 +70,20 @@ urlpatterns = [
         "barcodes/<int:pk>/restore/",
         ProductBarcodeViewSet.as_view({"post": "restore"}),
         name="product-barcode-restore",
+    ),
+    path(
+        "whatsapp-message/",
+        WhatsAppMessageSettingView.as_view(),
+        name="whatsapp-message-setting",
+    ),
+    path(
+        "whatsapp-message/send/",
+        WhatsAppMessageSendView.as_view(),
+        name="whatsapp-message-send",
+    ),
+    path(
+        "whatsapp-message/logs/",
+        WhatsAppMessageLogListView.as_view(),
+        name="whatsapp-message-logs",
     ),
 ]

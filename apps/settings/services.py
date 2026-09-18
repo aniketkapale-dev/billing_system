@@ -9,10 +9,14 @@ from apps.invoicing.models import PurchaseInvoiceItem
 from apps.products.models import Product
 from apps.settings.models import ProductBarcode
 
+from apps.purchases.models import Purchase
+from apps.settings.models import WhatsAppMessageLog, WhatsAppMessageSetting
 from apps.settings.repositories import (
     InvoiceSettingRepository,
     ProductBarcodeRepository,
     TaxRepository,
+    WhatsAppMessageLogRepository,
+    WhatsAppMessageSettingRepository,
 )
 from core.base_service import BaseService
 from core.exceptions import ValidationException
@@ -407,3 +411,309 @@ class ProductBarcodeService(BaseService):
         available = [f"{i:04d}" for i in range(10000) if f"{i:04d}" not in used]
         random.shuffle(available)
         return available[:quantity]
+
+
+class WhatsAppMessageSettingService(BaseService):
+    def __init__(self):
+        super().__init__(repository=WhatsAppMessageSettingRepository())
+
+    def get_or_create_for_business(self, business_id):
+        setting = (
+            self.repository.model.objects.filter(
+                business_id=business_id,
+                is_deleted=False,
+            )
+            .select_related("business")
+            .first()
+        )
+        if setting:
+            return setting
+        return self.repository.create(
+            business_id=business_id,
+            first_message_after_days=1,
+            repeat_every_days=7,
+            is_active=True,
+        )
+
+    def before_update(self, instance, data):
+        data.pop("owner_id", None)
+        data.pop("business_id", None)
+        self._validate(data)
+
+    def _validate(self, data):
+        if "first_message_after_days" in data:
+            value = data["first_message_after_days"]
+            if value is None or value == "":
+                raise ValidationException("Days after sale date for first message is required.")
+            try:
+                numeric = int(value)
+            except (TypeError, ValueError) as exc:
+                raise ValidationException("Days after sale date must be a whole number.") from exc
+            if numeric < 0:
+                raise ValidationException("Days after sale date cannot be negative.")
+            data["first_message_after_days"] = numeric
+
+        if "repeat_every_days" in data:
+            value = data["repeat_every_days"]
+            if value is None or value == "":
+                raise ValidationException("Repeat frequency is required.")
+            try:
+                numeric = int(value)
+            except (TypeError, ValueError) as exc:
+                raise ValidationException("Repeat frequency must be a whole number.") from exc
+            if numeric < 1:
+                raise ValidationException("Repeat frequency must be at least 1 day.")
+            data["repeat_every_days"] = numeric
+
+    @staticmethod
+    def _sale_pending_amount(sale):
+        paid = sum(
+            (payment.amount for payment in sale.payments.all() if not payment.is_deleted),
+            Decimal("0"),
+        )
+        total = sale.total_amount or Decimal("0")
+        return max(total - paid, Decimal("0"))
+
+    @staticmethod
+    def _sales_base_queryset(business_id):
+        return Purchase.objects.filter(
+            business_id=business_id,
+            is_deleted=False,
+            is_cancelled=False,
+            is_draft=False,
+        )
+
+    @staticmethod
+    def _invoice_label(sale):
+        if sale.reference_no:
+            return sale.reference_no
+        return f"Sale #{sale.id}"
+
+    def collect_pending_invoices(self, business_id):
+        sales = (
+            self._sales_base_queryset(business_id)
+            .filter(is_paid=False)
+            .select_related("customer")
+            .prefetch_related("payments")
+            .order_by("purchase_date", "created_at")
+        )
+
+        recipients = []
+        for sale in sales:
+            pending = self._sale_pending_amount(sale)
+            if pending <= 0:
+                continue
+
+            customer = sale.customer
+            recipients.append(
+                {
+                    "sale_id": sale.id,
+                    "invoice_no": self._invoice_label(sale),
+                    "customer_id": customer.id if customer else None,
+                    "customer_name": sale.customer_name or "Customer",
+                    "mobile": (customer.mobile if customer else "") or "",
+                    "total_amount": str((sale.total_amount or Decimal("0")).quantize(Decimal("0.01"))),
+                    "pending_amount": str(pending.quantize(Decimal("0.01"))),
+                    "sale_date": sale.purchase_date,
+                }
+            )
+
+        recipients.sort(
+            key=lambda item: (
+                item.get("sale_date") or timezone.localdate(),
+                item["invoice_no"].lower(),
+            )
+        )
+        return recipients
+
+    def collect_pending_customers(self, business_id):
+        return self.collect_pending_invoices(business_id)
+
+    def _last_log_by_sale(self, business_id):
+        logs = WhatsAppMessageLog.objects.filter(
+            business_id=business_id,
+            is_deleted=False,
+            sale_id__isnull=False,
+        ).order_by("-sent_at", "-created_at")
+        mapping = {}
+        for log in logs:
+            if log.sale_id not in mapping:
+                mapping[log.sale_id] = log
+        return mapping
+
+    def _is_due_for_first_message(self, item, setting, today):
+        sale_date = item.get("sale_date")
+        if not sale_date:
+            return False, "No sale date found for this invoice."
+
+        days_since_sale = (today - sale_date).days
+        if days_since_sale >= setting.first_message_after_days:
+            return True, None
+
+        days_remaining = setting.first_message_after_days - days_since_sale
+        return False, (
+            f"Invoice sale was {days_since_sale} day(s) ago; first reminder sends "
+            f"{days_remaining} day(s) from now "
+            f"(setting: {setting.first_message_after_days} day(s) after sale date)"
+        )
+
+    def filter_eligible_recipients(self, business_id, recipients, setting):
+        today = timezone.localdate()
+        last_logs = self._last_log_by_sale(business_id)
+        eligible = []
+        skipped = []
+
+        for item in recipients:
+            sale_id = item.get("sale_id")
+            last_log = last_logs.get(sale_id) if sale_id else None
+
+            if not last_log:
+                is_due, reason = self._is_due_for_first_message(item, setting, today)
+                if is_due:
+                    item["is_first_send"] = True
+                    eligible.append(item)
+                elif reason:
+                    skipped.append(
+                        {
+                            "invoice_no": item.get("invoice_no") or "",
+                            "customer_name": item["customer_name"],
+                            "mobile": item.get("mobile") or "",
+                            "reason": reason,
+                        }
+                    )
+                continue
+
+            last_sent_date = timezone.localdate(last_log.sent_at)
+            days_since_last = (today - last_sent_date).days
+            if days_since_last >= setting.repeat_every_days:
+                item["is_first_send"] = False
+                eligible.append(item)
+            else:
+                skipped.append(
+                    {
+                        "invoice_no": item.get("invoice_no") or "",
+                        "customer_name": item["customer_name"],
+                        "mobile": item.get("mobile") or "",
+                        "reason": (
+                            f"Repeat reminder already sent {days_since_last} day(s) ago; "
+                            f"next send after {setting.repeat_every_days} day(s)"
+                        ),
+                    }
+                )
+
+        return eligible, skipped
+
+    def _resolve_first_message_sent_date(self, business_id, sale_id):
+        if sale_id:
+            existing = (
+                WhatsAppMessageLog.objects.filter(
+                    business_id=business_id,
+                    is_deleted=False,
+                    sale_id=sale_id,
+                )
+                .order_by("first_message_sent_at")
+                .first()
+            )
+            if existing:
+                return existing.first_message_sent_at
+        return timezone.localdate()
+
+    @transaction.atomic
+    def _store_sent_messages(self, business_id, recipients):
+        sent_at = timezone.now()
+        logs = []
+        for item in recipients:
+            sale_id = item.get("sale_id")
+            customer_id = item.get("customer_id")
+            customer_name = item["customer_name"]
+            mobile = item.get("mobile") or ""
+            first_message_sent_at = self._resolve_first_message_sent_date(
+                business_id,
+                sale_id,
+            )
+            log = WhatsAppMessageLog.objects.create(
+                business_id=business_id,
+                sale_id=sale_id,
+                invoice_no=item.get("invoice_no") or "",
+                customer_id=customer_id,
+                customer_name=customer_name,
+                mobile=mobile,
+                total_amount=Decimal(item["total_amount"]),
+                pending_amount=Decimal(item["pending_amount"]),
+                first_message_sent_at=first_message_sent_at,
+                sent_at=sent_at,
+                is_first_send=bool(item.get("is_first_send", False)),
+                is_active=True,
+            )
+            logs.append(log)
+        return logs
+
+    def list_sent_messages(self, business_id):
+        return (
+            WhatsAppMessageLog.objects.filter(
+                business_id=business_id,
+                is_deleted=False,
+                is_first_send=True,
+            )
+            .select_related("customer")
+            .order_by("-sent_at", "-created_at")
+        )
+
+    def send_pending_payment_messages(self, business_id):
+        setting = self.get_or_create_for_business(business_id)
+        pending_recipients = self.collect_pending_invoices(business_id)
+        recipients, skipped = self.filter_eligible_recipients(
+            business_id,
+            pending_recipients,
+            setting,
+        )
+        first_time_count = sum(1 for item in recipients if item.get("is_first_send"))
+
+        if not pending_recipients:
+            print("[WhatsApp Reminder] No pending invoices found.")
+        elif not recipients:
+            print("[WhatsApp Reminder] No invoices due for reminders based on current settings.")
+            for index, item in enumerate(skipped, start=1):
+                print(
+                    f"{index}. Skipped: Invoice {item.get('invoice_no') or '—'} | "
+                    f"Customer: {item['customer_name']} | "
+                    f"Mobile: {item['mobile'] or '—'} | Reason: {item['reason']}"
+                )
+        else:
+            logs = self._store_sent_messages(business_id, recipients)
+            print(f"[WhatsApp Reminder] Sent payment reminders for {len(recipients)} invoice(s):")
+            for index, (item, log) in enumerate(zip(recipients, logs, strict=True), start=1):
+                print(
+                    f"{index}. Invoice: {item.get('invoice_no') or '—'} | "
+                    f"Customer: {item['customer_name']} | "
+                    f"Mobile: {item['mobile'] or '—'} | "
+                    f"Total Amount: {item['total_amount']} | "
+                    f"Pending Amount: {item['pending_amount']} | "
+                    f"First Message Date: {log.first_message_sent_at.isoformat()} | "
+                    f"First Send: {'Yes' if log.is_first_send else 'No'}"
+                )
+
+        sent_payload = [
+            {
+                "sale_id": item.get("sale_id"),
+                "invoice_no": item.get("invoice_no") or "",
+                "customer_name": item["customer_name"],
+                "mobile": item.get("mobile") or "",
+                "total_amount": item["total_amount"],
+                "pending_amount": item["pending_amount"],
+                "is_first_send": bool(item.get("is_first_send")),
+            }
+            for item in recipients
+        ]
+
+        return {
+            "settings": {
+                "first_message_after_days": setting.first_message_after_days,
+                "repeat_every_days": setting.repeat_every_days,
+            },
+            "pending_count": len(pending_recipients),
+            "count": len(recipients),
+            "first_time_count": first_time_count,
+            "recipients": sent_payload,
+            "skipped": skipped,
+        }

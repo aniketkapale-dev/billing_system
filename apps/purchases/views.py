@@ -1,4 +1,5 @@
 from rest_framework import status
+from rest_framework.views import APIView
 
 from apps.purchases.serializers import (
     PurchaseDraftUpdateSerializer,
@@ -8,8 +9,10 @@ from apps.purchases.serializers import (
     PurchasePaymentWriteSerializer,
     PurchaseSerializer,
     PurchaseWriteSerializer,
+    SaleDueSettingSerializer,
+    SaleDueSettingWriteSerializer,
 )
-from apps.purchases.services import PurchaseService
+from apps.purchases.services import PurchaseService, SaleDueSettingService
 from core.base_response import ApiResponse
 from core.base_viewset import BaseViewSet
 from core.business_viewset import BusinessScopedViewSetMixin
@@ -191,3 +194,44 @@ class PurchaseViewSet(BusinessScopedViewSetMixin, BaseViewSet):
             message="Purchase delete is not supported.",
             status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
         )
+
+
+class SaleDueSettingView(APIView):
+    required_roles = ["Business Owner", "Business Staff"]
+    required_tab = "purchases"
+    permission_classes = [IsAuthenticatedUser, HasRole]
+
+    def _get_business(self, request):
+        from core.business_access import resolve_business_access, user_has_tab
+
+        business, access = resolve_business_access(request)
+        if not user_has_tab(access, self.required_tab):
+            from rest_framework.exceptions import PermissionDenied
+
+            raise PermissionDenied("You do not have access to this section.")
+        return business
+
+    def get(self, request):
+        business = self._get_business(request)
+        setting = SaleDueSettingService().get_or_create_for_business(business.id)
+        payload = SaleDueSettingSerializer(setting).data
+        return ApiResponse.success(data=payload, message="Sale due settings")
+
+    def patch(self, request):
+        business = self._get_business(request)
+        serializer = SaleDueSettingWriteSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        service = SaleDueSettingService()
+        setting = service.update(
+            business.id,
+            serializer.validated_data["default_due_days_after_sale"],
+        )
+        updated_count = 0
+        if serializer.validated_data.get("apply_pending", True):
+            updated_count = service.apply_to_pending_sales(business.id)
+        payload = SaleDueSettingSerializer(setting).data
+        payload["updated_pending_count"] = updated_count
+        message = "Sale due settings saved."
+        if updated_count:
+            message = f"Sale due settings saved. Due date applied to {updated_count} pending invoice(s)."
+        return ApiResponse.success(data=payload, message=message)

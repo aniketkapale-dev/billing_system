@@ -182,7 +182,7 @@ var InventorySettingsInvoice = (function () {
         if (prefixEl) prefixEl.value = "";
         if (suffixEl) suffixEl.value = "";
         if (counterEl) counterEl.value = "1";
-        if (endCounterEl) endCounterEl.value = "";
+        if (endCounterEl) InventoryApi.setDateInputValue(endCounterEl, "");
         if (getTermsEditor()) resetTermsEditor();
         if (document.getElementById("settings-invoice-qr")) resetQrState();
     }
@@ -230,7 +230,7 @@ var InventorySettingsInvoice = (function () {
             prefix: document.getElementById("settings-invoice-prefix").value.trim(),
             suffix: document.getElementById("settings-invoice-suffix").value.trim(),
             counter: document.getElementById("settings-invoice-start-counter").value.trim(),
-            end_counter: document.getElementById("settings-invoice-end-counter").value.trim() || null,
+            end_counter: InventoryApi.getDateInputValue(document.getElementById("settings-invoice-end-counter")) || null,
             terms_conditions: getTermsValue()
         };
 
@@ -327,7 +327,10 @@ var InventorySettingsInvoice = (function () {
                     document.getElementById("settings-invoice-prefix").value = body.data.prefix || "";
                     document.getElementById("settings-invoice-suffix").value = body.data.suffix || "";
                     document.getElementById("settings-invoice-start-counter").value = body.data.counter != null ? body.data.counter : "1";
-                    document.getElementById("settings-invoice-end-counter").value = body.data.end_counter || "";
+                    InventoryApi.setDateInputValue(
+                        document.getElementById("settings-invoice-end-counter"),
+                        body.data.end_counter || ""
+                    );
                     setTermsEditorValue(body.data.terms_conditions || "");
                     qrFile = null;
                     clearQr = false;

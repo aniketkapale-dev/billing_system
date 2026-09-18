@@ -121,3 +121,80 @@ class ProductBarcode(BaseEntity):
         if label:
             return f"{label} ({self.value})"
         return self.value
+
+
+class WhatsAppMessageSetting(BaseEntity):
+    business = models.ForeignKey(
+        "businesses.Business",
+        on_delete=models.CASCADE,
+        related_name="whatsapp_message_settings",
+        db_column="business_id",
+    )
+    first_message_after_days = models.PositiveIntegerField(
+        default=1,
+        help_text="Days after sale date to send the first reminder.",
+    )
+    repeat_every_days = models.PositiveIntegerField(
+        default=7,
+        help_text="Days after the first message to repeat reminders.",
+    )
+
+    class Meta:
+        db_table = "whatsapp_message_settings"
+        verbose_name = "WhatsApp Message Setting"
+        verbose_name_plural = "WhatsApp Message Settings"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["business"],
+                condition=models.Q(is_deleted=False),
+                name="uniq_active_business_whatsapp_message_setting",
+            )
+        ]
+
+    def __str__(self):
+        return (
+            f"WhatsApp reminders: first {self.first_message_after_days}d after sale, "
+            f"repeat every {self.repeat_every_days}d"
+        )
+
+
+class WhatsAppMessageLog(BaseEntity):
+    business = models.ForeignKey(
+        "businesses.Business",
+        on_delete=models.CASCADE,
+        related_name="whatsapp_message_logs",
+        db_column="business_id",
+    )
+    sale = models.ForeignKey(
+        "purchases.Purchase",
+        on_delete=models.SET_NULL,
+        related_name="whatsapp_message_logs",
+        db_column="sale_id",
+        null=True,
+        blank=True,
+    )
+    invoice_no = models.CharField(max_length=50, blank=True, default="")
+    customer = models.ForeignKey(
+        "customers.Customer",
+        on_delete=models.SET_NULL,
+        related_name="whatsapp_message_logs",
+        db_column="customer_id",
+        null=True,
+        blank=True,
+    )
+    customer_name = models.CharField(max_length=255)
+    mobile = models.CharField(max_length=20, blank=True, default="")
+    total_amount = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
+    pending_amount = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
+    first_message_sent_at = models.DateField()
+    sent_at = models.DateTimeField()
+    is_first_send = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = "whatsapp_message_logs"
+        verbose_name = "WhatsApp Message Log"
+        verbose_name_plural = "WhatsApp Message Logs"
+        ordering = ("-sent_at", "-created_at")
+
+    def __str__(self):
+        return f"{self.customer_name} ({self.sent_at.date()})"

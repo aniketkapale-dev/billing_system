@@ -1,5 +1,8 @@
 from rest_framework import status
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
+from rest_framework.views import APIView
+
+from core.pagination import StandardPagination
 
 from apps.settings.serializers import (
     InvoiceSettingSerializer,
@@ -9,8 +12,16 @@ from apps.settings.serializers import (
     ProductBarcodeWriteSerializer,
     TaxSerializer,
     TaxWriteSerializer,
+    WhatsAppMessageLogSerializer,
+    WhatsAppMessageSettingSerializer,
+    WhatsAppMessageSettingWriteSerializer,
 )
-from apps.settings.services import InvoiceSettingService, ProductBarcodeService, TaxService
+from apps.settings.services import (
+    InvoiceSettingService,
+    ProductBarcodeService,
+    TaxService,
+    WhatsAppMessageSettingService,
+)
 from core.base_response import ApiResponse
 from core.base_viewset import BaseViewSet
 from core.business_access import resolve_business_access, user_has_tab
@@ -190,3 +201,99 @@ class ProductBarcodeViewSet(BusinessScopedViewSetMixin, BaseViewSet):
             message=f"{len(payload)} barcode(s) generated.",
             status_code=status.HTTP_201_CREATED,
         )
+
+
+class WhatsAppMessageSettingView(APIView):
+    required_roles = ["Business Owner", "Business Staff"]
+    required_tab = "settings-whatsapp"
+    permission_classes = [IsAuthenticatedUser, HasRole]
+
+    def _get_business(self, request):
+        from core.business_access import resolve_business_access, user_has_tab
+
+        business, access = resolve_business_access(request)
+        if not user_has_tab(access, self.required_tab):
+            from rest_framework.exceptions import PermissionDenied
+
+            raise PermissionDenied("You do not have access to this section.")
+        return business
+
+    def get(self, request):
+        business = self._get_business(request)
+        instance = WhatsAppMessageSettingService().get_or_create_for_business(business.id)
+        payload = WhatsAppMessageSettingSerializer(instance, context={"request": request}).data
+        return ApiResponse.success(data=payload, message="WhatsApp message settings")
+
+    def patch(self, request):
+        business = self._get_business(request)
+        service = WhatsAppMessageSettingService()
+        instance = service.get_or_create_for_business(business.id)
+        serializer = WhatsAppMessageSettingWriteSerializer(
+            instance,
+            data=request.data,
+            partial=True,
+        )
+        serializer.is_valid(raise_exception=True)
+        updated = service.update(instance.pk, dict(serializer.validated_data))
+        payload = WhatsAppMessageSettingSerializer(updated, context={"request": request}).data
+        return ApiResponse.success(data=payload, message="WhatsApp message settings saved")
+
+
+class WhatsAppMessageSendView(APIView):
+    required_roles = ["Business Owner", "Business Staff"]
+    required_tab = "settings-whatsapp"
+    permission_classes = [IsAuthenticatedUser, HasRole]
+
+    def post(self, request):
+        from core.business_access import resolve_business_access, user_has_tab
+
+        business, access = resolve_business_access(request)
+        if not user_has_tab(access, self.required_tab):
+            from rest_framework.exceptions import PermissionDenied
+
+            raise PermissionDenied("You do not have access to this section.")
+
+        data = WhatsAppMessageSettingService().send_pending_payment_messages(business.id)
+        count = data.get("count", 0)
+        pending_count = data.get("pending_count", 0)
+        first_time_count = data.get("first_time_count", 0)
+
+        if not pending_count:
+            message = "No pending invoices found."
+        elif not count:
+            message = "No invoices are due for reminders based on your day settings."
+        elif first_time_count == count:
+            message = f"WhatsApp reminders sent for {count} invoice(s) (all first time)."
+        elif first_time_count:
+            message = (
+                f"WhatsApp reminders sent for {count} invoice(s) "
+                f"({first_time_count} first time)."
+            )
+        else:
+            message = f"WhatsApp reminders sent for {count} invoice(s)."
+        return ApiResponse.success(data=data, message=message)
+
+
+class WhatsAppMessageLogListView(APIView):
+    required_roles = ["Business Owner", "Business Staff"]
+    required_tab = "settings-whatsapp"
+    permission_classes = [IsAuthenticatedUser, HasRole]
+    pagination_class = StandardPagination
+
+    def _get_business(self, request):
+        from core.business_access import resolve_business_access, user_has_tab
+
+        business, access = resolve_business_access(request)
+        if not user_has_tab(access, self.required_tab):
+            from rest_framework.exceptions import PermissionDenied
+
+            raise PermissionDenied("You do not have access to this section.")
+        return business
+
+    def get(self, request):
+        business = self._get_business(request)
+        queryset = WhatsAppMessageSettingService().list_sent_messages(business.id)
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(queryset, request, view=self)
+        payload = WhatsAppMessageLogSerializer(page, many=True, context={"request": request}).data
+        return paginator.get_paginated_response(payload)

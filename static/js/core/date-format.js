@@ -1,9 +1,11 @@
 /**
  * Shared date display formatting for the Billing System UI.
- * API inputs and <input type="date"> values stay YYYY-MM-DD.
+ * Display format: DD/MM/YYYY in tables and form text inputs. API values stay YYYY-MM-DD.
  */
 var InventoryDateFormat = (function () {
     "use strict";
+
+    var DISPLAY_SEP = "/";
 
     function parseDateParts(value) {
         if (value === null || value === undefined) return null;
@@ -40,7 +42,7 @@ var InventoryDateFormat = (function () {
         }
         var parts = parseDateParts(value);
         if (!parts) return String(value);
-        return parts.day + "-" + parts.month + "-" + parts.year;
+        return parts.day + DISPLAY_SEP + parts.month + DISPLAY_SEP + parts.year;
     }
 
     function hasTimeComponent(value) {
@@ -69,6 +71,8 @@ var InventoryDateFormat = (function () {
         if (iso) return iso[1];
         var dmy = str.match(/^(\d{2})-(\d{2})-(\d{4})/);
         if (dmy) return dmy[3] + "-" + dmy[2] + "-" + dmy[1];
+        var dmySlash = str.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+        if (dmySlash) return dmySlash[3] + "-" + dmySlash[2] + "-" + dmySlash[1];
         var parsed = new Date(str);
         if (isNaN(parsed.getTime())) return "";
         return parsed.toISOString().slice(0, 10);

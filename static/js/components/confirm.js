@@ -149,10 +149,12 @@ var InventoryConfirm = (function () {
                 ? (
                     '<div class="inv-confirm-modal__field">' +
                         '<label for="inv-confirm-date" class="inv-confirm-modal__label">' + escapeHtml(dateLabel) + "</label>" +
-                        '<input id="inv-confirm-date" class="inv-confirm-modal__date" type="date" value="' +
-                            escapeHtml(defaultDate) + '"' +
-                            (minDate ? ' min="' + escapeHtml(minDate) + '"' : "") +
-                            "/>" +
+                        '<input id="inv-confirm-date" class="inv-confirm-modal__date inv-date-input" type="text" placeholder="dd/mm/yyyy" autocomplete="off" inputmode="numeric" value="' +
+                            escapeHtml(
+                                typeof InventoryDateFormat !== "undefined"
+                                    ? InventoryDateFormat.formatDisplayDate(defaultDate, "")
+                                    : defaultDate
+                            ) + '"/>' +
                         '<p id="inv-confirm-date-error" class="inv-confirm-modal__error inv-hidden"></p>' +
                     "</div>"
                 )
@@ -188,6 +190,10 @@ var InventoryConfirm = (function () {
             var inputEl = modal.querySelector("#inv-confirm-input");
             var dateEl = modal.querySelector("#inv-confirm-date");
             var dateErrorEl = modal.querySelector("#inv-confirm-date-error");
+            if (dateEl && window.InventoryDateInput) {
+                InventoryDateInput.upgrade(dateEl);
+                if (minDate) InventoryDateInput.setMin(dateEl, minDate);
+            }
 
             function showDateError(message) {
                 if (!dateErrorEl) return;
@@ -207,7 +213,11 @@ var InventoryConfirm = (function () {
                     if (inputEl) inputEl.focus();
                     return;
                 }
-                var dateValue = dateEl ? dateEl.value.trim() : "";
+                var dateValue = dateEl
+                    ? (typeof InventoryApi !== "undefined"
+                        ? InventoryApi.getDateInputValue(dateEl)
+                        : dateEl.value.trim())
+                    : "";
                 if (showDate && dateRequired && !dateValue) {
                     if (dateEl) dateEl.focus();
                     return;
