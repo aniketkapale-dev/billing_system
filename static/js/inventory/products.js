@@ -371,8 +371,415 @@ var InventoryProducts = (function () {
         return '<div class="inv-row-actions">' + html + "</div>";
     }
 
-    function fillSelect(selectId, items, placeholder, labelFn) {
-        var select = document.getElementById(selectId);
+    function getProductFormRowsContainer() {
+        return document.getElementById("product-form-rows");
+    }
+
+    function getProductFormRows() {
+        var container = getProductFormRowsContainer();
+        if (!container) return [];
+        return Array.prototype.slice.call(container.querySelectorAll(".inv-product-form-row"));
+    }
+
+    function rowField(row, selector) {
+        return row ? row.querySelector(selector) : null;
+    }
+
+    function rowFieldValue(row, selector) {
+        var el = rowField(row, selector);
+        return el ? el.value : "";
+    }
+
+    function removeExtraFormRows() {
+        var rows = getProductFormRows();
+        for (var i = rows.length - 1; i > 0; i--) {
+            rows[i].remove();
+        }
+        ensureRowHeads();
+    }
+
+    function clearRowFields(row) {
+        if (!row) return;
+        var fields = [
+            ".inv-product-field-name",
+            ".inv-product-field-sku",
+            ".inv-product-field-quantity",
+            ".inv-product-field-price",
+            ".inv-product-field-mrp",
+            ".inv-product-field-description"
+        ];
+        fields.forEach(function (selector) {
+            var el = rowField(row, selector);
+            if (el) el.value = "";
+        });
+        ["category", "brand", "manufacturer", "unit"].forEach(function (key) {
+            var el = rowField(row, ".inv-product-field-" + key);
+            if (el) el.value = "";
+        });
+        refreshRowSelectDisplays(row);
+    }
+
+    function refreshRowSelectDisplays(row) {
+        if (!window.InventorySearchableSelect || !row) return;
+        row.querySelectorAll(
+            ".inv-product-field-category, .inv-product-field-brand, .inv-product-field-manufacturer, .inv-product-field-unit"
+        ).forEach(function (el) {
+            InventorySearchableSelect.refresh(el);
+        });
+    }
+
+    function fillRowSelects(row) {
+        var categoryEl = rowField(row, ".inv-product-field-category");
+        var brandEl = rowField(row, ".inv-product-field-brand");
+        var manufacturerEl = rowField(row, ".inv-product-field-manufacturer");
+        var unitEl = rowField(row, ".inv-product-field-unit");
+        if (categoryEl) {
+            fillSelect(categoryEl, categories, "Select category", function (item) { return item.name; });
+        }
+        if (brandEl) {
+            fillSelect(brandEl, brands, "Select brand (optional)", function (item) { return item.name; });
+        }
+        if (manufacturerEl) {
+            fillSelect(manufacturerEl, manufacturers, "Select manufacturer (optional)", function (item) { return item.name; });
+        }
+        if (unitEl) {
+            fillSelect(unitEl, units, "Select unit", function (item) { return item.name + " (" + item.short_name + ")"; });
+        }
+    }
+
+    function initRowSearchableSelects(row) {
+        if (!window.InventorySearchableSelect || !row) return;
+        InventorySearchableSelect.enhanceAll(row);
+    }
+
+    function getRowCatalogPanel(row, catalog) {
+        if (!row) return null;
+        return row.querySelector('.inv-product-row-catalog-panel[data-catalog="' + catalog + '"]');
+    }
+
+    function toggleRowCatalogPanel(row, catalog, show) {
+        var panel = getRowCatalogPanel(row, catalog);
+        if (!panel) return;
+        if (show) {
+            panel.classList.remove("inv-hidden");
+            var nameInput = panel.querySelector('[data-field="name"]');
+            if (nameInput) nameInput.focus();
+        } else {
+            panel.classList.add("inv-hidden");
+            panel.querySelectorAll("input").forEach(function (input) {
+                input.value = "";
+            });
+        }
+    }
+
+    function closeAllRowCatalogPanels() {
+        getProductFormRows().forEach(function (row) {
+            row.querySelectorAll(".inv-product-row-catalog-panel").forEach(function (panel) {
+                panel.classList.add("inv-hidden");
+                panel.querySelectorAll("input").forEach(function (input) {
+                    input.value = "";
+                });
+            });
+        });
+    }
+
+    function saveRowCatalogItem(row, catalog, btn) {
+        var panel = getRowCatalogPanel(row, catalog);
+        if (!panel) return;
+
+        var nameEl = panel.querySelector('[data-field="name"]');
+        var name = nameEl ? nameEl.value.trim() : "";
+        if (!name) {
+            var labelMap = {
+                category: "Category name",
+                brand: "Brand name",
+                manufacturer: "Manufacturer name",
+                unit: "Unit name"
+            };
+            InventoryToast.error((labelMap[catalog] || "Name") + " is required.");
+            return;
+        }
+
+        var body = { name: name };
+        var requestPath = "";
+        var reloadFn = null;
+
+        if (catalog === "category") {
+            var descEl = panel.querySelector('[data-field="description"]');
+            body.description = descEl ? descEl.value.trim() : "";
+            requestPath = "categories";
+            reloadFn = loadCategories;
+        } else if (catalog === "brand") {
+            requestPath = "brands";
+            reloadFn = loadBrands;
+        } else if (catalog === "manufacturer") {
+            requestPath = "manufacturers";
+            reloadFn = loadManufacturers;
+        } else if (catalog === "unit") {
+            var shortEl = panel.querySelector('[data-field="short_name"]');
+            var shortName = shortEl ? shortEl.value.trim() : "";
+            if (!shortName) {
+                InventoryToast.error("Unit short name is required.");
+                return;
+            }
+            body.short_name = shortName;
+            requestPath = "units";
+            reloadFn = loadUnits;
+        } else {
+            return;
+        }
+
+        InventoryLoader.button(btn, true, "Saving...");
+        catalogRequest(requestPath, "", { method: "POST", body: body })
+            .then(function (response) {
+                if (response && response.isSuccess && response.data) {
+                    var successMap = {
+                        category: "Category added.",
+                        brand: "Brand added.",
+                        manufacturer: "Manufacturer added.",
+                        unit: "Unit added."
+                    };
+                    InventoryToast.success(successMap[catalog] || "Saved.");
+                    toggleRowCatalogPanel(row, catalog, false);
+                    var selectedId = response.data.id;
+                    return reloadFn(selectedId, row).then(function () {
+                        refreshRowSelectDisplays(row);
+                    });
+                }
+                var err = response.message || "Unable to save.";
+                if (response.errors && response.errors.length) err = response.errors.join(" • ");
+                InventoryToast.error(err);
+            })
+            .catch(function () {
+                InventoryToast.error("Network error. Please try again.");
+            })
+            .finally(function () {
+                InventoryLoader.button(btn, false);
+            });
+    }
+
+    function ensureRowHeads() {
+        var rows = getProductFormRows();
+        if (rows.length <= 1) {
+            rows.forEach(function (row) {
+                var head = row.querySelector(".inv-product-form-row-head");
+                if (head) head.remove();
+            });
+            return;
+        }
+        rows.forEach(function (row, idx) {
+            var head = row.querySelector(".inv-product-form-row-head");
+            if (!head) {
+                head = document.createElement("div");
+                head.className = "inv-product-form-row-head";
+                row.insertBefore(head, row.firstChild);
+            }
+            var label = head.querySelector(".inv-product-form-row-label");
+            if (!label) {
+                label = document.createElement("span");
+                label.className = "inv-product-form-row-label";
+                head.appendChild(label);
+            }
+            label.textContent = "Product " + (idx + 1);
+            var removeBtn = head.querySelector(".inv-product-row-remove");
+            if (idx > 0) {
+                if (!removeBtn) {
+                    removeBtn = document.createElement("button");
+                    removeBtn.type = "button";
+                    removeBtn.className = "inv-product-row-remove inv-mgmt-btn";
+                    removeBtn.innerHTML = '<span class="material-symbols-outlined">close</span> Remove';
+                    head.appendChild(removeBtn);
+                }
+            } else if (removeBtn) {
+                removeBtn.remove();
+            }
+        });
+    }
+
+    function updateSaveButtonLabel() {
+        var saveBtn = document.getElementById("product-save-btn");
+        if (!saveBtn || editingId) return;
+        var count = getProductFormRows().length;
+        saveBtn.textContent = count > 1 ? "Save " + count + " Products" : "Save Product";
+    }
+
+    function toggleAddMoreButton(show) {
+        var btn = document.getElementById("product-add-more-btn");
+        if (btn) btn.classList.toggle("inv-hidden", !show);
+    }
+
+    function addProductFormRow() {
+        if (editingId) return;
+        var tpl = document.getElementById("product-form-row-template");
+        var container = getProductFormRowsContainer();
+        if (!tpl || !container) return;
+
+        var rows = getProductFormRows();
+        var clone = tpl.content.firstElementChild.cloneNode(true);
+        clone.setAttribute("data-row-index", String(rows.length));
+        container.appendChild(clone);
+        fillRowSelects(clone);
+        initRowSearchableSelects(clone);
+        ensureRowHeads();
+        updateSaveButtonLabel();
+
+        fetchNextUniqueFormSku(clone).then(function (sku) {
+            var skuEl = rowField(clone, ".inv-product-field-sku");
+            if (skuEl && sku) skuEl.value = sku;
+            var nameEl = rowField(clone, ".inv-product-field-name");
+            if (nameEl) nameEl.focus();
+        });
+    }
+
+    function removeProductFormRow(row) {
+        if (editingId || !row) return;
+        if (getProductFormRows().length <= 1) return;
+        row.remove();
+        getProductFormRows().forEach(function (r, idx) {
+            r.setAttribute("data-row-index", String(idx));
+        });
+        renumberFormRowSkus();
+        ensureRowHeads();
+        updateSaveButtonLabel();
+    }
+
+    function parseOpeningStockFromRow(row) {
+        var raw = rowFieldValue(row, ".inv-product-field-quantity").trim();
+        if (raw === "") return 0;
+        var num = parseFloat(raw);
+        return isNaN(num) ? 0 : num;
+    }
+
+    function parsePriceFromRow(row, selector) {
+        var raw = rowFieldValue(row, selector).trim();
+        if (raw === "") return 0;
+        var num = parseFloat(raw);
+        return isNaN(num) ? 0 : num;
+    }
+
+    function collectPayloadFromRow(row, rowLabel) {
+        var prefix = rowLabel ? " (Product " + rowLabel + ")" : "";
+        var name = rowFieldValue(row, ".inv-product-field-name").trim();
+        var unitId = rowFieldValue(row, ".inv-product-field-unit");
+        var categoryId = rowFieldValue(row, ".inv-product-field-category");
+        var sku = rowFieldValue(row, ".inv-product-field-sku").trim();
+
+        if (!name) {
+            InventoryToast.error("Product name is required" + prefix + ".");
+            return { ok: false };
+        }
+        if (!unitId) {
+            InventoryToast.error("Unit is required" + prefix + ".");
+            return { ok: false };
+        }
+        if (!categoryId) {
+            InventoryToast.error("Category is required" + prefix + ".");
+            return { ok: false };
+        }
+        if (!sku) {
+            InventoryToast.error("SKU is required" + prefix + ".");
+            return { ok: false };
+        }
+
+        var openingStock = parseOpeningStockFromRow(row);
+        if (openingStock < 0) {
+            InventoryToast.error("Opening stock cannot be negative" + prefix + ".");
+            return { ok: false };
+        }
+
+        var priceWithTax = parsePriceFromRow(row, ".inv-product-field-price");
+        if (priceWithTax < 0) {
+            InventoryToast.error("Cost price with tax (per product) must be 0 or greater" + prefix + ".");
+            return { ok: false };
+        }
+        if (openingStock > 0) {
+            var priceRaw = rowFieldValue(row, ".inv-product-field-price").trim();
+            if (priceRaw === "") {
+                InventoryToast.error("Cost price with tax (per product) is required" + prefix + ".");
+                return { ok: false };
+            }
+            if (priceWithTax <= 0) {
+                InventoryToast.error("Cost price with tax (per product) must be greater than 0 when opening stock is added" + prefix + ".");
+                return { ok: false };
+            }
+        }
+        priceWithTax = roundMoney(priceWithTax);
+
+        var mrp = parsePriceFromRow(row, ".inv-product-field-mrp");
+        if (mrp < 0) {
+            InventoryToast.error("MRP must be 0 or greater" + prefix + ".");
+            return { ok: false };
+        }
+        mrp = roundMoney(mrp);
+
+        var brandId = rowFieldValue(row, ".inv-product-field-brand");
+        var manufacturerId = rowFieldValue(row, ".inv-product-field-manufacturer");
+        var payload = {
+            name: name,
+            sku: sku,
+            unit_id: Number(unitId),
+            category_id: Number(categoryId),
+            description: rowFieldValue(row, ".inv-product-field-description").trim(),
+            quantity: openingStock,
+            actual_price: priceWithTax,
+            tax_ids: [],
+            mrp: mrp
+        };
+        if (brandId) payload.brand_id = Number(brandId);
+        if (manufacturerId) payload.manufacturer_id = Number(manufacturerId);
+        return { ok: true, payload: payload };
+    }
+
+    function saveProductsSequential(payloads, btn) {
+        InventoryLoader.button(btn, true, "Saving...");
+        var saved = [];
+        var chain = Promise.resolve();
+
+        payloads.forEach(function (payload, index) {
+            chain = chain.then(function () {
+                return request("", { method: "POST", body: payload }).then(function (body) {
+                    if (body && body.isSuccess && body.data) {
+                        saved.push(body.data);
+                        return;
+                    }
+                    var err = body && body.message ? body.message : "Unable to save product.";
+                    if (body && body.errors && body.errors.length) err = body.errors.join(" • ");
+                    var rowNum = index + 1;
+                    throw new Error(err + (payloads.length > 1 ? " (Product " + rowNum + ")" : ""));
+                });
+            });
+        });
+
+        chain
+            .then(function () {
+                var count = saved.length;
+                InventoryToast.success(count === 1 ? "Product added successfully." : count + " products added successfully.");
+                resetForm();
+                hideProductFormPanel();
+                if (document.getElementById("products-table-body")) {
+                    loadProducts(currentSearch, 1);
+                }
+                saved.forEach(function (product) {
+                    window.dispatchEvent(new CustomEvent("inventory:product-created", {
+                        detail: { product: product }
+                    }));
+                });
+            })
+            .catch(function (err) {
+                var msg = err && err.message ? err.message : "Network error. Please try again.";
+                InventoryToast.error(msg);
+                if (saved.length) {
+                    loadProducts(currentSearch, 1);
+                }
+            })
+            .finally(function () {
+                InventoryLoader.button(btn, false);
+                updateSaveButtonLabel();
+            });
+    }
+
+    function fillSelect(selectOrId, items, placeholder, labelFn) {
+        var select = typeof selectOrId === "string" ? document.getElementById(selectOrId) : selectOrId;
         if (!select) return;
         select.innerHTML = '<option value="">' + placeholder + "</option>";
         items.forEach(function (item) {
@@ -386,16 +793,19 @@ var InventoryProducts = (function () {
         }
     }
 
-    function renderCategorySelect(selectedId) {
-        var select = document.getElementById("product-category");
-        if (!select) return;
-        var current = selectedId !== undefined && selectedId !== null
-            ? String(selectedId)
-            : select.value;
-        fillSelect("product-category", categories, "Select category", function (item) {
-            return item.name;
+    function renderCategorySelect(selectedId, targetRow) {
+        getProductFormRows().forEach(function (row) {
+            var select = rowField(row, ".inv-product-field-category");
+            if (!select) return;
+            var current = select.value;
+            if (targetRow && row === targetRow && selectedId !== undefined && selectedId !== null) {
+                current = String(selectedId);
+            }
+            fillSelect(select, categories, "Select category", function (item) {
+                return item.name;
+            });
+            if (current) select.value = current;
         });
-        if (current) select.value = current;
     }
 
     function toggleCategoryPanel(show) {
@@ -411,10 +821,10 @@ var InventoryProducts = (function () {
         }
     }
 
-    function loadCategories(selectedId) {
+    function loadCategories(selectedId, targetRow) {
         return catalogRequest("categories", "?page_size=100").then(function (body) {
             categories = body && body.isSuccess ? (body.data.items || []) : [];
-            renderCategorySelect(selectedId);
+            renderCategorySelect(selectedId, targetRow);
             if (document.getElementById("products-category-filter")) {
                 renderProductFilterSelects();
             }
@@ -443,7 +853,7 @@ var InventoryProducts = (function () {
                 if (body && body.isSuccess && body.data) {
                     InventoryToast.success("Category added.");
                     toggleCategoryPanel(false);
-                    return loadCategories(body.data.id);
+                    return loadCategories(body.data.id, getProductFormRows()[0] || null);
                 }
                 var err = body.message || "Unable to add category.";
                 if (body.errors && body.errors.length) err = body.errors.join(" • ");
@@ -457,16 +867,19 @@ var InventoryProducts = (function () {
             });
     }
 
-    function renderBrandSelect(selectedId) {
-        var select = document.getElementById("product-brand");
-        if (!select) return;
-        var current = selectedId !== undefined && selectedId !== null
-            ? String(selectedId)
-            : select.value;
-        fillSelect("product-brand", brands, "Select brand (optional)", function (item) {
-            return item.name;
+    function renderBrandSelect(selectedId, targetRow) {
+        getProductFormRows().forEach(function (row) {
+            var select = rowField(row, ".inv-product-field-brand");
+            if (!select) return;
+            var current = select.value;
+            if (targetRow && row === targetRow && selectedId !== undefined && selectedId !== null) {
+                current = String(selectedId);
+            }
+            fillSelect(select, brands, "Select brand (optional)", function (item) {
+                return item.name;
+            });
+            if (current) select.value = current;
         });
-        if (current) select.value = current;
     }
 
     function toggleBrandPanel(show) {
@@ -481,10 +894,10 @@ var InventoryProducts = (function () {
         }
     }
 
-    function loadBrands(selectedId) {
+    function loadBrands(selectedId, targetRow) {
         return catalogRequest("brands", "?page_size=100").then(function (body) {
             brands = body && body.isSuccess ? (body.data.items || []) : [];
-            renderBrandSelect(selectedId);
+            renderBrandSelect(selectedId, targetRow);
             return brands;
         });
     }
@@ -507,7 +920,7 @@ var InventoryProducts = (function () {
                 if (body && body.isSuccess && body.data) {
                     InventoryToast.success("Brand added.");
                     toggleBrandPanel(false);
-                    return loadBrands(body.data.id);
+                    return loadBrands(body.data.id, getProductFormRows()[0] || null);
                 }
                 var err = body.message || "Unable to add brand.";
                 if (body.errors && body.errors.length) err = body.errors.join(" • ");
@@ -521,16 +934,19 @@ var InventoryProducts = (function () {
             });
     }
 
-    function renderManufacturerSelect(selectedId) {
-        var select = document.getElementById("product-manufacturer");
-        if (!select) return;
-        var current = selectedId !== undefined && selectedId !== null
-            ? String(selectedId)
-            : select.value;
-        fillSelect("product-manufacturer", manufacturers, "Select manufacturer (optional)", function (item) {
-            return item.name;
+    function renderManufacturerSelect(selectedId, targetRow) {
+        getProductFormRows().forEach(function (row) {
+            var select = rowField(row, ".inv-product-field-manufacturer");
+            if (!select) return;
+            var current = select.value;
+            if (targetRow && row === targetRow && selectedId !== undefined && selectedId !== null) {
+                current = String(selectedId);
+            }
+            fillSelect(select, manufacturers, "Select manufacturer (optional)", function (item) {
+                return item.name;
+            });
+            if (current) select.value = current;
         });
-        if (current) select.value = current;
     }
 
     function toggleManufacturerPanel(show) {
@@ -545,10 +961,10 @@ var InventoryProducts = (function () {
         }
     }
 
-    function loadManufacturers(selectedId) {
+    function loadManufacturers(selectedId, targetRow) {
         return catalogRequest("manufacturers", "?page_size=100").then(function (body) {
             manufacturers = body && body.isSuccess ? (body.data.items || []) : [];
-            renderManufacturerSelect(selectedId);
+            renderManufacturerSelect(selectedId, targetRow);
             return manufacturers;
         });
     }
@@ -571,7 +987,7 @@ var InventoryProducts = (function () {
                 if (body && body.isSuccess && body.data) {
                     InventoryToast.success("Manufacturer added.");
                     toggleManufacturerPanel(false);
-                    return loadManufacturers(body.data.id);
+                    return loadManufacturers(body.data.id, getProductFormRows()[0] || null);
                 }
                 var err = body.message || "Unable to add manufacturer.";
                 if (body.errors && body.errors.length) err = body.errors.join(" • ");
@@ -585,16 +1001,19 @@ var InventoryProducts = (function () {
             });
     }
 
-    function renderUnitSelect(selectedId) {
-        var select = document.getElementById("product-unit");
-        if (!select) return;
-        var current = selectedId !== undefined && selectedId !== null
-            ? String(selectedId)
-            : select.value;
-        fillSelect("product-unit", units, "Select unit", function (item) {
-            return item.name + " (" + item.short_name + ")";
+    function renderUnitSelect(selectedId, targetRow) {
+        getProductFormRows().forEach(function (row) {
+            var select = rowField(row, ".inv-product-field-unit");
+            if (!select) return;
+            var current = select.value;
+            if (targetRow && row === targetRow && selectedId !== undefined && selectedId !== null) {
+                current = String(selectedId);
+            }
+            fillSelect(select, units, "Select unit", function (item) {
+                return item.name + " (" + item.short_name + ")";
+            });
+            if (current) select.value = current;
         });
-        if (current) select.value = current;
     }
 
     function toggleUnitPanel(show) {
@@ -610,10 +1029,10 @@ var InventoryProducts = (function () {
         }
     }
 
-    function loadUnits(selectedId) {
+    function loadUnits(selectedId, targetRow) {
         return catalogRequest("units", "?page_size=100").then(function (body) {
             units = body && body.isSuccess ? (body.data.items || []) : [];
-            renderUnitSelect(selectedId);
+            renderUnitSelect(selectedId, targetRow);
             if (document.getElementById("products-unit-filter")) {
                 renderProductFilterSelects();
             }
@@ -647,7 +1066,7 @@ var InventoryProducts = (function () {
                 if (body && body.isSuccess && body.data) {
                     InventoryToast.success("Unit added.");
                     toggleUnitPanel(false);
-                    return loadUnits(body.data.id);
+                    return loadUnits(body.data.id, getProductFormRows()[0] || null);
                 }
                 var err = body.message || "Unable to add unit.";
                 if (body.errors && body.errors.length) err = body.errors.join(" • ");
@@ -857,9 +1276,11 @@ var InventoryProducts = (function () {
         if (mode === "edit") {
             if (titleEl) titleEl.textContent = "Edit Product";
             if (saveBtn) saveBtn.textContent = "Update Product";
+            toggleAddMoreButton(false);
         } else {
             if (titleEl) titleEl.textContent = "Add Product";
-            if (saveBtn) saveBtn.textContent = "Save Product";
+            updateSaveButtonLabel();
+            toggleAddMoreButton(!!document.getElementById("product-add-more-btn"));
         }
     }
 
@@ -918,31 +1339,22 @@ var InventoryProducts = (function () {
     function resetForm() {
         editingId = null;
         clearMrpEditContext();
+        removeExtraFormRows();
         setFormMode("add");
-        document.getElementById("product-name").value = "";
-        document.getElementById("product-sku").value = "";
-        document.getElementById("product-category").value = "";
-        document.getElementById("product-brand").value = "";
-        document.getElementById("product-manufacturer").value = "";
-        document.getElementById("product-unit").value = "";
-        document.getElementById("product-quantity").value = "";
-        document.getElementById("product-price-with-tax").value = "";
-        document.getElementById("product-mrp").value = "";
-        document.getElementById("product-description").value = "";
+        var firstRow = getProductFormRows()[0];
+        if (firstRow) clearRowFields(firstRow);
         toggleCategoryPanel(false);
         toggleBrandPanel(false);
         toggleManufacturerPanel(false);
         toggleUnitPanel(false);
         toggleTaxPanel(false);
+        closeAllRowCatalogPanels();
         syncProductSelectDisplays();
+        updateSaveButtonLabel();
     }
 
     function syncProductSelectDisplays() {
-        if (!window.InventorySearchableSelect) return;
-        ["product-category", "product-brand", "product-manufacturer", "product-unit"].forEach(function (id) {
-            var el = document.getElementById(id);
-            if (el) InventorySearchableSelect.refresh(el);
-        });
+        getProductFormRows().forEach(refreshRowSelectDisplays);
     }
 
     function populateForm(product) {
@@ -991,6 +1403,73 @@ var InventoryProducts = (function () {
             return "";
         }).catch(function () {
             return "";
+        });
+    }
+
+    function parseSkuNumber(sku) {
+        var match = /^SKU-(\d+)$/i.exec(String(sku || "").trim());
+        return match ? parseInt(match[1], 10) : null;
+    }
+
+    function formatSkuNumber(num) {
+        return "SKU-" + String(num).padStart(6, "0");
+    }
+
+    function getUsedFormSkus(excludeRow) {
+        var used = {};
+        getProductFormRows().forEach(function (row) {
+            if (excludeRow && row === excludeRow) return;
+            var sku = rowFieldValue(row, ".inv-product-field-sku").trim();
+            if (sku) used[sku.toLowerCase()] = true;
+        });
+        return used;
+    }
+
+    function nextUniqueFormSku(baseSku, used) {
+        var candidate = String(baseSku || "").trim();
+        if (!candidate) return "";
+        if (!used[candidate.toLowerCase()]) return candidate;
+
+        var num = parseSkuNumber(candidate);
+        if (num == null) return candidate;
+
+        do {
+            num += 1;
+            candidate = formatSkuNumber(num);
+        } while (used[candidate.toLowerCase()]);
+        return candidate;
+    }
+
+    function fetchNextUniqueFormSku(excludeRow) {
+        var used = getUsedFormSkus(excludeRow);
+        return fetchNextSku().then(function (sku) {
+            return nextUniqueFormSku(sku, used);
+        });
+    }
+
+    function renumberFormRowSkus() {
+        var rows = getProductFormRows();
+        if (!rows.length) return Promise.resolve();
+
+        var firstSkuEl = rowField(rows[0], ".inv-product-field-sku");
+        var baseNum = parseSkuNumber(firstSkuEl ? firstSkuEl.value : "");
+
+        function applyFromBase(startNum) {
+            rows.forEach(function (row, idx) {
+                var skuEl = rowField(row, ".inv-product-field-sku");
+                if (skuEl) skuEl.value = formatSkuNumber(startNum + idx);
+            });
+        }
+
+        if (baseNum != null) {
+            applyFromBase(baseNum);
+            return Promise.resolve();
+        }
+
+        return fetchNextSku().then(function (sku) {
+            var num = parseSkuNumber(sku);
+            if (num == null) return;
+            applyFromBase(num);
         });
     }
 
@@ -1050,6 +1529,7 @@ var InventoryProducts = (function () {
             .then(function (product) {
                 if (!product) return;
                 editingId = product.id;
+                removeExtraFormRows();
                 setFormMode("edit");
                 populateForm(product);
                 applyMrpEditContext(options);
@@ -1070,114 +1550,107 @@ var InventoryProducts = (function () {
     }
 
     function saveProduct() {
-        var name = document.getElementById("product-name").value.trim();
-        var unitId = document.getElementById("product-unit").value;
-        var categoryId = document.getElementById("product-category").value;
+        var btn = document.getElementById("product-save-btn");
+        var rows = getProductFormRows();
+        var firstRow = rows[0];
 
-        if (!name) {
-            InventoryToast.error("Product name is required.");
-            return;
-        }
-        if (!unitId) {
-            InventoryToast.error("Unit is required.");
-            return;
-        }
-        if (!editingId && !categoryId) {
-            InventoryToast.error("Category is required.");
-            return;
-        }
+        if (editingId) {
+            if (!firstRow) return;
+            var editResult = collectPayloadFromRow(firstRow, null);
+            if (!editResult.ok) return;
 
-        var sku = document.getElementById("product-sku").value.trim();
-        if (!sku) {
-            InventoryToast.error("SKU is required.");
-            return;
-        }
-
-        var openingStock = parseOpeningStock();
-        if (openingStock < 0) {
-            InventoryToast.error("Opening stock cannot be negative.");
-            return;
-        }
-
-        var priceWithTax = parsePrice("product-price-with-tax");
-        if (priceWithTax < 0) {
-            InventoryToast.error("Cost price with tax (per product) must be 0 or greater.");
-            return;
-        }
-        if (openingStock > 0) {
-            var requiredPrice = parseRequiredPrice("product-price-with-tax", "Cost price with tax (per product)");
-            if (requiredPrice === null) return;
-            if (requiredPrice <= 0) {
-                InventoryToast.error("Cost price with tax (per product) must be greater than 0 when opening stock is added.");
+            var editPayload = editResult.payload;
+            if (!editPayload.category_id) {
+                InventoryToast.error("Category is required.");
                 return;
             }
-            priceWithTax = requiredPrice;
-        }
-        priceWithTax = roundMoney(priceWithTax);
 
-        var mrp = parsePrice("product-mrp");
-        if (mrp < 0) {
-            InventoryToast.error("MRP must be 0 or greater.");
+            InventoryLoader.button(btn, true, "Updating...");
+            request("/" + editingId + "/", {
+                method: "PATCH",
+                body: editPayload
+            })
+                .then(function (body) {
+                    if (body && body.isSuccess) {
+                        var savedProduct = body.data;
+                        InventoryToast.success("Product updated successfully.");
+                        resetForm();
+                        hideProductFormPanel();
+                        if (document.getElementById("products-table-body")) {
+                            loadProducts(currentSearch, currentPage);
+                        }
+                        if (savedProduct) {
+                            window.dispatchEvent(new CustomEvent("inventory:product-updated", {
+                                detail: { product: savedProduct }
+                            }));
+                        }
+                    } else {
+                        var err = body.message || "Unable to save product.";
+                        if (body.errors && body.errors.length) err = body.errors.join(" • ");
+                        InventoryToast.error(err);
+                    }
+                })
+                .catch(function () {
+                    InventoryToast.error("Network error. Please try again.");
+                })
+                .finally(function () {
+                    InventoryLoader.button(btn, false);
+                });
             return;
         }
-        mrp = roundMoney(mrp);
 
-        var brandId = document.getElementById("product-brand").value;
-        var manufacturerId = document.getElementById("product-manufacturer").value;
-        var payload = {
-            name: name,
-            sku: sku,
-            unit_id: Number(unitId),
-            description: document.getElementById("product-description").value.trim(),
-            quantity: openingStock,
-            actual_price: priceWithTax,
-            tax_ids: [],
-            mrp: mrp
-        };
+        if (!rows.length) return;
 
-        if (categoryId) payload.category_id = Number(categoryId);
-        if (brandId) payload.brand_id = Number(brandId);
-        if (manufacturerId) payload.manufacturer_id = Number(manufacturerId);
+        var payloads = [];
+        var seenSkus = {};
+        for (var i = 0; i < rows.length; i++) {
+            var rowLabel = rows.length > 1 ? String(i + 1) : null;
+            var result = collectPayloadFromRow(rows[i], rowLabel);
+            if (!result.ok) return;
 
-        var btn = document.getElementById("product-save-btn");
-        InventoryLoader.button(btn, true, editingId ? "Updating..." : "Saving...");
+            var skuKey = result.payload.sku.toLowerCase();
+            if (seenSkus[skuKey]) {
+                InventoryToast.error("Duplicate SKU in Product " + seenSkus[skuKey] + " and Product " + (i + 1) + ".");
+                return;
+            }
+            seenSkus[skuKey] = i + 1;
+            payloads.push(result.payload);
+        }
 
-        request(editingId ? "/" + editingId + "/" : "", {
-            method: editingId ? "PATCH" : "POST",
-            body: payload
-        })
-            .then(function (body) {
-                if (body && body.isSuccess) {
-                    var savedProduct = body.data;
-                    var wasEditing = editingId;
-                    InventoryToast.success(wasEditing ? "Product updated successfully." : "Product added successfully.");
-                    resetForm();
-                    hideProductFormPanel();
-                    if (document.getElementById("products-table-body")) {
-                        loadProducts(currentSearch, wasEditing ? currentPage : 1);
+        if (payloads.length === 1) {
+            var singlePayload = payloads[0];
+            InventoryLoader.button(btn, true, "Saving...");
+            request("", { method: "POST", body: singlePayload })
+                .then(function (body) {
+                    if (body && body.isSuccess) {
+                        var savedProduct = body.data;
+                        InventoryToast.success("Product added successfully.");
+                        resetForm();
+                        hideProductFormPanel();
+                        if (document.getElementById("products-table-body")) {
+                            loadProducts(currentSearch, 1);
+                        }
+                        if (savedProduct) {
+                            window.dispatchEvent(new CustomEvent("inventory:product-created", {
+                                detail: { product: savedProduct }
+                            }));
+                        }
+                    } else {
+                        var singleErr = body.message || "Unable to save product.";
+                        if (body.errors && body.errors.length) singleErr = body.errors.join(" • ");
+                        InventoryToast.error(singleErr);
                     }
-                    if (savedProduct && !wasEditing) {
-                        window.dispatchEvent(new CustomEvent("inventory:product-created", {
-                            detail: { product: savedProduct }
-                        }));
-                    }
-                    if (savedProduct && wasEditing) {
-                        window.dispatchEvent(new CustomEvent("inventory:product-updated", {
-                            detail: { product: savedProduct }
-                        }));
-                    }
-                } else {
-                    var err = body.message || "Unable to save product.";
-                    if (body.errors && body.errors.length) err = body.errors.join(" • ");
-                    InventoryToast.error(err);
-                }
-            })
-            .catch(function () {
-                InventoryToast.error("Network error. Please try again.");
-            })
-            .finally(function () {
-                InventoryLoader.button(btn, false);
-            });
+                })
+                .catch(function () {
+                    InventoryToast.error("Network error. Please try again.");
+                })
+                .finally(function () {
+                    InventoryLoader.button(btn, false);
+                });
+            return;
+        }
+
+        saveProductsSequential(payloads, btn);
     }
 
     function deleteProduct(id, btn) {
@@ -1286,6 +1759,49 @@ var InventoryProducts = (function () {
         }
 
         if (saveBtn) saveBtn.addEventListener("click", saveProduct);
+
+        var addMoreBtn = document.getElementById("product-add-more-btn");
+        if (addMoreBtn) {
+            addMoreBtn.addEventListener("click", addProductFormRow);
+        }
+
+        var formRowsContainer = getProductFormRowsContainer();
+        if (formRowsContainer) {
+            formRowsContainer.addEventListener("click", function (e) {
+                var removeBtn = e.target.closest(".inv-product-row-remove");
+                if (removeBtn) {
+                    var removeRow = removeBtn.closest(".inv-product-form-row");
+                    if (removeRow) removeProductFormRow(removeRow);
+                    return;
+                }
+
+                var catalogAddBtn = e.target.closest(".inv-product-row-catalog-add");
+                if (catalogAddBtn) {
+                    var addRow = catalogAddBtn.closest(".inv-product-form-row");
+                    var addCatalog = catalogAddBtn.getAttribute("data-catalog");
+                    if (addRow && addCatalog) {
+                        var panel = getRowCatalogPanel(addRow, addCatalog);
+                        toggleRowCatalogPanel(addRow, addCatalog, panel && panel.classList.contains("inv-hidden"));
+                    }
+                    return;
+                }
+
+                var catalogSaveBtn = e.target.closest(".inv-product-row-catalog-save");
+                if (catalogSaveBtn) {
+                    var saveRow = catalogSaveBtn.closest(".inv-product-form-row");
+                    var saveCatalog = catalogSaveBtn.getAttribute("data-catalog");
+                    if (saveRow && saveCatalog) saveRowCatalogItem(saveRow, saveCatalog, catalogSaveBtn);
+                    return;
+                }
+
+                var catalogCancelBtn = e.target.closest(".inv-product-row-catalog-cancel");
+                if (catalogCancelBtn) {
+                    var cancelRow = catalogCancelBtn.closest(".inv-product-form-row");
+                    var cancelCatalog = catalogCancelBtn.getAttribute("data-catalog");
+                    if (cancelRow && cancelCatalog) toggleRowCatalogPanel(cancelRow, cancelCatalog, false);
+                }
+            });
+        }
 
         var categoryAddBtn = document.getElementById("product-category-add-btn");
         var categorySaveBtn = document.getElementById("product-category-save-btn");

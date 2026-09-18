@@ -1502,6 +1502,43 @@ var InventoryPurchases = (function () {
         return formatted;
     }
 
+    function sumSaleLineField(lines, field) {
+        return roundMoney((lines || []).reduce(function (sum, line) {
+            return sum + Number(line[field] || 0);
+        }, 0));
+    }
+
+    function getSaleLineProfit(line, isDraft) {
+        if (isDraft) return null;
+        if (line.profit_amount != null && line.profit_amount !== "") {
+            return roundMoney(line.profit_amount);
+        }
+        return roundMoney(Number(line.line_total || 0) - Number(line.cost_amount || 0));
+    }
+
+    function formatProfitLossValue(value, isDraft) {
+        if (isDraft || value == null || value === "") {
+            return "—";
+        }
+        return formatProfit(value);
+    }
+
+    function formatProfitLossCell(value, isDraft) {
+        if (isDraft || value == null || value === "") {
+            return '<td class="inv-mgmt-cell--num">—</td>';
+        }
+        var num = Number(value || 0);
+        var cls = num >= 0 ? "inv-profit-positive" : "inv-profit-negative";
+        return '<td class="inv-mgmt-cell--num ' + cls + '">' + formatProfit(num) + "</td>";
+    }
+
+    function formatSaleCostCell(value, isDraft) {
+        if (isDraft) {
+            return '<td class="inv-mgmt-cell--num">—</td>';
+        }
+        return '<td class="inv-mgmt-cell--num">' + InventoryApi.formatMoney(value) + "</td>";
+    }
+
     function isDraftFlow() {
         return !!editingPurchaseIsDraft;
     }
@@ -2160,6 +2197,18 @@ var InventoryPurchases = (function () {
 
         rows.push(formatPaymentScheduleViewField(purchase));
 
+        var lines = purchase.items || [];
+        var isDraft = !!purchase.is_draft;
+        var totalTax = isDraft ? null : sumSaleLineField(lines, "tax_amount");
+        var totalProfit = null;
+        if (!isDraft) {
+            if (purchase.total_profit != null && purchase.total_profit !== "") {
+                totalProfit = roundMoney(purchase.total_profit);
+            } else {
+                totalProfit = roundMoney(Number(purchase.total_amount || 0) - Number(purchase.total_cost || 0));
+            }
+        }
+
         rows.push(
             { label: "Billing Address", value: displayValue(purchase.billing_address) },
             { label: "Shipping Address", value: displayValue(purchase.shipping_address) },
@@ -2167,9 +2216,19 @@ var InventoryPurchases = (function () {
             { label: "Payment Status", value: formatPaymentStatusLabel(purchase) },
             { label: "Payment Type", value: displayValue(purchase.payment_type_name) },
             { label: "Bill Amount", value: InventoryApi.formatMoney(purchase.total_amount), colStart: 1, num: true, emphasis: true },
+            { label: "Total Tax", value: isDraft ? "—" : InventoryApi.formatMoney(totalTax), num: true },
             { label: "Total Paid", value: InventoryApi.formatMoney(purchase.total_paid), num: true },
             { label: "Pending Bill", value: formatPendingBillValue(purchase), num: true },
-            { label: "Total Cost", value: InventoryApi.formatMoney(purchase.total_cost), num: true }
+            { label: "Total Cost", value: isDraft ? "—" : InventoryApi.formatMoney(purchase.total_cost), num: true },
+            {
+                label: "Total Profit / Loss",
+                value: (function () {
+                    if (isDraft || totalProfit == null) return "—";
+                    var cls = Number(totalProfit) >= 0 ? "inv-profit-positive" : "inv-profit-negative";
+                    return '<span class="' + cls + '">' + formatProfit(totalProfit) + "</span>";
+                })(),
+                num: true
+            }
         );
         if (purchase.is_cancelled) {
             var cancelDate = purchase.cancellation_date || purchase.cancelled_at;
@@ -2189,33 +2248,77 @@ var InventoryPurchases = (function () {
 
         container.innerHTML = InventoryApi.renderViewGrid(rows);
 
-        var lines = purchase.items || [];
         if (!lines.length) {
             itemsWrap.innerHTML = "";
             return;
         }
 
+        var draftNote = isDraft
+            ? '<p class="inv-mgmt-items-help">Cost and profit/loss are calculated when the sale is finalized.</p>'
+            : "";
+
         itemsWrap.innerHTML =
             '<h4 class="inv-stockin-view-items-title">Products Sold</h4>' +
-            '<div class="inv-mgmt-table-wrap">' +
-            '<table class="inv-mgmt-table">' +
+            draftNote +
+            '<div class="inv-mgmt-table-wrap inv-sale-view-table-wrap">' +
+            '<table class="inv-mgmt-table inv-sale-view-table">' +
+            "<colgroup>" +
+            '<col class="inv-sale-col-product"/>' +
+            '<col class="inv-sale-col-sku"/>' +
+            '<col class="inv-sale-col-unit"/>' +
+            '<col class="inv-sale-col-qty"/>' +
+            '<col class="inv-sale-col-money"/>' +
+            '<col class="inv-sale-col-money"/>' +
+            '<col class="inv-sale-col-money"/>' +
+            '<col class="inv-sale-col-money"/>' +
+            '<col class="inv-sale-col-money"/>' +
+            '<col class="inv-sale-col-money"/>' +
+            "</colgroup>" +
             "<thead><tr>" +
-            "<th>Product</th><th>SKU</th><th>Unit</th><th>Qty</th><th>Sale Price</th><th>Total Price</th><th>Total Cost</th>" +
+            "<th>Product</th>" +
+            "<th>SKU</th>" +
+            "<th>Unit</th>" +
+            "<th class=\"inv-mgmt-cell--num\">Qty</th>" +
+            "<th class=\"inv-mgmt-cell--num\">MRP</th>" +
+            "<th class=\"inv-mgmt-cell--num\">Sale Price</th>" +
+            "<th class=\"inv-mgmt-cell--num\">Tax</th>" +
+            "<th class=\"inv-mgmt-cell--num\">Sold Total</th>" +
+            "<th class=\"inv-mgmt-cell--num\">Cost (incl. tax)</th>" +
+            "<th class=\"inv-mgmt-cell--num\">Profit / Loss</th>" +
             "</tr></thead><tbody>" +
             lines.map(function (line) {
+                var mrp = line.list_price != null && line.list_price !== ""
+                    ? line.list_price
+                    : line.unit_price;
+                var lineProfit = getSaleLineProfit(line, isDraft);
                 return (
                     "<tr>" +
                     "<td>" + displayValue(line.product_name) + "</td>" +
                     "<td>" + displayValue(line.product_sku) + "</td>" +
                     "<td>" + displayValue(line.product_unit || "pcs") + "</td>" +
                     "<td class=\"inv-mgmt-cell--num\">" + displayValue(formatQty(line.quantity)) + "</td>" +
+                    "<td class=\"inv-mgmt-cell--num\">" + InventoryApi.formatMoney(mrp) + "</td>" +
                     "<td class=\"inv-mgmt-cell--num\">" + InventoryApi.formatMoney(line.unit_price) + "</td>" +
+                    "<td class=\"inv-mgmt-cell--num\">" + (isDraft ? "—" : InventoryApi.formatMoney(line.tax_amount)) + "</td>" +
                     "<td class=\"inv-mgmt-cell--num\">" + InventoryApi.formatMoney(line.line_total) + "</td>" +
-                    "<td class=\"inv-mgmt-cell--num\">" + InventoryApi.formatMoney(line.cost_amount) + "</td>" +
+                    formatSaleCostCell(line.cost_amount, isDraft) +
+                    formatProfitLossCell(lineProfit, isDraft) +
                     "</tr>"
                 );
             }).join("") +
-            "</tbody></table></div>";
+            "</tbody><tfoot><tr class=\"inv-sale-view-total-row\">" +
+            "<td colspan=\"6\" class=\"inv-sale-view-total-label\"><strong>Invoice Totals</strong></td>" +
+            "<td class=\"inv-mgmt-cell--num\">" + (isDraft ? "—" : InventoryApi.formatMoney(totalTax)) + "</td>" +
+            "<td class=\"inv-mgmt-cell--num\">" + InventoryApi.formatMoney(purchase.total_amount) + "</td>" +
+            "<td class=\"inv-mgmt-cell--num\">" + (isDraft ? "—" : InventoryApi.formatMoney(purchase.total_cost)) + "</td>" +
+            (function () {
+                if (isDraft) {
+                    return '<td class="inv-mgmt-cell--num">—</td>';
+                }
+                var cls = Number(totalProfit) >= 0 ? "inv-profit-positive" : "inv-profit-negative";
+                return '<td class="inv-mgmt-cell--num ' + cls + '">' + formatProfit(totalProfit) + "</td>";
+            })() +
+            "</tr></tfoot></table></div>";
     }
 
     function openEditPurchase(id) {
