@@ -622,6 +622,23 @@ var InventoryPurchases = (function () {
         return roundMoney(actual * rate / 100);
     }
 
+    /** GST-inclusive price → taxable value (e.g. ₹100 @ 5% → ₹95.24). */
+    function extractTaxableFromInclusive(inclusivePrice, taxRate) {
+        var inclusive = Number(inclusivePrice || 0);
+        var rate = Number(taxRate || 0);
+        if (isNaN(inclusive) || inclusive <= 0) return 0;
+        if (rate <= 0) return roundMoney(inclusive);
+        return roundMoney(inclusive / (1 + rate / 100));
+    }
+
+    /** GST-inclusive price → GST portion (e.g. ₹45 @ 5% → ₹2.14). */
+    function extractGstFromInclusive(inclusivePrice, taxRate) {
+        var inclusive = Number(inclusivePrice || 0);
+        var rate = Number(taxRate || 0);
+        if (isNaN(inclusive) || inclusive <= 0 || rate <= 0) return 0;
+        return roundMoney(inclusive - extractTaxableFromInclusive(inclusive, rate));
+    }
+
     function getCombinedTaxRate(taxIds) {
         return InventoryTaxSelect.getCombinedRate(taxes, taxIds);
     }
@@ -784,7 +801,9 @@ var InventoryPurchases = (function () {
     }
 
     function getRowFinalSalePrice(row) {
-        return computeWithGst(getRowAfterDistributorPrice(row), getRowTaxRate(row));
+        // MRP, discounts, and distributor margin are all on GST-inclusive amounts.
+        // Salon price stays tax-inclusive; GST is extracted for reporting, not added again.
+        return getRowAfterDistributorPrice(row);
     }
 
     function getRowDiscountAmount(row, quantity) {
@@ -798,9 +817,9 @@ var InventoryPurchases = (function () {
     function getRowTaxAmount(row, quantity) {
         var qty = Number(quantity || 0);
         if (isNaN(qty) || qty <= 0) return 0;
-        var afterDiscounts = getRowAfterDistributorPrice(row);
+        var salonPrice = getRowAfterDistributorPrice(row);
         var rate = getRowTaxRate(row);
-        return roundMoney(afterDiscounts * (rate / 100) * qty);
+        return roundMoney(extractGstFromInclusive(salonPrice, rate) * qty);
     }
 
     function clearRowDiscount(row) {
@@ -1157,7 +1176,7 @@ var InventoryPurchases = (function () {
         row.innerHTML =
             '<div class="inv-mgmt-field"><label>Available Product</label><select class="inv-mgmt-select inv-item-product" required>' + productOptions(data.product_id, row) + "</select></div>" +
             '<div class="inv-mgmt-field"><label>Quantity</label><input class="inv-mgmt-input inv-item-qty" type="number" min="0" step="0.01" placeholder="1" value="' + (data.quantity != null && data.quantity !== "" ? data.quantity : 1) + '" required/></div>' +
-            '<div class="inv-mgmt-field"><label>MRP Price</label><input class="inv-mgmt-input inv-item-sale-actual" type="number" min="0" step="0.01" placeholder="0.00" value="' + (data.sale_actual_price != null && data.sale_actual_price !== "" ? data.sale_actual_price : "") + '" required/></div>' +
+            '<div class="inv-mgmt-field"><label>MRP Price <span class="inv-field-optional">(incl. tax)</span></label><input class="inv-mgmt-input inv-item-sale-actual" type="number" min="0" step="0.01" placeholder="0.00" value="' + (data.sale_actual_price != null && data.sale_actual_price !== "" ? data.sale_actual_price : "") + '" required/></div>' +
             discountFieldHtml({
                 label: "Discount",
                 discount_type: data.discount_type,

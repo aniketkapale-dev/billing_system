@@ -476,13 +476,15 @@ var InventoryDocumentExport = (function () {
         }
 
         discounts = discounts || getLineDiscountAmounts(line);
-        var taxableBase = Number(discounts.afterDistributor || 0);
-        if (taxableBase <= 0) return 0;
+        var inclusiveBase = Number(discounts.afterDistributor || 0);
+        if (inclusiveBase <= 0) return 0;
 
         var qty = Number(line.quantity || 0);
         if (qty <= 0) return 0;
 
         var taxPerUnit = roundMoney(Number(line.tax_amount || 0) / qty);
+        var taxableBase = roundMoney(inclusiveBase - taxPerUnit);
+        if (taxableBase <= 0) return 0;
         return roundMoney((taxPerUnit / taxableBase) * 100);
     }
 
