@@ -183,6 +183,8 @@ var InventoryBusiness = (function () {
             "business-gst",
             "business-phone",
             "business-email",
+            "business-state-code",
+            "business-pin-code",
             "business-address",
             "business-logo"
         ];
@@ -197,6 +199,8 @@ var InventoryBusiness = (function () {
         var gst = document.getElementById("business-gst").value.trim();
         var phone = document.getElementById("business-phone").value.trim();
         var email = document.getElementById("business-email").value.trim();
+        var stateCode = document.getElementById("business-state-code").value.trim();
+        var pinCode = document.getElementById("business-pin-code").value.trim();
         var address = document.getElementById("business-address").value.trim();
         var logoInput = document.getElementById("business-logo");
         var logoFile = logoInput && logoInput.files && logoInput.files[0] ? logoInput.files[0] : null;
@@ -213,12 +217,28 @@ var InventoryBusiness = (function () {
             return null;
         }
 
+        if (stateCode && (!/^\d{1,2}$/.test(stateCode))) {
+            InventoryToast.error("Enter a valid GST state code (1–2 digits).");
+            var stateInput = document.getElementById("business-state-code");
+            if (stateInput) stateInput.focus();
+            return null;
+        }
+
+        if (pinCode && (!/^\d{6}$/.test(pinCode))) {
+            InventoryToast.error("Enter a valid 6-digit pin code.");
+            var pinInput = document.getElementById("business-pin-code");
+            if (pinInput) pinInput.focus();
+            return null;
+        }
+
         if (useFormData || logoFile) {
             var formData = new FormData();
             formData.append("business_name", businessName);
             if (gst) formData.append("gst_number", gst);
             if (phone) formData.append("phone", phone);
             if (email) formData.append("email", email);
+            if (stateCode) formData.append("state_code", stateCode);
+            if (pinCode) formData.append("pin_code", pinCode);
             if (address) formData.append("address", address);
             if (logoFile) formData.append("logo", logoFile);
             return formData;
@@ -228,6 +248,8 @@ var InventoryBusiness = (function () {
         if (gst) payload.gst_number = gst;
         if (phone) payload.phone = phone;
         if (email) payload.email = email;
+        if (stateCode) payload.state_code = stateCode;
+        if (pinCode) payload.pin_code = pinCode;
         if (address) payload.address = address;
         return payload;
     }

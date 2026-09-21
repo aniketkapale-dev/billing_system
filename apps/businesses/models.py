@@ -16,6 +16,8 @@ class Business(BaseEntity):
     phone = models.CharField(max_length=20, blank=True, default="")
     email = models.EmailField(blank=True, default="")
     address = models.TextField(blank=True, default="")
+    state_code = models.CharField(max_length=2, blank=True, default="")
+    pin_code = models.CharField(max_length=10, blank=True, default="")
     logo = models.ImageField(upload_to="business_logos/", blank=True, null=True)
 
     class Meta:

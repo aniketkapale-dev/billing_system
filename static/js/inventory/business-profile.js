@@ -89,6 +89,8 @@ var InventoryBusinessProfile = (function () {
         document.getElementById("business-profile-gst").value = business.gst_number || "";
         document.getElementById("business-profile-phone").value = business.phone || "";
         document.getElementById("business-profile-email").value = business.email || "";
+        document.getElementById("business-profile-state-code").value = business.state_code || "";
+        document.getElementById("business-profile-pin-code").value = business.pin_code || "";
         document.getElementById("business-profile-address").value = business.address || "";
         document.getElementById("business-profile-owner").textContent = business.owner_name || "—";
         setMetaDate("business-profile-created", business.created_at);
@@ -144,12 +146,30 @@ var InventoryBusinessProfile = (function () {
             return null;
         }
 
+        var stateCode = document.getElementById("business-profile-state-code").value.trim();
+        if (stateCode && (!/^\d{1,2}$/.test(stateCode))) {
+            InventoryToast.error("Enter a valid GST state code (1–2 digits).");
+            var stateInput = document.getElementById("business-profile-state-code");
+            if (stateInput) stateInput.focus();
+            return null;
+        }
+
+        var pinCode = document.getElementById("business-profile-pin-code").value.trim();
+        if (pinCode && (!/^\d{6}$/.test(pinCode))) {
+            InventoryToast.error("Enter a valid 6-digit pin code.");
+            var pinInput = document.getElementById("business-profile-pin-code");
+            if (pinInput) pinInput.focus();
+            return null;
+        }
+
         if (logoFile || clearLogo) {
             var formData = new FormData();
             formData.append("business_name", businessName);
             formData.append("gst_number", document.getElementById("business-profile-gst").value.trim());
             formData.append("phone", document.getElementById("business-profile-phone").value.trim());
             formData.append("email", document.getElementById("business-profile-email").value.trim());
+            formData.append("state_code", stateCode);
+            formData.append("pin_code", pinCode);
             formData.append("address", document.getElementById("business-profile-address").value.trim());
             if (logoFile) formData.append("logo", logoFile);
             if (clearLogo) formData.append("clear_logo", "true");
@@ -161,6 +181,8 @@ var InventoryBusinessProfile = (function () {
             gst_number: document.getElementById("business-profile-gst").value.trim(),
             phone: document.getElementById("business-profile-phone").value.trim(),
             email: document.getElementById("business-profile-email").value.trim(),
+            state_code: stateCode,
+            pin_code: pinCode,
             address: document.getElementById("business-profile-address").value.trim()
         };
     }

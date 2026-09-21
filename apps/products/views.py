@@ -11,11 +11,12 @@ class ProductViewSet(BusinessScopedViewSetMixin, BaseViewSet):
     service_class = ProductService
     serializer_class = ProductSerializer
     write_serializer_class = ProductWriteSerializer
-    search_fields = ("name", "sku", "barcode", "description")
+    search_fields = ("name", "sku", "hsn_code", "barcode", "description")
     ordering_default = ("-created_at",)
     ordering_fields = {
         "name": "name",
         "sku": "sku",
+        "hsn_code": "hsn_code",
         "barcode": "barcode",
         "purchase_price": "purchase_price",
         "category": "category__name",

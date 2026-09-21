@@ -38,6 +38,7 @@ var InventoryProducts = (function () {
                 columns: [
                     { id: "name", label: "Name", locked: true, sortKey: "name", headerClass: "inv-col-name", cell: function (item) { return '<td class="inv-col-name">' + cellText(item.name) + "</td>"; } },
                     { id: "sku", label: "SKU", sortKey: "sku", headerClass: "inv-col-sku", cell: function (item) { return '<td class="inv-col-sku">' + cellText(item.sku) + "</td>"; } },
+                    { id: "hsn_code", label: "HSN Code", sortKey: "hsn_code", headerClass: "inv-col-hsn", cell: function (item) { return '<td class="inv-col-hsn">' + cellText(item.hsn_code) + "</td>"; } },
                     { id: "category", label: "Category", sortKey: "category", headerClass: "inv-col-category", cell: function (item) { return '<td class="inv-col-category">' + cellText(item.category_name) + "</td>"; } },
                     { id: "brand", label: "Brand", sortKey: "brand", headerClass: "inv-col-brand", cell: function (item) { return '<td class="inv-col-brand">' + cellText(item.brand_name) + "</td>"; } },
                     {
@@ -101,11 +102,12 @@ var InventoryProducts = (function () {
         if (!items.length) return;
         InventoryDocumentExport.downloadTablePdf(
             "Products",
-            ["Name", "SKU", "Category", "Brand", "Cost Price with Tax (per product)", "Qty", "Unit"],
+            ["Name", "SKU", "HSN Code", "Category", "Brand", "Cost Price with Tax (per product)", "Qty", "Unit"],
             items.map(function (item) {
                 return [
                     item.name || "",
                     item.sku || "",
+                    item.hsn_code || "",
                     item.category_name || "",
                     item.brand_name || "",
                     item.purchase_price || item.actual_price || "",
@@ -122,11 +124,12 @@ var InventoryProducts = (function () {
         if (!items.length) return;
         var html = InventoryDocumentExport.buildTableHtml(
             "Products",
-            ["Name", "SKU", "Category", "Brand", "Cost Price with Tax (per product)", "Qty", "Unit"],
+            ["Name", "SKU", "HSN Code", "Category", "Brand", "Cost Price with Tax (per product)", "Qty", "Unit"],
             items.map(function (item) {
                 return [
                     item.name || "",
                     item.sku || "",
+                    item.hsn_code || "",
                     item.category_name || "",
                     item.brand_name || "",
                     item.purchase_price || item.actual_price || "",
@@ -403,6 +406,7 @@ var InventoryProducts = (function () {
         var fields = [
             ".inv-product-field-name",
             ".inv-product-field-sku",
+            ".inv-product-field-hsn-code",
             ".inv-product-field-quantity",
             ".inv-product-field-price",
             ".inv-product-field-mrp",
@@ -657,6 +661,16 @@ var InventoryProducts = (function () {
         return isNaN(num) ? 0 : num;
     }
 
+    function validateHsnCode(value, prefix) {
+        var hsn = String(value || "").trim();
+        if (!hsn) return "";
+        if (!/^\d{4}$|^\d{6}$|^\d{8}$/.test(hsn)) {
+            InventoryToast.error("Enter a valid HSN code (4, 6, or 8 digits)" + (prefix || "") + ".");
+            return null;
+        }
+        return hsn;
+    }
+
     function collectPayloadFromRow(row, rowLabel) {
         var prefix = rowLabel ? " (Product " + rowLabel + ")" : "";
         var name = rowFieldValue(row, ".inv-product-field-name").trim();
@@ -680,6 +694,9 @@ var InventoryProducts = (function () {
             InventoryToast.error("SKU is required" + prefix + ".");
             return { ok: false };
         }
+
+        var hsnCode = validateHsnCode(rowFieldValue(row, ".inv-product-field-hsn-code"), prefix);
+        if (hsnCode === null) return { ok: false };
 
         var openingStock = parseOpeningStockFromRow(row);
         if (openingStock < 0) {
@@ -725,6 +742,7 @@ var InventoryProducts = (function () {
             tax_ids: [],
             mrp: mrp
         };
+        if (hsnCode) payload.hsn_code = hsnCode;
         if (brandId) payload.brand_id = Number(brandId);
         if (manufacturerId) payload.manufacturer_id = Number(manufacturerId);
         return { ok: true, payload: payload };
@@ -1360,6 +1378,7 @@ var InventoryProducts = (function () {
     function populateForm(product) {
         document.getElementById("product-name").value = product.name || "";
         document.getElementById("product-sku").value = product.sku || "";
+        document.getElementById("product-hsn-code").value = product.hsn_code || "";
         document.getElementById("product-category").value = product.category || "";
         document.getElementById("product-brand").value = product.brand || "";
         document.getElementById("product-manufacturer").value = product.manufacturer || "";
@@ -1381,6 +1400,7 @@ var InventoryProducts = (function () {
         var rows = [
             { label: "Product Name", value: displayValue(product.name), emphasis: true },
             { label: "SKU", value: displayValue(product.sku) },
+            { label: "HSN Code", value: displayValue(product.hsn_code) },
             { label: "Barcode", value: displayValue(product.barcode) },
             { label: "Category", value: displayValue(product.category_name) },
             { label: "Brand", value: displayValue(product.brand_name) },

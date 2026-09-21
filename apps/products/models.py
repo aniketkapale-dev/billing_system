@@ -59,6 +59,7 @@ class Product(BaseEntity):
     )
     name = models.CharField(max_length=150)
     sku = models.CharField(max_length=50, blank=True, default="")
+    hsn_code = models.CharField(max_length=8, blank=True, default="")
     barcode = models.CharField(max_length=100, blank=True, default="")
     description = models.TextField(blank=True, default="")
     actual_price = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0"))

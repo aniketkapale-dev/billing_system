@@ -47,6 +47,7 @@ class ProductSerializer(BaseModelSerializer):
             "tax_value",
             "name",
             "sku",
+            "hsn_code",
             "barcode",
             "description",
             "actual_price",
@@ -136,11 +137,20 @@ class ProductWriteSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("SKU is required.")
         return value
 
+    def validate_hsn_code(self, value):
+        value = (value or "").strip()
+        if not value:
+            return ""
+        if not value.isdigit() or len(value) not in (4, 6, 8):
+            raise serializers.ValidationError("Enter a valid HSN code (4, 6, or 8 digits).")
+        return value
+
     class Meta:
         model = Product
         fields = (
             "name",
             "sku",
+            "hsn_code",
             "barcode",
             "category_id",
             "brand_id",

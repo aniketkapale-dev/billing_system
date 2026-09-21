@@ -21,6 +21,8 @@ class BusinessSerializer(BaseModelSerializer):
             "phone",
             "email",
             "address",
+            "state_code",
+            "pin_code",
             "logo",
             "logo_url",
             "is_active",
@@ -58,6 +60,8 @@ class BusinessWriteSerializer(serializers.ModelSerializer):
             "phone",
             "email",
             "address",
+            "state_code",
+            "pin_code",
             "logo",
             "clear_logo",
             "is_active",
@@ -87,3 +91,19 @@ class BusinessWriteSerializer(serializers.ModelSerializer):
 
     def validate_address(self, value):
         return (value or "").strip()
+
+    def validate_state_code(self, value):
+        value = (value or "").strip()
+        if not value:
+            return ""
+        if not value.isdigit() or not (1 <= len(value) <= 2):
+            raise serializers.ValidationError("Enter a valid GST state code (1–2 digits).")
+        return value.zfill(2)
+
+    def validate_pin_code(self, value):
+        value = (value or "").strip()
+        if not value:
+            return ""
+        if not value.isdigit() or len(value) != 6:
+            raise serializers.ValidationError("Enter a valid 6-digit pin code.")
+        return value

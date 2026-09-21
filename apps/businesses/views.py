@@ -12,7 +12,7 @@ class BusinessViewSet(BaseViewSet):
     serializer_class = BusinessSerializer
     write_serializer_class = BusinessWriteSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
-    search_fields = ("business_name", "gst_number", "phone", "email", "address")
+    search_fields = ("business_name", "gst_number", "phone", "email", "address", "pin_code", "state_code")
     required_roles = ["Business Owner", "Business Staff"]
 
     def get_permissions(self):
