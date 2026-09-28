@@ -159,6 +159,9 @@ class VendorSerializer(BaseModelSerializer):
             "business",
             "business_name",
             "name",
+            "address",
+            "pin_code",
+            "gst_number",
             "is_active",
             "is_deleted",
             "created_at",
@@ -170,4 +173,18 @@ class VendorSerializer(BaseModelSerializer):
 class VendorWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Vendor
-        fields = ("name", "is_active")
+        fields = ("name", "address", "pin_code", "gst_number", "is_active")
+
+    def validate_address(self, value):
+        return (value or "").strip()
+
+    def validate_pin_code(self, value):
+        value = (value or "").strip()
+        if not value:
+            return ""
+        if not value.isdigit() or len(value) != 6:
+            raise serializers.ValidationError("Enter a valid 6-digit pin code.")
+        return value
+
+    def validate_gst_number(self, value):
+        return (value or "").strip()

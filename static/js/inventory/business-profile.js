@@ -170,10 +170,18 @@ var InventoryBusinessProfile = (function () {
             return null;
         }
 
-        var pinCode = document.getElementById("business-profile-pin-code").value.trim();
-        if (pinCode && (!/^\d{6}$/.test(pinCode))) {
+        var pinInput = document.getElementById("business-profile-pin-code");
+        var pinCode = pinInput ? pinInput.value.trim() : "";
+        if (window.InventoryPinCodeInput) {
+            pinCode = InventoryPinCodeInput.normalize(pinCode);
+            if (pinInput) pinInput.value = pinCode;
+            if (!InventoryPinCodeInput.isValid(pinCode, true)) {
+                InventoryToast.error("Enter a valid 6-digit pin code.");
+                pinInput.focus();
+                return null;
+            }
+        } else if (pinCode && (!/^\d{6}$/.test(pinCode))) {
             InventoryToast.error("Enter a valid 6-digit pin code.");
-            var pinInput = document.getElementById("business-profile-pin-code");
             if (pinInput) pinInput.focus();
             return null;
         }

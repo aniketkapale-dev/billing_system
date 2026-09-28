@@ -280,10 +280,8 @@ var InventoryCustomers = (function () {
         }
 
         var pinCodeEl = customerRowField(row, ".inv-customer-field-pin-code");
-        if (pinCodeEl) {
-            pinCodeEl.addEventListener("input", function () {
-                this.value = this.value.replace(/\D/g, "").slice(0, 6);
-            });
+        if (pinCodeEl && window.InventoryPinCodeInput) {
+            InventoryPinCodeInput.wire(pinCodeEl);
         }
 
         var addBusinessCheckbox = customerRowField(row, ".inv-customer-field-add-business");
@@ -454,6 +452,9 @@ var InventoryCustomers = (function () {
     }
 
     function isValidPinCode(value) {
+        if (window.InventoryPinCodeInput) {
+            return InventoryPinCodeInput.isValid(value, false);
+        }
         return /^[0-9]{6}$/.test(String(value || "").trim());
     }
 

@@ -54,13 +54,25 @@ var InventoryCatalog = (function () {
             title: "Vendor",
             plural: "Vendors",
             columns: [
-                { key: "name", label: "Name" }
+                { key: "name", label: "Name" },
+                { key: "address", label: "Address" },
+                { key: "pin_code", label: "Pin Code" },
+                { key: "gst_number", label: "GST Number" }
             ],
             fields: [
-                { id: "name", label: "Vendor Name", type: "text", required: true, placeholder: "Vendor name" }
+                { id: "name", label: "Vendor Name", type: "text", required: true, placeholder: "Vendor name", layout: "third" },
+                { id: "gst_number", label: "GST Number (optional)", type: "text", required: false, placeholder: "GST number", layout: "third" },
+                { id: "pin_code", label: "Pin Code (optional)", type: "pin_code", required: false, placeholder: "6-digit pin code", layout: "third" },
+                { id: "address", label: "Address (optional)", type: "textarea", required: false, placeholder: "Vendor address", layout: "full" }
             ],
             validate: function (payload) {
                 if (!payload.name) return "Vendor name is required.";
+                if (window.InventoryPinCodeInput && !InventoryPinCodeInput.isValid(payload.pin_code, true)) {
+                    return "Enter a valid 6-digit pin code.";
+                }
+                if (!window.InventoryPinCodeInput && payload.pin_code && (!/^\d{6}$/.test(payload.pin_code))) {
+                    return "Enter a valid 6-digit pin code.";
+                }
                 return null;
             }
         }
@@ -252,18 +264,31 @@ var InventoryCatalog = (function () {
                 placeholder + '"></textarea>'
             );
         }
+        if (field.type === "pin_code") {
+            return (
+                '<input' + idAttr + ' class="inv-mgmt-input inv-pin-code-input ' + className + '" type="text" placeholder="' +
+                placeholder + '"' + (field.required ? " required" : "") + "/>"
+            );
+        }
         return (
             '<input' + idAttr + ' class="inv-mgmt-input ' + className + '" type="text" placeholder="' +
             placeholder + '"' + (field.required ? " required" : "") + "/>"
         );
     }
 
+    function getCatalogFormGridClass() {
+        return resource === "vendors" ? " inv-mgmt-form-grid--vendor" : "";
+    }
+
     function renderCatalogRowFieldsHtml(withId) {
         return config.fields.map(function (field) {
-            var fullClass = field.type === "textarea" ? " inv-mgmt-field--full" : "";
+            var layoutClass = field.layout === "full" ? " inv-mgmt-field--full" : "";
+            if (!layoutClass && field.type === "textarea") {
+                layoutClass = " inv-mgmt-field--full";
+            }
             var labelFor = withId ? ' for="catalog-field-' + field.id + '"' : "";
             return (
-                '<div class="inv-mgmt-field' + fullClass + '">' +
+                '<div class="inv-mgmt-field' + layoutClass + '">' +
                 "<label" + labelFor + ">" + field.label + "</label>" +
                 renderCatalogFieldInput(field, withId) +
                 "</div>"
@@ -274,17 +299,25 @@ var InventoryCatalog = (function () {
     function renderFormFields() {
         var wrap = document.getElementById(resource + "-form-fields");
         if (!wrap || !config) return;
+        var gridClass = "inv-mgmt-form-grid" + getCatalogFormGridClass();
         wrap.innerHTML =
             '<div id="catalog-form-rows" class="inv-product-form-rows">' +
             '<div class="inv-catalog-form-row inv-product-form-row" data-row-index="0">' +
-            '<div class="inv-mgmt-form-grid" style="padding:0;">' +
+            '<div class="' + gridClass + '" style="padding:0;">' +
             renderCatalogRowFieldsHtml(true) +
             "</div></div></div>" +
             '<template id="catalog-form-row-template">' +
             '<div class="inv-catalog-form-row inv-product-form-row" data-row-index="">' +
-            '<div class="inv-mgmt-form-grid" style="padding:0;">' +
+            '<div class="' + gridClass + '" style="padding:0;">' +
             renderCatalogRowFieldsHtml(false) +
             "</div></div></template>";
+        wireCatalogPinCodeFields(wrap);
+    }
+
+    function wireCatalogPinCodeFields(root) {
+        if (window.InventoryPinCodeInput) {
+            InventoryPinCodeInput.wireAll(root || document.getElementById(resource + "-form-fields"));
+        }
     }
 
     function collectPayloadFromRow(row) {
@@ -385,6 +418,7 @@ var InventoryCatalog = (function () {
         var clone = tpl.content.firstElementChild.cloneNode(true);
         clone.setAttribute("data-row-index", String(rows.length));
         container.appendChild(clone);
+        wireCatalogPinCodeFields(clone);
         ensureCatalogRowHeads();
         updateCatalogSaveButtonLabel();
         var firstField = rowField(clone, ".inv-catalog-field-" + config.fields[0].id);

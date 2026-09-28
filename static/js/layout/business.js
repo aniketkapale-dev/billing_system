@@ -224,7 +224,15 @@ var InventoryBusiness = (function () {
             return null;
         }
 
-        if (pinCode && (!/^\d{6}$/.test(pinCode))) {
+        if (window.InventoryPinCodeInput) {
+            pinCode = InventoryPinCodeInput.normalize(pinCode);
+            if (!InventoryPinCodeInput.isValid(pinCode, true)) {
+                InventoryToast.error("Enter a valid 6-digit pin code.");
+                var pinInput = document.getElementById("business-pin-code");
+                if (pinInput) pinInput.focus();
+                return null;
+            }
+        } else if (pinCode && (!/^\d{6}$/.test(pinCode))) {
             InventoryToast.error("Enter a valid 6-digit pin code.");
             var pinInput = document.getElementById("business-pin-code");
             if (pinInput) pinInput.focus();

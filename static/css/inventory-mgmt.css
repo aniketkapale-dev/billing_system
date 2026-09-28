@@ -3792,6 +3792,52 @@ body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sideb
     margin-bottom: 12px;
 }
 
+.inv-catalog-form-fields {
+    width: 100%;
+    padding: 0;
+}
+
+.inv-catalog-form-fields .inv-product-form-rows,
+.inv-catalog-form-fields .inv-catalog-form-row {
+    width: 100%;
+}
+
+.inv-stockin-vendor-fields,
+.inv-mgmt-form-grid.inv-mgmt-form-grid--vendor {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    width: 100%;
+    max-width: 100%;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.inv-stockin-vendor-fields .inv-mgmt-field,
+.inv-mgmt-form-grid.inv-mgmt-form-grid--vendor .inv-mgmt-field {
+    min-width: 0;
+}
+
+.inv-stockin-vendor-fields .inv-mgmt-field--full,
+.inv-mgmt-form-grid.inv-mgmt-form-grid--vendor .inv-mgmt-field--full {
+    grid-column: 1 / -1;
+}
+
+.inv-stockin-vendor-fields .inv-mgmt-input,
+.inv-stockin-vendor-fields .inv-mgmt-textarea,
+.inv-mgmt-form-grid.inv-mgmt-form-grid--vendor .inv-mgmt-input,
+.inv-mgmt-form-grid.inv-mgmt-form-grid--vendor .inv-mgmt-textarea {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+@media (max-width: 900px) {
+    .inv-stockin-vendor-fields,
+    .inv-mgmt-form-grid.inv-mgmt-form-grid--vendor {
+        grid-template-columns: 1fr;
+    }
+}
+
 .inv-mgmt-items-footer-actions {
     display: flex;
     align-items: center;
@@ -4337,6 +4383,10 @@ body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sideb
 
 .inv-modal-dialog--category-tax {
     width: min(920px, calc(100vw - 32px));
+}
+
+.inv-modal-dialog--product {
+    width: min(960px, calc(100vw - 32px));
 }
 
 .inv-category-tax-modal-body {

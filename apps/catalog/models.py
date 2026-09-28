@@ -144,6 +144,9 @@ class Vendor(BaseEntity):
         db_column="business_id",
     )
     name = models.CharField(max_length=150)
+    address = models.TextField(blank=True, default="")
+    pin_code = models.CharField(max_length=10, blank=True, default="")
+    gst_number = models.CharField(max_length=30, blank=True, default="")
 
     class Meta:
         db_table = "vendors"

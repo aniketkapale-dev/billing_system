@@ -10,7 +10,7 @@
     <title>{% block title %}Billing System - Dashboard{% endblock %}</title>
     {% include "partials/inventory_theme.html" %}
     <link href="{% static 'css/dashboard.css' %}?v=20260317-nav-hover" rel="stylesheet"/>
-    <link href="{% static 'css/inventory-mgmt.css' %}?v=20260328-category-tax-cards" rel="stylesheet"/>
+    <link href="{% static 'css/inventory-mgmt.css' %}?v=20260328-product-modal-wide" rel="stylesheet"/>
 </head>
 <body class="inv-auth-pending inv-dashboard-body inv-sidebar-collapsed">
 {% include "partials/inventory_ui.html" %}
@@ -407,7 +407,7 @@
                 </div>
                 <div class="inv-mgmt-field">
                     <label for="business-pin-code">Pin Code <span class="inv-field-optional">(optional)</span></label>
-                    <input id="business-pin-code" class="inv-mgmt-input" type="text" inputmode="numeric" maxlength="6" placeholder="6-digit pin code"/>
+                    <input id="business-pin-code" class="inv-mgmt-input inv-pin-code-input" type="text" placeholder="6-digit pin code"/>
                 </div>
                 <div class="inv-mgmt-field inv-mgmt-field--full">
                     <label for="business-address">Address</label>
@@ -437,6 +437,7 @@
 <script src="{% static 'js/components/date-input.js' %}?v=20260318-date-picker-nav"></script>
 <script src="{% static 'js/core/dashboard-period.js' %}?v=20260317-sales-finalized"></script>
 <script src="{% static 'js/core/api.js' %}?v=20260318-form-date-input"></script>
+<script src="{% static 'js/core/pin-code-input.js' %}?v=20260328-pin-code-6"></script>
 <script src="{% static 'js/layout/business.js' %}"></script>
 <script src="{% static 'js/layout/nav-access.js' %}?v=20260317-staff-access"></script>
 <script src="{% static 'js/components/bulk-select.js' %}"></script>

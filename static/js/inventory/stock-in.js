@@ -211,13 +211,34 @@ var InventoryStockIn = (function () {
         } else {
             panel.classList.add("inv-hidden");
             document.getElementById("stockin-vendor-new-name").value = "";
+            document.getElementById("stockin-vendor-new-address").value = "";
+            document.getElementById("stockin-vendor-new-gst").value = "";
+            document.getElementById("stockin-vendor-new-pin").value = "";
         }
     }
 
     function saveNewVendor() {
         var name = document.getElementById("stockin-vendor-new-name").value.trim();
+        var address = document.getElementById("stockin-vendor-new-address").value.trim();
+        var gstNumber = document.getElementById("stockin-vendor-new-gst").value.trim();
+        var pinInput = document.getElementById("stockin-vendor-new-pin");
+        var pinCode = pinInput ? pinInput.value.trim() : "";
+        if (window.InventoryPinCodeInput) {
+            pinCode = InventoryPinCodeInput.normalize(pinCode);
+            if (pinInput) pinInput.value = pinCode;
+        }
         if (!name) {
             InventoryToast.error("Vendor name is required.");
+            return;
+        }
+        if (window.InventoryPinCodeInput) {
+            if (!InventoryPinCodeInput.isValid(pinCode, true)) {
+                InventoryToast.error("Enter a valid 6-digit pin code.");
+                if (pinInput) pinInput.focus();
+                return;
+            }
+        } else if (pinCode && (!/^\d{6}$/.test(pinCode))) {
+            InventoryToast.error("Enter a valid 6-digit pin code.");
             return;
         }
 
@@ -226,7 +247,12 @@ var InventoryStockIn = (function () {
 
         catalogRequest("/vendors/", {
             method: "POST",
-            body: { name: name }
+            body: {
+                name: name,
+                address: address,
+                pin_code: pinCode,
+                gst_number: gstNumber
+            }
         })
             .then(function (body) {
                 if (body && body.isSuccess && body.data) {

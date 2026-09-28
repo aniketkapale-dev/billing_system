@@ -84,7 +84,24 @@
                     <div id="stockin-items-container"></div>
                     <div class="inv-mgmt-items-footer">
                         <div id="stockin-vendor-new-panel" class="inv-inline-add-panel inv-stockin-vendor-panel inv-hidden">
-                            <input id="stockin-vendor-new-name" class="inv-mgmt-input" type="text" placeholder="New vendor name"/>
+                            <div class="inv-stockin-vendor-fields">
+                                <div class="inv-mgmt-field">
+                                    <label for="stockin-vendor-new-name">Vendor Name</label>
+                                    <input id="stockin-vendor-new-name" class="inv-mgmt-input" type="text" placeholder="Vendor name" required/>
+                                </div>
+                                <div class="inv-mgmt-field">
+                                    <label for="stockin-vendor-new-gst">GST Number <span class="inv-field-optional">(optional)</span></label>
+                                    <input id="stockin-vendor-new-gst" class="inv-mgmt-input" type="text" placeholder="GST number"/>
+                                </div>
+                                <div class="inv-mgmt-field">
+                                    <label for="stockin-vendor-new-pin">Pin Code <span class="inv-field-optional">(optional)</span></label>
+                                    <input id="stockin-vendor-new-pin" class="inv-mgmt-input inv-pin-code-input" type="text" placeholder="6-digit pin code"/>
+                                </div>
+                                <div class="inv-mgmt-field inv-mgmt-field--full">
+                                    <label for="stockin-vendor-new-address">Address <span class="inv-field-optional">(optional)</span></label>
+                                    <textarea id="stockin-vendor-new-address" class="inv-mgmt-textarea" rows="2" placeholder="Vendor address"></textarea>
+                                </div>
+                            </div>
                             <div class="inv-inline-add-actions">
                                 <button id="stockin-vendor-save-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Save Vendor</button>
                                 <button id="stockin-vendor-cancel-btn" type="button" class="inv-mgmt-btn">Cancel</button>
@@ -142,7 +159,7 @@
 <script src="{% static 'js/inventory/products.js' %}?v=20260310-mrp-edit"></script>
 <script src="{% static 'js/components/barcode-pdf.js' %}?v=20260310-barcode-size"></script>
 <script src="{% static 'js/inventory/settings-barcode.js' %}?v=20260311-one-barcode"></script>
-<script src="{% static 'js/inventory/stock-in.js' %}?v=20260328-stockin-vendor-footer"></script>
+<script src="{% static 'js/inventory/stock-in.js' %}?v=20260328-vendor-form-layout"></script>
 <script>
 InventoryPagePanel.init();
 InventoryProducts.init();
