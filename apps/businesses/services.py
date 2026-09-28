@@ -1,6 +1,8 @@
 from django.core.validators import validate_email
+from django.db import transaction
 
 from apps.businesses.repositories import BusinessRepository
+from apps.products.models import Product
 from core.base_service import BaseService
 from core.exceptions import ValidationException
 from core.middleware import get_current_user
@@ -49,3 +51,20 @@ class BusinessService(BaseService):
                 validate_email(email)
             except Exception as exc:
                 raise ValidationException("Enter a valid email address.") from exc
+
+    @staticmethod
+    def has_products(business_id):
+        return Product.objects.filter(
+            business_id=business_id,
+            is_deleted=False,
+        ).exists()
+
+    @transaction.atomic
+    def soft_delete(self, pk):
+        instance = self.repository.get_by_id(pk)
+        if self.has_products(instance.id):
+            raise ValidationException(
+                "This business has products and cannot be deleted. "
+                "Remove all products first."
+            )
+        return self.repository.soft_delete(instance)

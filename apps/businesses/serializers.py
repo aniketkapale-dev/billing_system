@@ -8,6 +8,8 @@ class BusinessSerializer(BaseModelSerializer):
     owner_name = serializers.CharField(source="owner.full_name", read_only=True)
     logo_url = serializers.SerializerMethodField()
     is_owner = serializers.SerializerMethodField()
+    product_count = serializers.SerializerMethodField()
+    can_delete = serializers.SerializerMethodField()
 
     class Meta:
         model = Business
@@ -16,6 +18,8 @@ class BusinessSerializer(BaseModelSerializer):
             "owner",
             "owner_name",
             "is_owner",
+            "product_count",
+            "can_delete",
             "business_name",
             "gst_number",
             "phone",
@@ -47,6 +51,19 @@ class BusinessSerializer(BaseModelSerializer):
         if not user:
             return False
         return obj.owner_id == user.id
+
+    def get_product_count(self, obj):
+        from apps.products.models import Product
+
+        return Product.objects.filter(
+            business_id=obj.id,
+            is_deleted=False,
+        ).count()
+
+    def get_can_delete(self, obj):
+        if not self.get_is_owner(obj):
+            return False
+        return self.get_product_count(obj) == 0
 
 
 class BusinessWriteSerializer(serializers.ModelSerializer):

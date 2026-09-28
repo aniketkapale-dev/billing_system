@@ -135,10 +135,19 @@
                         </div>
 
                         <div class="inv-business-profile-actions">
-                            <button type="submit" id="business-profile-save-btn" class="inv-mgmt-btn inv-mgmt-btn--primary">
-                                <span class="material-symbols-outlined">save</span>
-                                Save Changes
-                            </button>
+                            <p id="business-profile-delete-hint" class="inv-business-delete-hint inv-hidden">
+                                This business has products and cannot be deleted.
+                            </p>
+                            <div class="inv-business-profile-action-buttons">
+                                <button type="button" id="business-profile-delete-btn" class="inv-mgmt-btn inv-mgmt-btn--danger inv-hidden">
+                                    <span class="material-symbols-outlined">delete</span>
+                                    Delete Business
+                                </button>
+                                <button type="submit" id="business-profile-save-btn" class="inv-mgmt-btn inv-mgmt-btn--primary">
+                                    <span class="material-symbols-outlined">save</span>
+                                    Save Changes
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </form>

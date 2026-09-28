@@ -13,6 +13,8 @@ class BusinessViewSet(BaseViewSet):
     write_serializer_class = BusinessWriteSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     search_fields = ("business_name", "gst_number", "phone", "email", "address", "pin_code", "state_code")
+    ordering_default = ("created_at",)
+    ordering_fields = {"created_at": "created_at", "business_name": "business_name"}
     required_roles = ["Business Owner", "Business Staff"]
 
     def get_permissions(self):
@@ -62,5 +64,8 @@ class BusinessViewSet(BaseViewSet):
         return super().partial_update(request, pk)
 
     def destroy(self, request, pk=None):
+        from core.base_response import ApiResponse
+
         self._get_owned_instance(pk)
-        return super().destroy(request, pk)
+        self.get_service().soft_delete(pk)
+        return ApiResponse.success(message="Business deleted successfully.")

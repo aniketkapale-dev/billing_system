@@ -4225,13 +4225,33 @@ body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sideb
 
 .inv-business-profile-actions {
     display: flex;
-    justify-content: flex-end;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
     margin-top: 24px;
     padding-top: 20px;
     border-top: 1px solid #EEF0F4;
 }
 
-.inv-business-profile-actions .inv-mgmt-btn--primary {
+.inv-business-delete-hint {
+    margin: 0;
+    flex: 1 1 220px;
+    font-size: 13px;
+    color: var(--inv-on-surface-variant);
+}
+
+.inv-business-profile-action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.inv-business-profile-actions .inv-mgmt-btn--primary,
+.inv-business-profile-actions .inv-mgmt-btn--danger {
     display: inline-flex;
     align-items: center;
     gap: 8px;

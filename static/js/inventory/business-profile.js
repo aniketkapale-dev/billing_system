@@ -98,8 +98,24 @@ var InventoryBusinessProfile = (function () {
 
         resetLogoState();
         setLogoPreview(business.logo_url || null);
+        updateDeleteAction(business);
         togglePanels(true);
         window.dispatchEvent(new CustomEvent("inventory:business-profile-loaded"));
+    }
+
+    function updateDeleteAction(business) {
+        var deleteBtn = document.getElementById("business-profile-delete-btn");
+        var hintEl = document.getElementById("business-profile-delete-hint");
+        var canDelete = !!(business && business.is_owner && business.can_delete);
+
+        if (deleteBtn) {
+            deleteBtn.classList.toggle("inv-hidden", !canDelete);
+        }
+
+        if (hintEl) {
+            var showHint = !!(business && business.is_owner && !business.can_delete);
+            hintEl.classList.toggle("inv-hidden", !showHint);
+        }
     }
 
     function loadActiveBusiness() {
@@ -187,6 +203,42 @@ var InventoryBusinessProfile = (function () {
         };
     }
 
+    function deleteBusiness() {
+        if (!currentBusiness || !currentBusiness.id || !currentBusiness.can_delete) {
+            InventoryToast.error("This business cannot be deleted.");
+            return;
+        }
+
+        var businessName = currentBusiness.business_name || "this business";
+        InventoryConfirm.delete({
+            title: "Delete business?",
+            message: "Are you sure you want to delete " + businessName + "? This action cannot be undone."
+        }).then(function (confirmed) {
+            if (!confirmed) return;
+
+            var btn = document.getElementById("business-profile-delete-btn");
+            InventoryLoader.button(btn, true, "Deleting...");
+
+            return request("/" + currentBusiness.id + "/", { method: "DELETE" })
+                .then(function (body) {
+                    if (body && body.isSuccess) {
+                        InventoryToast.success(body.message || "Business deleted successfully.");
+                        currentBusiness = null;
+                        togglePanels(false);
+                        updateDeleteAction(null);
+                        return InventoryBusiness.reload();
+                    }
+                    InventoryToast.error(body.message || "Unable to delete business.");
+                })
+                .catch(function () {
+                    InventoryToast.error("Network error. Please try again.");
+                })
+                .finally(function () {
+                    InventoryLoader.button(btn, false);
+                });
+        });
+    }
+
     function saveBusiness(e) {
         if (e) e.preventDefault();
         if (!currentBusiness || !currentBusiness.id) {
@@ -227,8 +279,10 @@ var InventoryBusinessProfile = (function () {
         var logoInput = document.getElementById("business-profile-logo");
         var clearBtn = document.getElementById("business-profile-logo-clear");
         var emptyAddBtn = document.getElementById("business-profile-empty-add-btn");
+        var deleteBtn = document.getElementById("business-profile-delete-btn");
 
         if (form) form.addEventListener("submit", saveBusiness);
+        if (deleteBtn) deleteBtn.addEventListener("click", deleteBusiness);
 
         if (logoInput) {
             logoInput.addEventListener("change", function () {
