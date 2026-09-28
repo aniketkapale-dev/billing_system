@@ -133,6 +133,15 @@ def user_settings_tax(request):
 
 
 @never_cache
+def user_settings_category_tax(request):
+    return render(request, "user/settings.html", {
+        "active_nav": "settings-category-tax",
+        "settings_section": "category-tax",
+        "settings_title": "Tax per Category",
+    })
+
+
+@never_cache
 def user_settings_invoice(request):
     return render(request, "user/settings.html", {
         "active_nav": "settings-invoice",

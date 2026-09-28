@@ -35,6 +35,15 @@ var InventoryTableCards = (function () {
         return !!table.closest(".inv-dashboard-page");
     }
 
+    function isSettingsListTable(table) {
+        if (!table) return false;
+        return (
+            table.classList.contains("inv-mgmt-table--settings-tax") ||
+            table.classList.contains("inv-mgmt-table--settings-invoice") ||
+            table.classList.contains("inv-mgmt-table--settings-barcode")
+        );
+    }
+
     function syncActionTooltips(root) {
         (root || document).querySelectorAll(".inv-row-action-btn[title], .inv-bulk-action-btn[title]").forEach(function (btn) {
             if (!btn.getAttribute("aria-label")) {
@@ -47,6 +56,7 @@ var InventoryTableCards = (function () {
     function syncTable(table) {
         if (!table || !table.classList.contains("inv-mgmt-table")) return;
         if (isDashboardTable(table)) return;
+        if (isSettingsListTable(table)) return;
 
         var labels = getHeaderLabels(table);
         if (!labels.length) return;
@@ -79,6 +89,7 @@ var InventoryTableCards = (function () {
     function wireTable(table) {
         if (!table || table.dataset.cardSyncWired === "1") return;
         if (isDashboardTable(table)) return;
+        if (isSettingsListTable(table)) return;
         table.dataset.cardSyncWired = "1";
 
         var tbody = table.querySelector("tbody");
@@ -95,7 +106,7 @@ var InventoryTableCards = (function () {
     function init() {
         syncActionTooltips(document);
         document.querySelectorAll(".inv-mgmt-table-wrap > .inv-mgmt-table").forEach(function (table) {
-            if (!isDashboardTable(table)) wireTable(table);
+            if (!isDashboardTable(table) && !isSettingsListTable(table)) wireTable(table);
         });
 
         var addedObserver = new MutationObserver(function (mutations) {
@@ -103,11 +114,11 @@ var InventoryTableCards = (function () {
                 mutation.addedNodes.forEach(function (node) {
                     if (node.nodeType !== 1) return;
                     if (node.matches && node.matches(".inv-mgmt-table-wrap > .inv-mgmt-table")) {
-                        if (!isDashboardTable(node)) wireTable(node);
+                        if (!isDashboardTable(node) && !isSettingsListTable(node)) wireTable(node);
                     }
                     if (node.querySelectorAll) {
                         node.querySelectorAll(".inv-mgmt-table-wrap > .inv-mgmt-table").forEach(function (table) {
-                            if (!isDashboardTable(table)) wireTable(table);
+                            if (!isDashboardTable(table) && !isSettingsListTable(table)) wireTable(table);
                         });
                     }
                 });

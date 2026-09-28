@@ -31,6 +31,7 @@ class UnitWriteSerializer(serializers.ModelSerializer):
 
 class CategorySerializer(BaseModelSerializer):
     business_name = serializers.CharField(source="business.business_name", read_only=True)
+    sale_tax_labels = serializers.SerializerMethodField()
 
     class Meta:
         model = Category
@@ -40,6 +41,8 @@ class CategorySerializer(BaseModelSerializer):
             "business_name",
             "name",
             "description",
+            "sale_tax_ids",
+            "sale_tax_labels",
             "is_active",
             "is_deleted",
             "created_at",
@@ -47,11 +50,31 @@ class CategorySerializer(BaseModelSerializer):
         )
         read_only_fields = ("business",)
 
+    def get_sale_tax_labels(self, obj):
+        tax_ids = obj.sale_tax_ids or []
+        if not tax_ids:
+            return []
+        from apps.settings.models import Tax
+
+        taxes = Tax.objects.filter(pk__in=tax_ids, is_deleted=False)
+        order = {pk: idx for idx, pk in enumerate(tax_ids)}
+        taxes = sorted(taxes, key=lambda item: order.get(item.pk, 0))
+        return [
+            {"id": tax.id, "key": tax.key, "value": str(tax.value)}
+            for tax in taxes
+        ]
+
 
 class CategoryWriteSerializer(serializers.ModelSerializer):
+    sale_tax_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        allow_empty=True,
+    )
+
     class Meta:
         model = Category
-        fields = ("name", "description", "is_active")
+        fields = ("name", "description", "sale_tax_ids", "is_active")
 
 
 class BrandSerializer(BaseModelSerializer):

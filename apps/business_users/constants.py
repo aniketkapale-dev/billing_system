@@ -10,6 +10,7 @@ BUSINESS_TAB_DEFINITIONS = [
     {"code": "purchases", "label": "Create Invoice", "group": "Manage Sales"},
     {"code": "customers", "label": "Customers", "group": "Manage Sales"},
     {"code": "settings-tax", "label": "Tax", "group": "Settings"},
+    {"code": "settings-category-tax", "label": "Tax per Category", "group": "Settings"},
     {"code": "settings-invoice", "label": "Invoice", "group": "Settings"},
     {"code": "settings-barcode", "label": "Barcode", "group": "Settings"},
     {"code": "settings-whatsapp", "label": "WhatsApp Message Send", "group": "Settings"},

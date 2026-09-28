@@ -43,6 +43,7 @@ class Category(BaseEntity):
     )
     name = models.CharField(max_length=150)
     description = models.TextField(blank=True, default="")
+    sale_tax_ids = models.JSONField(default=list, blank=True)
 
     class Meta:
         db_table = "categories"

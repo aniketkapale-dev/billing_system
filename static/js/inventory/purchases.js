@@ -566,6 +566,7 @@ var InventoryPurchases = (function () {
                 } else {
                     products = [];
                 }
+                syncRowTaxesFromProducts();
             });
     }
 
@@ -644,6 +645,18 @@ var InventoryPurchases = (function () {
         return InventoryTaxSelect.getCombinedRate(taxes, taxIds);
     }
 
+    function getProductDefaultSaleTaxIds(product) {
+        if (!product) return [];
+        if (product.sale_tax_ids && product.sale_tax_ids.length) {
+            return product.sale_tax_ids.map(String);
+        }
+        if (product.category_sale_tax_ids && product.category_sale_tax_ids.length) {
+            return product.category_sale_tax_ids.map(String);
+        }
+        if (product.tax) return [String(product.tax)];
+        return [];
+    }
+
     function normalizeIds(ids) {
         return InventoryMultiSelect ? InventoryMultiSelect.parseIds(ids) : [];
     }
@@ -675,11 +688,34 @@ var InventoryPurchases = (function () {
     function setRowTaxSelection(row, selectedIds, silent) {
         var root = row.querySelector(".inv-item-sale-gst");
         if (!root || !window.InventoryTaxSelect) return;
-        InventoryTaxSelect.setSelected(root, normalizeIds(selectedIds), silent !== false);
+        var ids = normalizeIds(selectedIds);
+        if (typeof InventoryTaxSelect.refresh === "function") {
+            InventoryTaxSelect.refresh(root, taxes, ids);
+            return;
+        }
+        InventoryTaxSelect.setSelected(root, ids, silent !== false);
     }
 
     function refreshAllRowTaxSelects() {
         InventoryTaxSelect.refreshAll("#purchase-items-container .inv-item-sale-gst", taxes);
+        syncRowTaxesFromProducts();
+    }
+
+    function syncRowTaxesFromProducts() {
+        document.querySelectorAll("#purchase-items-container .inv-mgmt-item-row").forEach(function (row) {
+            var select = row.querySelector(".inv-item-product");
+            if (!select || !select.value) return;
+            var product = getProduct(select.value);
+            if (!product) return;
+            var root = row.querySelector(".inv-item-sale-gst");
+            if (!root || !window.InventoryTaxSelect) return;
+            var current = InventoryTaxSelect.getSelected(root);
+            if (current.length) return;
+            var defaults = getProductDefaultSaleTaxIds(product);
+            if (!defaults.length) return;
+            setRowTaxSelection(row, defaults, true);
+            updateRowPricing(row);
+        });
     }
 
     function loadTaxes() {
@@ -1082,7 +1118,14 @@ var InventoryPurchases = (function () {
             }
             if (selectedId) {
                 select.value = String(selectedId);
-                updateRowQtyLimits(row, getProduct(select.value));
+                var product = getProduct(select.value);
+                updateRowQtyLimits(row, product);
+                if (product) {
+                    var taxRoot = row.querySelector(".inv-item-sale-gst");
+                    if (taxRoot && window.InventoryTaxSelect && !InventoryTaxSelect.getSelected(taxRoot).length) {
+                        setRowTaxSelection(row, getProductDefaultSaleTaxIds(product), true);
+                    }
+                }
             }
             if (window.InventorySearchableSelect) {
                 InventorySearchableSelect.refresh(select);
@@ -1153,11 +1196,7 @@ var InventoryPurchases = (function () {
         updateRowQtyLimits(row, product);
 
         if (!options.preserveSalePricing) {
-            if (product.tax) {
-                setRowTaxSelection(row, [String(product.tax)], true);
-            } else {
-                setRowTaxSelection(row, [], true);
-            }
+            setRowTaxSelection(row, getProductDefaultSaleTaxIds(product), true);
         }
 
         if (saleActualInput && options.updatePrice !== false) {
@@ -1248,6 +1287,7 @@ var InventoryPurchases = (function () {
         } else {
             updateRowPricing(row);
         }
+        syncRowTaxesFromProducts();
         return row;
     }
 
@@ -1440,8 +1480,8 @@ var InventoryPurchases = (function () {
             discountValue = roundMoney(Number(line.discount_amount) / qty);
         }
 
-        if (!saleTaxIds.length && Number(line.tax_amount || 0) > 0 && product && product.tax) {
-            saleTaxIds = [String(product.tax)];
+        if (!saleTaxIds.length && Number(line.tax_amount || 0) > 0 && product) {
+            saleTaxIds = getProductDefaultSaleTaxIds(product);
         }
 
         return {

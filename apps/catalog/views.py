@@ -22,9 +22,11 @@ from apps.catalog.services import (
 )
 from core.base_response import ApiResponse
 from core.base_viewset import BaseViewSet
+from core.business_access import resolve_business_access, user_has_tab
 from core.business_viewset import BusinessScopedViewSetMixin
 from core.permissions import HasRole, IsAuthenticatedUser
 from rest_framework import status
+from rest_framework.exceptions import PermissionDenied
 
 
 class UnitViewSet(BusinessScopedViewSetMixin, BaseViewSet):
@@ -62,9 +64,23 @@ class CategoryViewSet(BusinessScopedViewSetMixin, BaseViewSet):
     ordering_fields = {"name": "name", "description": "description"}
     required_roles = ["Business Owner", "Business Staff"]
     required_tab = "products-categories"
+    settings_category_tax_tab = "settings-category-tax"
 
     def get_permissions(self):
         return [IsAuthenticatedUser(), HasRole()]
+
+    def get_active_business(self):
+        if hasattr(self, "_active_business"):
+            return self._active_business
+
+        self._active_business, self._business_access = resolve_business_access(self.request)
+        action = getattr(self, "action", None)
+        allowed_tabs = [self.required_tab]
+        if action in {"list", "retrieve", "update", "partial_update", "create"}:
+            allowed_tabs.append(self.settings_category_tax_tab)
+        if not any(user_has_tab(self._business_access, tab) for tab in allowed_tabs):
+            raise PermissionDenied("You do not have access to this section.")
+        return self._active_business
 
     def create(self, request):
         serializer = self.get_write_serializer(data=request.data, context={"request": request})

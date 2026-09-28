@@ -117,6 +117,7 @@ class ProductService(BaseService):
         self._opening_sale_price = data["sale_price"]
         data["sku"] = self._resolve_sku(data, business_id)
         self._validate_catalog_refs(data, business_id)
+        self._apply_category_sale_tax_ids(data)
         self._validate(data, business_id=business_id)
 
     def after_create(self, instance):
@@ -194,6 +195,7 @@ class ProductService(BaseService):
         if "sku" in data:
             data["sku"] = self._resolve_sku(data, instance.business_id, exclude_pk=instance.pk)
         self._validate_catalog_refs(data, instance.business_id, instance=instance)
+        self._apply_category_sale_tax_ids(data, instance=instance)
         self._validate(data, exclude_pk=instance.pk, business_id=instance.business_id)
 
     def after_update(self, instance):
@@ -293,6 +295,15 @@ class ProductService(BaseService):
             sku = self._generate_unique_sku(business_id, exclude_pk=exclude_pk)
         self._ensure_unique_sku(sku, business_id, exclude_pk=exclude_pk)
         return sku
+
+    def _apply_category_sale_tax_ids(self, data, instance=None):
+        if "category" not in data:
+            return
+        category = data.get("category")
+        if category is not None:
+            data["sale_tax_ids"] = list(category.sale_tax_ids or [])
+        elif instance is None:
+            data["sale_tax_ids"] = []
 
     def _validate_catalog_refs(self, data, business_id, instance=None):
         category = data.get("category")

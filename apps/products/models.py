@@ -57,6 +57,7 @@ class Product(BaseEntity):
         null=True,
         blank=True,
     )
+    sale_tax_ids = models.JSONField(default=list, blank=True)
     name = models.CharField(max_length=150)
     sku = models.CharField(max_length=50, blank=True, default="")
     hsn_code = models.CharField(max_length=8, blank=True, default="")

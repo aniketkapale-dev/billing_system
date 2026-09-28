@@ -66,6 +66,7 @@ class UnitService(BaseService):
 class CategoryService(BaseService):
     def __init__(self):
         super().__init__(repository=CategoryRepository())
+        self._sale_tax_ids_to_sync = None
 
     def before_create(self, data):
         user = get_current_user()
@@ -75,12 +76,62 @@ class CategoryService(BaseService):
         business_id = data.get("business_id")
         if not business_id:
             raise ValidationException("Business is required.")
+        self._normalize_sale_tax_ids(data, business_id)
         self._validate(data)
 
     def before_update(self, instance, data):
         data.pop("owner_id", None)
         data.pop("business_id", None)
+        self._normalize_sale_tax_ids(data, instance.business_id)
         self._validate(data, exclude_pk=instance.pk, business_id=instance.business_id)
+        self._sale_tax_ids_to_sync = data.get("sale_tax_ids") if "sale_tax_ids" in data else None
+
+    def after_update(self, instance):
+        if self._sale_tax_ids_to_sync is not None:
+            self._sync_products_sale_tax_ids(instance.id, self._sale_tax_ids_to_sync)
+            self._sale_tax_ids_to_sync = None
+
+    @staticmethod
+    def _sync_products_sale_tax_ids(category_id, sale_tax_ids):
+        from apps.products.models import Product
+
+        Product.objects.filter(
+            category_id=category_id,
+            is_deleted=False,
+        ).update(sale_tax_ids=list(sale_tax_ids or []))
+
+    @staticmethod
+    def _normalize_sale_tax_ids(data, business_id):
+        if "sale_tax_ids" not in data:
+            return
+
+        raw = data.get("sale_tax_ids") or []
+        tax_ids = []
+        for tax_id in raw:
+            try:
+                tax_ids.append(int(tax_id))
+            except (TypeError, ValueError):
+                continue
+
+        if not tax_ids:
+            data["sale_tax_ids"] = []
+            return
+
+        from apps.settings.models import Tax
+
+        taxes = list(
+            Tax.objects.filter(
+                pk__in=tax_ids,
+                business_id=business_id,
+                is_deleted=False,
+                is_active=True,
+            )
+        )
+        if len(taxes) != len(set(tax_ids)):
+            raise ValidationException("One or more selected taxes are not available.")
+
+        order = {pk: idx for idx, pk in enumerate(tax_ids)}
+        data["sale_tax_ids"] = [tax.pk for tax in sorted(taxes, key=lambda item: order.get(item.pk, 0))]
 
     def _validate(self, data, exclude_pk=None, business_id=None):
         if "name" in data:

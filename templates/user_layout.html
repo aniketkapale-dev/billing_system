@@ -10,7 +10,7 @@
     <title>{% block title %}Billing System - Dashboard{% endblock %}</title>
     {% include "partials/inventory_theme.html" %}
     <link href="{% static 'css/dashboard.css' %}?v=20260317-nav-hover" rel="stylesheet"/>
-    <link href="{% static 'css/inventory-mgmt.css' %}?v=20260318-date-picker-nav" rel="stylesheet"/>
+    <link href="{% static 'css/inventory-mgmt.css' %}?v=20260328-category-tax-cards" rel="stylesheet"/>
 </head>
 <body class="inv-auth-pending inv-dashboard-body inv-sidebar-collapsed">
 {% include "partials/inventory_ui.html" %}
@@ -161,8 +161,8 @@
                 </button>
             </div>
         </li>
-        <li class="inv-nav-group{% if active_nav == 'settings-tax' or active_nav == 'settings-invoice' or active_nav == 'settings-barcode' or active_nav == 'settings-whatsapp' %} inv-nav-group--has-active-child{% endif %}{% if active_nav == 'settings-tax' or active_nav == 'settings-invoice' or active_nav == 'settings-barcode' or active_nav == 'settings-whatsapp' %} inv-nav-group--open{% endif %}" data-nav-group="settings-tax settings-invoice settings-barcode settings-whatsapp">
-            <button type="button" class="inv-nav-item inv-nav-group-toggle" aria-expanded="{% if active_nav == 'settings-tax' or active_nav == 'settings-invoice' or active_nav == 'settings-barcode' or active_nav == 'settings-whatsapp' %}true{% else %}false{% endif %}">
+        <li class="inv-nav-group{% if active_nav == 'settings-tax' or active_nav == 'settings-category-tax' or active_nav == 'settings-invoice' or active_nav == 'settings-barcode' or active_nav == 'settings-whatsapp' %} inv-nav-group--has-active-child{% endif %}{% if active_nav == 'settings-tax' or active_nav == 'settings-category-tax' or active_nav == 'settings-invoice' or active_nav == 'settings-barcode' or active_nav == 'settings-whatsapp' %} inv-nav-group--open{% endif %}" data-nav-group="settings-tax settings-category-tax settings-invoice settings-barcode settings-whatsapp">
+            <button type="button" class="inv-nav-item inv-nav-group-toggle" aria-expanded="{% if active_nav == 'settings-tax' or active_nav == 'settings-category-tax' or active_nav == 'settings-invoice' or active_nav == 'settings-barcode' or active_nav == 'settings-whatsapp' %}true{% else %}false{% endif %}">
                 <span class="material-symbols-outlined inv-nav-icon">tune</span>
                 Settings
                 <span class="material-symbols-outlined inv-nav-group-chevron">expand_more</span>
@@ -176,6 +176,14 @@
                         </a>
                         <a class="inv-nav-add-btn" href="/dashboard/settings/tax/?action=add" title="Add tax" aria-label="Add tax">
                             <span class="material-symbols-outlined">add</span>
+                        </a>
+                    </div>
+                </li>
+                <li data-nav-tab="settings-category-tax">
+                    <div class="inv-nav-row{% if active_nav == 'settings-category-tax' %} inv-nav-row--active{% endif %}">
+                        <a class="inv-nav-item inv-nav-item--sub{% if active_nav == 'settings-category-tax' %} inv-nav-item--active{% endif %}" href="/dashboard/settings/category-tax/">
+                            <span class="material-symbols-outlined inv-nav-icon inv-nav-icon--sub">category</span>
+                            Tax per Category
                         </a>
                     </div>
                 </li>
@@ -436,7 +444,7 @@
 <script src="{% static 'js/components/document-export.js' %}?v=20260318-sale-gst-inclusive"></script>
 <script src="{% static 'js/components/column-customize.js' %}?v=20260317-syntax-fix"></script>
 <script src="{% static 'js/components/searchable-select.js' %}?v=20260310-select-fix"></script>
-<script src="{% static 'js/components/table-cards.js' %}?v=20260308-action-hover"></script>
+<script src="{% static 'js/components/table-cards.js' %}?v=20260328-category-tax-cards"></script>
 <script src="{% static 'js/layout/sidebar.js' %}?v=20260310-sidebar-scroll"></script>
 <script src="{% static 'js/layout/quick-access.js' %}"></script>
 <script src="{% static 'js/layout/owner-profile.js' %}"></script>

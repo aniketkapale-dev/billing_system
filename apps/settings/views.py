@@ -39,10 +39,30 @@ class TaxViewSet(BusinessScopedViewSetMixin, BaseViewSet):
     ordering_fields = {"key": "key", "value": "value"}
     required_roles = ["Business Owner", "Business Staff"]
     required_tab = "settings-tax"
-    read_access_tabs = ("purchases", "stock-in")
+    read_access_tabs = ("purchases", "stock-in", "settings-category-tax")
 
     def get_permissions(self):
         return [IsAuthenticatedUser(), HasRole()]
+
+    def get_active_business(self):
+        if hasattr(self, "_active_business"):
+            return self._active_business
+
+        self._active_business, self._business_access = resolve_business_access(self.request)
+        action = getattr(self, "action", None)
+        allowed_tabs = [self.required_tab] if self.required_tab else []
+        read_tabs = getattr(self, "read_access_tabs", ()) or ()
+        if action in {"list", "retrieve"}:
+            allowed_tabs.extend(read_tabs)
+        elif action == "create" and "settings-category-tax" in read_tabs:
+            allowed_tabs.append("settings-category-tax")
+        if allowed_tabs and not any(
+            user_has_tab(self._business_access, tab) for tab in allowed_tabs
+        ):
+            from rest_framework.exceptions import PermissionDenied
+
+            raise PermissionDenied("You do not have access to this section.")
+        return self._active_business
 
     def create(self, request):
         serializer = self.get_write_serializer(data=request.data, context={"request": request})

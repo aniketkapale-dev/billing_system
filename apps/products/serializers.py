@@ -24,6 +24,7 @@ class ProductSerializer(BaseModelSerializer):
     sold_quantity = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
     has_sales = serializers.SerializerMethodField()
     max_batch_mrp = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
+    category_sale_tax_ids = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
@@ -35,6 +36,8 @@ class ProductSerializer(BaseModelSerializer):
             "business_name",
             "category",
             "category_name",
+            "category_sale_tax_ids",
+            "sale_tax_ids",
             "brand",
             "brand_name",
             "manufacturer",
@@ -72,6 +75,12 @@ class ProductSerializer(BaseModelSerializer):
         if stocks:
             return stocks[0].quantity
         return 0
+
+    def get_category_sale_tax_ids(self, obj):
+        category = getattr(obj, "category", None)
+        if not category:
+            return []
+        return list(category.sale_tax_ids or [])
 
     def get_has_sales(self, obj):
         sold = getattr(obj, "sold_quantity", None)
