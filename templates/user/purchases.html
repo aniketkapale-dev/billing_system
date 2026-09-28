@@ -141,18 +141,16 @@
 
                 <div class="inv-mgmt-items-panel" style="margin-top:16px;border-radius:12px;">
                     <div class="inv-mgmt-items-header">
-                        <div>
-                            <h4 style="margin:0;font-size:16px;font-weight:600;color:var(--inv-primary);">Products to Sell</h4>
-                        </div>
-                        <div class="inv-mgmt-items-header-actions">
-                            <button id="purchase-tax-add-btn" type="button" class="inv-mgmt-btn" title="Add tax" aria-label="Add tax">
-                                <span class="material-symbols-outlined">add</span>
-                                Add Tax
-                            </button>
-                            <button id="purchase-add-item-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Add Product</button>
-                        </div>
+                        <h4 style="margin:0;font-size:16px;font-weight:600;color:var(--inv-primary);">Products to Sell</h4>
                     </div>
                     <div id="purchase-items-container"></div>
+                    <div class="inv-mgmt-items-footer-actions">
+                        <button type="button" class="inv-mgmt-btn purchase-tax-add-btn" title="Add tax" aria-label="Add tax">
+                            <span class="material-symbols-outlined">add</span>
+                            Add Tax
+                        </button>
+                        <button type="button" class="inv-mgmt-btn inv-mgmt-btn--primary purchase-add-item-btn">Add Product</button>
+                    </div>
                     <div id="purchase-totals" class="inv-stockin-totals">
                         <div id="purchase-total-cost-row" class="inv-stockin-total-row inv-hidden">
                             <div class="inv-stockin-total-label">
@@ -356,7 +354,7 @@
 <script src="{% static 'js/inventory/settings-tax.js' %}?v=20260309-sale-add-modals"></script>
 <script src="{% static 'js/inventory/settings-invoice.js' %}?v=20260318-form-date-input"></script>
 <script src="{% static 'js/components/sale-invoice-print-preview.js' %}?v=20260311-no-caption"></script>
-<script src="{% static 'js/inventory/purchases.js' %}?v=20260328-category-sale-tax"></script>
+<script src="{% static 'js/inventory/purchases.js' %}?v=20260328-sale-items-footer"></script>
 <script>
 InventoryPagePanel.init();
 InventoryCustomers.init();

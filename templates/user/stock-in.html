@@ -79,19 +79,21 @@
 
                 <div class="inv-mgmt-items-panel" style="margin-top:16px;border-radius:12px;">
                     <div class="inv-mgmt-items-header">
-                        <div>
-                            <h4 style="margin:0;font-size:16px;font-weight:600;color:var(--inv-primary);">Purchase Items</h4>
-                        </div>
-                        <button id="stockin-add-item-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Add Product</button>
-                    </div>
-                    <div id="stockin-vendor-new-panel" class="inv-inline-add-panel inv-hidden" style="margin-bottom:12px;">
-                        <input id="stockin-vendor-new-name" class="inv-mgmt-input" type="text" placeholder="New vendor name"/>
-                        <div class="inv-inline-add-actions">
-                            <button id="stockin-vendor-save-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Save Vendor</button>
-                            <button id="stockin-vendor-cancel-btn" type="button" class="inv-mgmt-btn">Cancel</button>
-                        </div>
+                        <h4 style="margin:0;font-size:16px;font-weight:600;color:var(--inv-primary);">Purchase Items</h4>
                     </div>
                     <div id="stockin-items-container"></div>
+                    <div class="inv-mgmt-items-footer">
+                        <div id="stockin-vendor-new-panel" class="inv-inline-add-panel inv-stockin-vendor-panel inv-hidden">
+                            <input id="stockin-vendor-new-name" class="inv-mgmt-input" type="text" placeholder="New vendor name"/>
+                            <div class="inv-inline-add-actions">
+                                <button id="stockin-vendor-save-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Save Vendor</button>
+                                <button id="stockin-vendor-cancel-btn" type="button" class="inv-mgmt-btn">Cancel</button>
+                            </div>
+                        </div>
+                        <div class="inv-mgmt-items-footer-actions">
+                            <button type="button" class="inv-mgmt-btn inv-mgmt-btn--primary stockin-add-item-btn">Add Product</button>
+                        </div>
+                    </div>
                     <div id="stockin-totals" class="inv-stockin-totals">
                         <div class="inv-stockin-total-row inv-stockin-total-row--grand">
                             <div class="inv-stockin-total-label">
@@ -140,7 +142,7 @@
 <script src="{% static 'js/inventory/products.js' %}?v=20260310-mrp-edit"></script>
 <script src="{% static 'js/components/barcode-pdf.js' %}?v=20260310-barcode-size"></script>
 <script src="{% static 'js/inventory/settings-barcode.js' %}?v=20260311-one-barcode"></script>
-<script src="{% static 'js/inventory/stock-in.js' %}?v=20260318-form-date-input"></script>
+<script src="{% static 'js/inventory/stock-in.js' %}?v=20260328-stockin-vendor-footer"></script>
 <script>
 InventoryPagePanel.init();
 InventoryProducts.init();

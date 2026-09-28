@@ -1390,13 +1390,20 @@ var InventoryPurchases = (function () {
         }
     }
 
+    function setSaleItemActionButtonsVisible(visible) {
+        document.querySelectorAll(".purchase-add-item-btn, .purchase-tax-add-btn").forEach(function (btn) {
+            btn.classList.toggle("inv-hidden", !visible);
+        });
+        var footerActions = document.querySelector("#purchases-form-panel .inv-mgmt-items-footer-actions");
+        if (footerActions) footerActions.classList.toggle("inv-hidden", !visible);
+    }
+
     function ensureSaleItemsReadonlyPanel() {
         var itemsPanel = document.querySelector("#purchases-form-panel .inv-mgmt-items-panel");
-        var addItemBtn = document.getElementById("purchase-add-item-btn");
         var itemsTitle = itemsPanel ? itemsPanel.querySelector("h4") : null;
 
         if (itemsPanel) itemsPanel.classList.add("inv-sale-items--readonly");
-        if (addItemBtn) addItemBtn.classList.add("inv-hidden");
+        setSaleItemActionButtonsVisible(false);
         if (itemsTitle) itemsTitle.textContent = "Products on Invoice";
         setSaleItemsEditable(false);
     }
@@ -1408,11 +1415,10 @@ var InventoryPurchases = (function () {
 
     function ensureSaleItemsEditablePanel() {
         var itemsPanel = document.querySelector("#purchases-form-panel .inv-mgmt-items-panel");
-        var addItemBtn = document.getElementById("purchase-add-item-btn");
         var itemsTitle = itemsPanel ? itemsPanel.querySelector("h4") : null;
 
         if (itemsPanel) itemsPanel.classList.remove("inv-sale-items--readonly");
-        if (addItemBtn) addItemBtn.classList.remove("inv-hidden");
+        setSaleItemActionButtonsVisible(true);
         if (itemsTitle) itemsTitle.textContent = "Products to Sell";
         setSaleItemsEditable(true);
     }
@@ -3228,8 +3234,7 @@ var InventoryPurchases = (function () {
             });
         });
 
-        var addItemBtnEl = document.getElementById("purchase-add-item-btn");
-        if (addItemBtnEl) {
+        document.querySelectorAll(".purchase-add-item-btn").forEach(function (addItemBtnEl) {
             addItemBtnEl.addEventListener("click", function () {
                 if (!hasAvailableProducts(null)) {
                     InventoryToast.warning("No products with remaining stock available.");
@@ -3237,7 +3242,7 @@ var InventoryPurchases = (function () {
                 }
                 addItemRow(null, true);
             });
-        }
+        });
 
         var saveBtnEl = document.getElementById("purchase-save-btn");
         if (saveBtnEl) saveBtnEl.addEventListener("click", savePurchase);
@@ -3276,17 +3281,15 @@ var InventoryPurchases = (function () {
         var paymentTypeCancelBtn = document.getElementById("purchase-payment-type-cancel-btn");
         var customerAddBtn = document.getElementById("purchase-customer-add-btn");
         var invoiceAddBtn = document.getElementById("purchase-invoice-add-btn");
-        var taxAddBtn = document.getElementById("purchase-tax-add-btn");
-
         if (customerAddBtn) {
             customerAddBtn.addEventListener("click", openAddCustomerModal);
         }
         if (invoiceAddBtn) {
             invoiceAddBtn.addEventListener("click", openAddInvoiceModal);
         }
-        if (taxAddBtn) {
+        document.querySelectorAll(".purchase-tax-add-btn").forEach(function (taxAddBtn) {
             taxAddBtn.addEventListener("click", openAddTaxModal);
-        }
+        });
 
         window.addEventListener("inventory:customer-created", function (e) {
             var customer = e.detail && e.detail.customer;

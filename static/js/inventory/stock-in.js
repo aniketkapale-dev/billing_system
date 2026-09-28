@@ -205,6 +205,9 @@ var InventoryStockIn = (function () {
         if (show) {
             panel.classList.remove("inv-hidden");
             document.getElementById("stockin-vendor-new-name").focus();
+            if (panel.scrollIntoView) {
+                panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+            }
         } else {
             panel.classList.add("inv-hidden");
             document.getElementById("stockin-vendor-new-name").value = "";
@@ -749,8 +752,7 @@ var InventoryStockIn = (function () {
         });
         row.querySelector(".inv-item-vendor-add").addEventListener("click", function () {
             pendingVendorRow = row;
-            var panel = document.getElementById("stockin-vendor-new-panel");
-            toggleVendorPanel(panel.classList.contains("inv-hidden"));
+            toggleVendorPanel(true);
         });
 
         if (data.product_id) {
@@ -980,21 +982,29 @@ var InventoryStockIn = (function () {
             "</tbody></table></div>";
     }
 
+    function setStockinAddItemButtonsVisible(visible) {
+        document.querySelectorAll(".stockin-add-item-btn").forEach(function (btn) {
+            btn.classList.toggle("inv-hidden", !visible);
+        });
+        var footerActions = document.querySelector("#stockin-form-panel .inv-mgmt-items-footer-actions");
+        if (footerActions) footerActions.classList.toggle("inv-hidden", !visible);
+    }
+
     function setFormMode(mode) {
         var titleEl = document.getElementById("stockin-form-title");
         var saveBtn = document.getElementById("stockin-save-btn");
-        var addItemBtn = document.getElementById("stockin-add-item-btn");
         var itemsPanel = document.querySelector("#stockin-form-panel .inv-mgmt-items-panel");
 
         if (mode === "edit") {
             if (titleEl) titleEl.textContent = "Edit Purchase";
             if (saveBtn) saveBtn.textContent = "Update Purchase";
-            if (addItemBtn) addItemBtn.classList.add("inv-hidden");
+            toggleVendorPanel(false);
+            setStockinAddItemButtonsVisible(false);
             if (itemsPanel) itemsPanel.classList.add("inv-stockin-items--readonly");
         } else {
             if (titleEl) titleEl.textContent = "Add Purchase";
             if (saveBtn) saveBtn.textContent = "Save Purchase";
-            if (addItemBtn) addItemBtn.classList.remove("inv-hidden");
+            setStockinAddItemButtonsVisible(true);
             if (itemsPanel) itemsPanel.classList.remove("inv-stockin-items--readonly");
         }
     }
@@ -1330,7 +1340,6 @@ var InventoryStockIn = (function () {
         getColumnCtrl();
 
         var openBtn = document.getElementById("stockin-open-modal-btn");
-        var addItemBtn = document.getElementById("stockin-add-item-btn");
         var saveBtn = document.getElementById("stockin-save-btn");
         var tbody = document.getElementById("stockin-table-body");
 
@@ -1390,11 +1399,11 @@ var InventoryStockIn = (function () {
         });
 
         if (openBtn) openBtn.addEventListener("click", openModal);
-        if (addItemBtn) {
+        document.querySelectorAll(".stockin-add-item-btn").forEach(function (addItemBtn) {
             addItemBtn.addEventListener("click", function () {
                 document.getElementById("stockin-items-container").appendChild(createItemRow());
             });
-        }
+        });
         if (saveBtn) saveBtn.addEventListener("click", saveInvoice);
 
         var itemsContainer = document.getElementById("stockin-items-container");
