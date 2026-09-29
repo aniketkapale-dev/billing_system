@@ -368,6 +368,14 @@ body.inv-confirm-open { overflow: hidden; }
     justify-content: center;
 }
 
+.inv-confirm-modal--alert .inv-confirm-modal__message {
+    margin-bottom: 20px;
+}
+
+.inv-confirm-modal__actions--single {
+    justify-content: center;
+}
+
 .inv-confirm-btn {
     min-width: 110px;
     padding: 10px 16px;

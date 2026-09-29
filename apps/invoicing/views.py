@@ -57,6 +57,12 @@ class PurchaseInvoiceViewSet(BusinessScopedViewSetMixin, BaseViewSet):
                 data["items"] = json.loads(items)
             except (TypeError, ValueError):
                 pass
+        new_items = data.get("new_items")
+        if isinstance(new_items, str):
+            try:
+                data["new_items"] = json.loads(new_items)
+            except (TypeError, ValueError):
+                pass
         return data
 
     def get_permissions(self):
@@ -92,14 +98,31 @@ class PurchaseInvoiceViewSet(BusinessScopedViewSetMixin, BaseViewSet):
             context={"request": request},
         )
         serializer.is_valid(raise_exception=True)
-        instance = self.get_service().update_header(pk, serializer.validated_data)
+        validated = dict(serializer.validated_data)
+        new_items = validated.pop("new_items", None)
+        instance = self.get_service().update_invoice(
+            pk,
+            header_data=validated,
+            new_items=new_items,
+        )
+        message = "Purchase invoice updated."
+        if new_items:
+            count = len(new_items)
+            message = (
+                "Purchase invoice updated and "
+                + ("1 product added." if count == 1 else f"{count} products added.")
+            )
         payload = self.serializer_class(instance, context={"request": request}).data
         return ApiResponse.success(
             data=payload,
-            message="Purchase invoice updated.",
+            message=message,
         )
 
     def destroy(self, request, pk=None):
+        partial_recreate = request.query_params.get("partial_recreate") in ("1", "true", "yes")
+        if partial_recreate:
+            self.get_service().soft_delete_for_recreate(pk)
+            return ApiResponse.success(message="Unsold purchase lines removed for re-create.")
         self.get_service().soft_delete(pk)
         return ApiResponse.success(message="Purchase invoice deleted.")
 

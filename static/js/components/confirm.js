@@ -273,8 +273,68 @@ var InventoryConfirm = (function () {
         });
     }
 
+    function alertDialog(options) {
+        options = options || {};
+
+        var title = options.title || "Notice";
+        var message = options.message || "";
+        var cancelText = options.cancelText || options.buttonText || "Cancel";
+        var variant = options.variant || "danger";
+        var icon = options.icon || "info";
+
+        return new Promise(function (resolve) {
+            removeExisting();
+
+            var settledRef = { settled: false };
+
+            var backdrop = document.createElement("div");
+            backdrop.id = BACKDROP_ID;
+            backdrop.className = "inv-confirm-backdrop";
+
+            var modal = document.createElement("div");
+            modal.id = MODAL_ID;
+            modal.className = "inv-confirm-modal inv-confirm-modal--alert";
+            modal.setAttribute("role", "alertdialog");
+            modal.setAttribute("aria-modal", "true");
+            modal.setAttribute("aria-labelledby", "inv-confirm-title");
+
+            modal.innerHTML =
+                '<div class="inv-confirm-modal__icon inv-confirm-modal__icon--' + variant + '">' +
+                    '<span class="material-symbols-outlined">' + escapeHtml(icon) + "</span>" +
+                "</div>" +
+                '<h3 id="inv-confirm-title" class="inv-confirm-modal__title">' + escapeHtml(title) + "</h3>" +
+                '<p class="inv-confirm-modal__message">' + escapeHtml(message) + "</p>" +
+                '<div class="inv-confirm-modal__actions inv-confirm-modal__actions--single">' +
+                    '<button type="button" class="inv-confirm-btn inv-confirm-btn--cancel" data-act="cancel">' +
+                        escapeHtml(cancelText) +
+                    "</button>" +
+                "</div>";
+
+            document.body.appendChild(backdrop);
+            document.body.appendChild(modal);
+            document.body.classList.add("inv-confirm-open");
+
+            function dismiss() {
+                closeDialog(settledRef, resolve, false);
+            }
+
+            modal.querySelector('[data-act="cancel"]').addEventListener("click", dismiss);
+            backdrop.addEventListener("click", dismiss);
+
+            window.addEventListener("keydown", function onKeydown(e) {
+                if (e.key === "Escape" || e.key === "Enter") {
+                    window.removeEventListener("keydown", onKeydown);
+                    dismiss();
+                }
+            });
+
+            modal.querySelector('[data-act="cancel"]').focus();
+        });
+    }
+
     return {
         ask: ask,
+        alert: alertDialog,
         delete: deleteConfirm,
         prompt: prompt
     };

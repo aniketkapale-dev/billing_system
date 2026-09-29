@@ -45,12 +45,26 @@ class PurchaseInvoiceItemSerializer(BaseModelSerializer):
         )
 
 
+class PurchaseInvoiceDeleteBlockerSerializer(serializers.Serializer):
+    product_id = serializers.IntegerField()
+    product_name = serializers.CharField()
+    sold_quantity = serializers.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        required=False,
+        allow_null=True,
+    )
+
+
 class PurchaseInvoiceSerializer(BaseModelSerializer):
     items = PurchaseInvoiceItemSerializer(many=True, read_only=True)
     business_name = serializers.CharField(source="business.business_name", read_only=True)
     total_quantity = serializers.SerializerMethodField()
     attachment_url = serializers.SerializerMethodField()
     attachment_name = serializers.SerializerMethodField()
+    can_delete = serializers.SerializerMethodField()
+    can_recreate = serializers.SerializerMethodField()
+    delete_blockers = serializers.SerializerMethodField()
 
     class Meta:
         model = PurchaseInvoice
@@ -70,6 +84,9 @@ class PurchaseInvoiceSerializer(BaseModelSerializer):
             "attachment_url",
             "attachment_name",
             "items",
+            "can_delete",
+            "can_recreate",
+            "delete_blockers",
             "is_active",
             "created_at",
             "updated_at",
@@ -94,15 +111,21 @@ class PurchaseInvoiceSerializer(BaseModelSerializer):
             return ""
         return obj.attachment.name.rsplit("/", 1)[-1]
 
+    def get_delete_blockers(self, obj):
+        from apps.invoicing.services import PurchaseInvoiceService
 
-class PurchaseInvoiceHeaderWriteSerializer(serializers.Serializer):
-    invoice_number = serializers.CharField(max_length=50, required=False)
-    invoice_date = serializers.DateField(required=False, allow_null=True)
-    remarks = serializers.CharField(required=False, allow_blank=True, default="")
-    attachment = serializers.FileField(required=False, allow_null=True)
+        blockers = PurchaseInvoiceService().get_delete_blockers(obj)
+        return PurchaseInvoiceDeleteBlockerSerializer(blockers, many=True).data
 
-    def validate_attachment(self, value):
-        return validate_purchase_attachment(value)
+    def get_can_delete(self, obj):
+        from apps.invoicing.services import PurchaseInvoiceService
+
+        return not PurchaseInvoiceService().get_delete_blockers(obj)
+
+    def get_can_recreate(self, obj):
+        from apps.invoicing.services import PurchaseInvoiceService
+
+        return PurchaseInvoiceService().can_recreate(obj)
 
 
 class PurchaseInvoiceItemWriteSerializer(serializers.Serializer):
@@ -115,6 +138,17 @@ class PurchaseInvoiceItemWriteSerializer(serializers.Serializer):
     vendor_id = serializers.IntegerField(required=False, allow_null=True)
     expiry_date = serializers.DateField(required=False, allow_null=True)
     mrp = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, min_value=0, default=0)
+
+
+class PurchaseInvoiceHeaderWriteSerializer(serializers.Serializer):
+    invoice_number = serializers.CharField(max_length=50, required=False)
+    invoice_date = serializers.DateField(required=False, allow_null=True)
+    remarks = serializers.CharField(required=False, allow_blank=True, default="")
+    attachment = serializers.FileField(required=False, allow_null=True)
+    new_items = PurchaseInvoiceItemWriteSerializer(many=True, required=False)
+
+    def validate_attachment(self, value):
+        return validate_purchase_attachment(value)
 
 
 class PurchaseInvoiceWriteSerializer(serializers.Serializer):

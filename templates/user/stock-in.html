@@ -47,6 +47,20 @@
         </div>
         <div class="inv-mgmt-card inv-mgmt-panel-card">
             <div class="inv-mgmt-panel-body">
+                <div id="stockin-recreate-banner" class="inv-stockin-form-hint inv-stockin-recreate-banner inv-hidden" role="status">
+                    <span class="material-symbols-outlined" aria-hidden="true">info</span>
+                    <div>
+                        <strong>Re-create purchase</strong>
+                        <p>The previous purchase was removed. Review the details below, fix any mistakes, then save to record it again.</p>
+                    </div>
+                </div>
+                <div id="stockin-edit-hint" class="inv-stockin-form-hint inv-stockin-edit-hint inv-hidden" role="note">
+                    <span class="material-symbols-outlined" aria-hidden="true">lock</span>
+                    <div>
+                        <strong>Existing items are locked</strong>
+                        <p>To change qty, price, or product on saved lines, use <strong>Re-create</strong>. This deletes the purchase and opens a new form with the same data (only if none of its stock has been sold).</p>
+                    </div>
+                </div>
                 <div class="inv-stockin-header-wrap" style="padding:0;">
                     <div class="inv-stockin-header-row">
                         <div class="inv-mgmt-field inv-stockin-field inv-stockin-field--invoice">
@@ -124,6 +138,7 @@
             </div>
             <div class="inv-mgmt-panel-footer">
                 <button type="button" class="inv-mgmt-btn" data-page-back="stockin-list-panel">Cancel</button>
+                <button id="stockin-recreate-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--secondary inv-hidden">Re-create Purchase</button>
                 <button id="stockin-save-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Save Purchase</button>
             </div>
         </div>
@@ -159,7 +174,7 @@
 <script src="{% static 'js/inventory/products.js' %}?v=20260310-mrp-edit"></script>
 <script src="{% static 'js/components/barcode-pdf.js' %}?v=20260310-barcode-size"></script>
 <script src="{% static 'js/inventory/settings-barcode.js' %}?v=20260311-one-barcode"></script>
-<script src="{% static 'js/inventory/stock-in.js' %}?v=20260328-vendor-form-layout"></script>
+<script src="{% static 'js/inventory/stock-in.js' %}?v=20260329-stockin-compact-actions"></script>
 <script>
 InventoryPagePanel.init();
 InventoryProducts.init();

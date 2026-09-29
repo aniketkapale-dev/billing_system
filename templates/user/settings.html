@@ -507,7 +507,7 @@
 
 {% block page_scripts %}
 {% if settings_section == 'tax' %}
-<script src="{% static 'js/inventory/settings-tax.js' %}?v=20260318-tax-add-more"></script>
+<script src="{% static 'js/inventory/settings-tax.js' %}?v=20260329-settings-card-rows"></script>
 <script>
 InventoryPagePanel.init();
 InventorySettingsTax.init();
@@ -519,14 +519,14 @@ InventorySettingsTax.init();
 InventorySettingsCategoryTax.init();
 </script>
 {% elif settings_section == 'invoice' %}
-<script src="{% static 'js/inventory/settings-invoice.js' %}?v=20260318-form-date-input"></script>
+<script src="{% static 'js/inventory/settings-invoice.js' %}?v=20260329-settings-card-rows"></script>
 <script>
 InventoryPagePanel.init();
 InventorySettingsInvoice.init();
 </script>
 {% elif settings_section == 'barcode' %}
 <script src="{% static 'js/components/barcode-pdf.js' %}?v=20260310-barcode-size"></script>
-<script src="{% static 'js/inventory/settings-barcode.js' %}?v=20260311-barcode-no-delete"></script>
+<script src="{% static 'js/inventory/settings-barcode.js' %}?v=20260329-settings-card-rows"></script>
 <script>
 InventoryPagePanel.init();
 InventorySettingsBarcode.init();

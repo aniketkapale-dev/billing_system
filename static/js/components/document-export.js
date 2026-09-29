@@ -556,6 +556,8 @@ var InventoryDocumentExport = (function () {
                 : 0;
             var taxPercent = entry.amount > 0 ? roundMoney((entry.tax / entry.amount) * 100) : 0;
 
+            var afterDistributorTotal = Math.max(0, afterSimple - entry.distributor_discount);
+
             return {
                 serial: index + 1,
                 product_id: entry.product_id,
@@ -566,10 +568,14 @@ var InventoryDocumentExport = (function () {
                 batch_number: "",
                 expiry_date: null,
                 price: price,
+                total_price: roundMoney(gross),
                 simple_discount: entry.simple_discount,
                 simple_discount_percent: simplePercent,
+                price_after_simple: roundMoney(afterSimple),
                 distributor_discount: entry.distributor_discount,
                 distributor_discount_percent: distributorPercent,
+                price_after_distributor: roundMoney(afterDistributorTotal),
+                price_without_tax: entry.amount,
                 tax: entry.tax,
                 tax_percent: taxPercent,
                 amount: entry.amount
@@ -599,10 +605,14 @@ var InventoryDocumentExport = (function () {
                 quantity: lineQty,
                 unit: line.product_unit || "pcs",
                 price: unitPrice,
+                total_price: roundMoney(unitPrice * lineQty),
                 simple_discount: roundMoney(discounts.simplePerUnit * lineQty),
                 simple_discount_percent: discounts.simplePercent,
+                price_after_simple: roundMoney(discounts.afterSimple * lineQty),
                 distributor_discount: roundMoney(discounts.distributorPerUnit * lineQty),
                 distributor_discount_percent: discounts.distributorPercent,
+                price_after_distributor: roundMoney(discounts.afterDistributor * lineQty),
+                price_without_tax: roundMoney(lineNet),
                 tax: roundMoney(lineTax),
                 tax_percent: getLineTaxPercent(line, discounts, taxes),
                 amount: roundMoney(lineNet)
@@ -617,16 +627,19 @@ var InventoryDocumentExport = (function () {
             "<colgroup>" +
             '<col class="inv-col-sr"/>' +
             '<col class="inv-col-product"/>' +
+            '<col class="inv-col-price"/>' +
             '<col class="inv-col-qty"/>' +
             '<col class="inv-col-unit"/>' +
             '<col class="inv-col-exp"/>' +
-            '<col class="inv-col-price"/>' +
-            '<col class="inv-col-simple-amt"/>' +
+            '<col class="inv-col-total-price"/>' +
             '<col class="inv-col-simple-pct"/>' +
-            '<col class="inv-col-dist-amt"/>' +
+            '<col class="inv-col-simple-amt"/>' +
             '<col class="inv-col-dist-pct"/>' +
-            '<col class="inv-col-tax-amt"/>' +
+            '<col class="inv-col-dist-amt"/>' +
+            '<col class="inv-col-after-dist"/>' +
+            '<col class="inv-col-without-tax"/>' +
             '<col class="inv-col-tax-pct"/>' +
+            '<col class="inv-col-tax-amt"/>' +
             '<col class="inv-col-amount"/>' +
             "</colgroup>"
         );
@@ -635,7 +648,7 @@ var InventoryDocumentExport = (function () {
     function buildInvoiceItemRowsHtml(sale, taxes) {
         var printRows = buildInvoicePrintRows(sale, taxes);
         if (!printRows.length) {
-            return '<tr class="inv-empty-row"><td colspan="13">No products on this invoice</td></tr>';
+            return '<tr class="inv-empty-row"><td colspan="16">No products on this invoice</td></tr>';
         }
 
         return printRows.map(function (row) {
@@ -648,17 +661,20 @@ var InventoryDocumentExport = (function () {
                 "<tr>" +
                 '<td class="center inv-col-sr">' + row.serial + "</td>" +
                 '<td class="item-name inv-col-product">' + itemHtml + "</td>" +
+                '<td class="num inv-col-price">' + formatMoney(row.price) + "</td>" +
                 '<td class="num inv-col-qty">' + displayText(formatQty(row.quantity)) + "</td>" +
                 '<td class="center inv-col-unit">' + displayText(row.unit) + "</td>" +
                 '<td class="center inv-col-exp">' + formatDisplayDate(row.expiry_date) + "</td>" +
-                '<td class="num inv-col-price">' + formatMoney(row.price) + "</td>" +
-                '<td class="num inv-col-simple-amt">' + formatMoney(row.simple_discount) + "</td>" +
+                '<td class="num inv-col-total-price">' + formatMoney(row.total_price) + "</td>" +
                 '<td class="center inv-col-simple-pct">' + displayText(formatPercent(row.simple_discount_percent)) + "</td>" +
-                '<td class="num inv-col-dist-amt">' + formatMoney(row.distributor_discount) + "</td>" +
+                '<td class="num inv-col-simple-amt">' + formatMoney(row.simple_discount) + "</td>" +
                 '<td class="center inv-col-dist-pct">' + displayText(formatPercent(row.distributor_discount_percent)) + "</td>" +
-                '<td class="num inv-col-tax-amt">' + formatMoney(row.tax) + "</td>" +
+                '<td class="num inv-col-dist-amt">' + formatMoney(row.distributor_discount) + "</td>" +
+                '<td class="num inv-col-after-dist">' + formatMoney(row.price_after_distributor) + "</td>" +
+                '<td class="num inv-col-without-tax">' + formatMoney(row.price_without_tax) + "</td>" +
                 '<td class="center inv-col-tax-pct">' + displayText(formatTaxPercent(row.tax_percent)) + "</td>" +
-                '<td class="num inv-col-amount">' + formatMoney(row.amount) + "</td>" +
+                '<td class="num inv-col-tax-amt">' + formatMoney(row.tax) + "</td>" +
+                '<td class="num inv-col-amount">' + formatMoney(row.price_after_distributor) + "</td>" +
                 "</tr>"
             );
         }).join("");
@@ -701,19 +717,22 @@ var InventoryDocumentExport = (function () {
             ".inv-meta-value{font-weight:800;color:#000;text-align:right;}" +
             ".inv-lines-wrap{width:100%;max-width:100%;overflow-x:visible;margin-bottom:10px;}" +
             ".inv-lines{width:100%;max-width:100%;border-collapse:collapse;font-size:8px;table-layout:fixed;}" +
-            ".inv-lines col.inv-col-sr{width:4%;}" +
-            ".inv-lines col.inv-col-product{width:30%;}" +
-            ".inv-lines col.inv-col-qty{width:4%;}" +
-            ".inv-lines col.inv-col-unit{width:4%;}" +
-            ".inv-lines col.inv-col-exp{width:6%;}" +
-            ".inv-lines col.inv-col-price{width:6.5%;}" +
-            ".inv-lines col.inv-col-simple-amt{width:6.5%;}" +
-            ".inv-lines col.inv-col-simple-pct{width:5%;}" +
-            ".inv-lines col.inv-col-dist-amt{width:6.5%;}" +
-            ".inv-lines col.inv-col-dist-pct{width:5%;}" +
-            ".inv-lines col.inv-col-tax-amt{width:6%;}" +
-            ".inv-lines col.inv-col-tax-pct{width:4.5%;}" +
-            ".inv-lines col.inv-col-amount{width:12%;}" +
+            ".inv-lines col.inv-col-sr{width:3%;}" +
+            ".inv-lines col.inv-col-product{width:15.5%;}" +
+            ".inv-lines col.inv-col-price{width:5%;}" +
+            ".inv-lines col.inv-col-qty{width:3.5%;}" +
+            ".inv-lines col.inv-col-unit{width:3.5%;}" +
+            ".inv-lines col.inv-col-exp{width:4.5%;}" +
+            ".inv-lines col.inv-col-total-price{width:5.5%;}" +
+            ".inv-lines col.inv-col-simple-pct{width:4%;}" +
+            ".inv-lines col.inv-col-simple-amt{width:5.5%;}" +
+            ".inv-lines col.inv-col-dist-pct{width:4%;}" +
+            ".inv-lines col.inv-col-dist-amt{width:5%;}" +
+            ".inv-lines col.inv-col-after-dist{width:7.5%;}" +
+            ".inv-lines col.inv-col-without-tax{width:5.5%;}" +
+            ".inv-lines col.inv-col-tax-pct{width:4%;}" +
+            ".inv-lines col.inv-col-tax-amt{width:5%;}" +
+            ".inv-lines col.inv-col-amount{width:9%;}" +
             ".inv-lines th.inv-col-sr,.inv-lines td.inv-col-sr{text-align:center;}" +
             ".inv-lines th.inv-col-product,.inv-lines td.inv-col-product{word-wrap:break-word;overflow-wrap:anywhere;}" +
             ".inv-lines-page-header-cell{padding:0 0 8px 0;border:none;vertical-align:top;background:#fff;width:100%;}" +
@@ -827,22 +846,25 @@ var InventoryDocumentExport = (function () {
             '<div class="inv-lines-wrap"><table class="inv-lines">' +
             buildInvoiceLinesColgroup() +
             "<thead>" +
-            '<tr class="inv-lines-page-header"><td colspan="13" class="inv-lines-page-header-cell">' +
+            '<tr class="inv-lines-page-header"><td colspan="16" class="inv-lines-page-header-cell">' +
             headerRowHtml +
             "</td></tr>" +
             "<tr>" +
             '<th class="center inv-col-sr">Sr.</th>' +
             '<th class="center inv-col-product">Product</th>' +
+            '<th class="center inv-col-price">Price (₹)</th>' +
             '<th class="center inv-col-qty">Qty</th>' +
             '<th class="center inv-col-unit">Unit</th>' +
             '<th class="center inv-col-exp">Exp.</th>' +
-            '<th class="center inv-col-price">Price (₹)</th>' +
-            '<th class="center inv-col-simple-amt">Simple<br/>Discount (₹)</th>' +
-            '<th class="center inv-col-simple-pct">Simple<br/>Discount (%)</th>' +
-            '<th class="center inv-col-dist-amt">Distributor<br/>Discount (₹)</th>' +
+            '<th class="center inv-col-total-price">Total<br/>Price (₹)</th>' +
+            '<th class="center inv-col-simple-pct">Salon<br/>Discount (%)</th>' +
+            '<th class="center inv-col-simple-amt">Salon<br/>Discount (₹)</th>' +
             '<th class="center inv-col-dist-pct">Distributor<br/>Discount (%)</th>' +
-            '<th class="center inv-col-tax-amt">Tax (₹)</th>' +
-            '<th class="center inv-col-tax-pct">Tax (%)</th>' +
+            '<th class="center inv-col-dist-amt">Distributor<br/>Discount (₹)</th>' +
+            '<th class="center inv-col-after-dist">Price after<br/>Discount (₹)</th>' +
+            '<th class="center inv-col-without-tax">Price without<br/>Tax (₹)</th>' +
+            '<th class="center inv-col-tax-pct">Tax added<br/>(%)</th>' +
+            '<th class="center inv-col-tax-amt">Tax added<br/>(₹)</th>' +
             '<th class="center inv-col-amount">Amount (₹)</th>' +
             "</tr></thead><tbody>" + itemRows + "</tbody></table></div>" +
             '<div class="inv-amount-words"><strong>Amount in words:</strong> ' +

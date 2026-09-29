@@ -89,18 +89,25 @@
     </div>
 
     <div class="inv-mgmt-field">
-        <label for="product-quantity">Opening Stock</label>
-        <input id="product-quantity" class="inv-mgmt-input inv-product-field-quantity" type="number" min="0" step="0.01" placeholder="Optional"/>
+        <label for="product-cost-without-tax">Cost Price without Tax (per product)</label>
+        <input id="product-cost-without-tax" class="inv-mgmt-input inv-product-field-cost-without-tax" type="number" min="0" step="0.01" placeholder="0.00"/>
     </div>
-
     <div class="inv-mgmt-field">
-        <label for="product-price-with-tax">Cost Price with Tax (per product)</label>
-        <input id="product-price-with-tax" class="inv-mgmt-input inv-product-field-price" type="number" min="0" step="0.01" placeholder="0.00"/>
+        <label for="product-tax-display">Tax (per product)</label>
+        <input id="product-tax-display" class="inv-mgmt-input inv-input-readonly inv-product-field-tax-display" type="text" readonly placeholder="0.00"/>
+    </div>
+    <div class="inv-mgmt-field">
+        <label for="product-cost-with-tax">Cost Price with Tax (per product)</label>
+        <input id="product-cost-with-tax" class="inv-mgmt-input inv-input-readonly inv-product-field-cost-with-tax" type="number" min="0" step="0.01" readonly placeholder="0.00"/>
     </div>
     <div class="inv-mgmt-field" id="product-mrp-field">
         <label for="product-mrp">MRP <span class="inv-field-optional">(optional)</span></label>
         <input id="product-mrp" class="inv-mgmt-input inv-product-field-mrp" type="number" min="0" step="0.01" placeholder="0.00"/>
         <div id="product-mrp-hint" class="inv-field-hint inv-hidden" aria-live="polite"></div>
+    </div>
+    <div class="inv-mgmt-field">
+        <label for="product-quantity">Opening Stock</label>
+        <input id="product-quantity" class="inv-mgmt-input inv-product-field-quantity" type="number" min="0" step="0.01" placeholder="Optional"/>
     </div>
 
     <div class="inv-mgmt-field inv-mgmt-field--full">
@@ -200,16 +207,24 @@
         </div>
     </div>
     <div class="inv-mgmt-field">
-        <label>Opening Stock</label>
-        <input class="inv-mgmt-input inv-product-field-quantity" type="number" min="0" step="0.01" placeholder="Optional"/>
+        <label>Cost Price without Tax (per product)</label>
+        <input class="inv-mgmt-input inv-product-field-cost-without-tax" type="number" min="0" step="0.01" placeholder="0.00"/>
+    </div>
+    <div class="inv-mgmt-field">
+        <label>Tax (per product)</label>
+        <input class="inv-mgmt-input inv-input-readonly inv-product-field-tax-display" type="text" readonly placeholder="0.00"/>
     </div>
     <div class="inv-mgmt-field">
         <label>Cost Price with Tax (per product)</label>
-        <input class="inv-mgmt-input inv-product-field-price" type="number" min="0" step="0.01" placeholder="0.00"/>
+        <input class="inv-mgmt-input inv-input-readonly inv-product-field-cost-with-tax" type="number" min="0" step="0.01" readonly placeholder="0.00"/>
     </div>
     <div class="inv-mgmt-field">
         <label>MRP <span class="inv-field-optional">(optional)</span></label>
         <input class="inv-mgmt-input inv-product-field-mrp" type="number" min="0" step="0.01" placeholder="0.00"/>
+    </div>
+    <div class="inv-mgmt-field">
+        <label>Opening Stock</label>
+        <input class="inv-mgmt-input inv-product-field-quantity" type="number" min="0" step="0.01" placeholder="Optional"/>
     </div>
     <div class="inv-mgmt-field inv-mgmt-field--full">
         <label>Description (Optional)</label>

@@ -67,7 +67,7 @@ class ProductService(BaseService):
         else:
             actual_price = Decimal(str(data.get("purchase_price") or 0))
         if actual_price < 0:
-            raise ValidationException("Cost price with tax cannot be negative.")
+            raise ValidationException("Cost price without tax cannot be negative.")
         if combined_tax_rate is None:
             if tax is None:
                 tax = data.get("tax")
@@ -96,6 +96,13 @@ class ProductService(BaseService):
         if self._initial_quantity < 0:
             raise ValidationException("Quantity cannot be negative.")
         data.pop("purchase_price", None)
+        tax_ids_input = data.get("tax_ids")
+        if tax_ids_input is not None and not tax_ids_input:
+            category = data.get("category")
+            if category is not None:
+                category_tax_ids = list(category.sale_tax_ids or [])
+                if category_tax_ids:
+                    data["tax_ids"] = category_tax_ids
         combined_tax_rate = self._resolve_tax_ids(data, business_id)
         if combined_tax_rate is not None:
             actual_price, purchase_price = self._resolve_prices(
@@ -106,7 +113,7 @@ class ProductService(BaseService):
             actual_price, purchase_price = self._resolve_prices(data)
         if self._initial_quantity > 0:
             if actual_price <= 0:
-                raise ValidationException("Cost price with tax is required when opening stock is added.")
+                raise ValidationException("Cost price without tax (per product) is required when opening stock is recorded.")
             self._opening_purchase_price = purchase_price
             if self._opening_purchase_price < 0:
                 raise ValidationException("Buy price cannot be negative.")
@@ -178,7 +185,7 @@ class ProductService(BaseService):
         if self._update_quantity is not None and self._update_quantity > 0:
             actual_price = data.get("actual_price", instance.actual_price)
             if actual_price is not None and Decimal(str(actual_price)) <= 0:
-                raise ValidationException("Cost price with tax is required when stock quantity is set.")
+                raise ValidationException("Cost price without tax is required when stock quantity is set.")
         if "actual_price" in data or "tax" in data or has_tax_ids:
             combined_tax_rate = self._resolve_tax_ids(data, instance.business_id) if has_tax_ids else None
             tax = data["tax"] if "tax" in data else instance.tax

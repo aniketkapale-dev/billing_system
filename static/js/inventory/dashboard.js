@@ -69,16 +69,16 @@ var InventoryDashboard = (function () {
         }
         var date = new Date(value);
         return isNaN(date.getTime()) ? null : date;
-    }
+        }
 
     function formatChartLabel(value, period) {
         if (period === "all") {
             var date = parseChartDate(value);
             if (!date) return "—";
-            return date.toLocaleDateString("en-IN", {
-                month: "short",
-                year: "numeric"
-            });
+        return date.toLocaleDateString("en-IN", {
+            month: "short",
+            year: "numeric"
+        });
         }
         return InventoryApi.formatDisplayDate(value, "—");
     }
@@ -225,14 +225,14 @@ var InventoryDashboard = (function () {
     function buildInteractiveKpiCardHtml(card) {
         var period = getKpiPeriod(card.key);
         var caption = (KPI_CAPTIONS[card.key] && KPI_CAPTIONS[card.key][period]) || "";
-        return (
+            return (
             '<div class="inv-dashboard-stat-card inv-dashboard-stat-card--' + card.tone + ' inv-dashboard-stat-card--interactive-kpi" data-kpi="' + card.key + '">' +
-            '<span class="inv-dashboard-stat-shine" aria-hidden="true"></span>' +
-            '<span class="inv-dashboard-stat-icon-wrap">' +
-            '<span class="material-symbols-outlined inv-dashboard-stat-icon">' + card.icon + "</span>" +
-            "</span>" +
-            '<div class="inv-dashboard-stat-body">' +
-            '<div class="inv-dashboard-stat-label">' + card.label + "</div>" +
+                '<span class="inv-dashboard-stat-shine" aria-hidden="true"></span>' +
+                '<span class="inv-dashboard-stat-icon-wrap">' +
+                '<span class="material-symbols-outlined inv-dashboard-stat-icon">' + card.icon + "</span>" +
+                "</span>" +
+                '<div class="inv-dashboard-stat-body">' +
+                '<div class="inv-dashboard-stat-label">' + card.label + "</div>" +
             '<div id="dashboard-' + card.key + '-kpi-count" class="inv-dashboard-stat-value">—</div>' +
             '<div class="inv-dashboard-stat-kpi-filters" id="dashboard-' + card.key + '-kpi-filters" data-kpi="' + card.key + '" role="tablist" aria-label="' + card.label + ' period">' +
             '<button type="button" class="inv-dashboard-stat-kpi-filter' + (period === "day" ? " is-active" : "") + '" data-period="day" role="tab"' + (period === "day" ? ' aria-selected="true"' : "") + ">Day</button>" +
@@ -242,7 +242,7 @@ var InventoryDashboard = (function () {
             '<div id="dashboard-' + card.key + '-kpi-caption" class="inv-dashboard-stat-kpi-caption">' +
             caption +
             "</div>" +
-            "</div>" +
+                "</div>" +
             '<a href="' + getStatCardLink(card) + '" class="inv-dashboard-stat-arrow inv-dashboard-stat-arrow--link" data-stat-link="1" aria-label="View ' + card.label.toLowerCase() + '">' +
             '<span class="material-symbols-outlined" aria-hidden="true">arrow_outward</span>' +
             "</a>" +
@@ -698,7 +698,7 @@ var InventoryDashboard = (function () {
             if (kpiKey === "sales") {
                 loadKpiCounts({ salesPeriod: period, salesOnly: true, showLoading: true });
             }
-        });
+            });
     }
 
     function init() {

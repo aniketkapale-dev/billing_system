@@ -153,6 +153,12 @@ var InventorySettingsBarcode = (function () {
         return '<span class="inv-text-muted">Unassigned</span>';
     }
 
+    function syncTableCards(tbody) {
+        if (!tbody || !window.InventoryTableCards) return;
+        var table = tbody.closest(".inv-mgmt-table");
+        if (table) InventoryTableCards.syncTable(table);
+    }
+
     function renderRows(items) {
         var tbody = document.getElementById("settings-barcode-table-body");
         if (!tbody) return;
@@ -174,13 +180,14 @@ var InventorySettingsBarcode = (function () {
                 "<td><strong>" + productLabel(item) + "</strong></td>" +
                 "<td>" + skuLabel(item) + "</td>" +
                 "<td>" + displayText(item.value) + "</td>" +
-                '<td class="inv-mgmt-cell--action"><div class="inv-row-actions">' +
+                '<td class="inv-col-action inv-mgmt-cell--action"><div class="inv-row-actions">' +
                 '<button type="button" class="inv-row-action-btn inv-row-action-btn--edit" data-barcode-edit="' + item.id + '" title="View" aria-label="View">' +
                 '<span class="material-symbols-outlined">visibility</span></button>' +
                 deleteBtn +
                 "</div></td></tr>"
             );
         }).join("");
+        syncTableCards(tbody);
     }
 
     function loadBarcodes(page) {

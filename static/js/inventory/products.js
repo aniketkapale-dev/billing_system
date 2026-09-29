@@ -262,6 +262,99 @@ var InventoryProducts = (function () {
         return roundMoney(actual * (1 + rate / 100));
     }
 
+    function computeTaxAmount(costWithoutTax, combinedRate) {
+        var cost = Number(costWithoutTax || 0);
+        var rate = Number(combinedRate || 0);
+        if (isNaN(cost) || isNaN(rate) || cost < 0) return 0;
+        return roundMoney(cost * rate / 100);
+    }
+
+    function getCategoryById(categoryId) {
+        var id = Number(categoryId);
+        if (!id) return null;
+        for (var i = 0; i < categories.length; i++) {
+            if (Number(categories[i].id) === id) return categories[i];
+        }
+        return null;
+    }
+
+    function getTaxMetaForCategory(category) {
+        var meta = { labels: [], combinedRate: 0, taxIds: [] };
+        if (!category) return meta;
+
+        var taxIds = category.sale_tax_ids || [];
+        meta.taxIds = taxIds.slice();
+
+        if (taxIds.length && taxes.length) {
+            taxIds.forEach(function (taxId) {
+                for (var i = 0; i < taxes.length; i++) {
+                    if (Number(taxes[i].id) === Number(taxId)) {
+                        meta.labels.push(taxLabel(taxes[i]));
+                        meta.combinedRate += parseFloat(taxes[i].value) || 0;
+                        break;
+                    }
+                }
+            });
+        }
+
+        if (!meta.labels.length && category.sale_tax_labels && category.sale_tax_labels.length) {
+            category.sale_tax_labels.forEach(function (item) {
+                meta.labels.push(item.key + " (" + item.value + "%)");
+                meta.combinedRate += parseFloat(item.value) || 0;
+            });
+        }
+
+        return meta;
+    }
+
+    function getRowTaxMeta(row) {
+        var categoryId = rowFieldValue(row, ".inv-product-field-category");
+        return getTaxMetaForCategory(getCategoryById(categoryId));
+    }
+
+    function formatProductTaxAmount(product) {
+        var actual = parseFloat(product.actual_price);
+        var purchase = parseFloat(product.purchase_price);
+        if (!isNaN(actual) && !isNaN(purchase) && purchase >= actual && actual > 0) {
+            return cellMoney(roundMoney(purchase - actual));
+        }
+        if (!isNaN(actual) && actual > 0) {
+            var meta = getTaxMetaForCategory(getCategoryById(product.category));
+            return cellMoney(computeTaxAmount(actual, meta.combinedRate));
+        }
+        return "—";
+    }
+
+    function updateRowPricing(row) {
+        if (!row) return;
+        // Per-product pricing only; opening stock quantity is not used here.
+        var meta = getRowTaxMeta(row);
+        var taxEl = rowField(row, ".inv-product-field-tax-display");
+        var costWithoutRaw = rowFieldValue(row, ".inv-product-field-cost-without-tax").trim();
+        var costWithEl = rowField(row, ".inv-product-field-cost-with-tax");
+
+        if (costWithoutRaw === "") {
+            if (taxEl) taxEl.value = "";
+            if (costWithEl) costWithEl.value = "";
+            return;
+        }
+
+        var costWithout = parseFloat(costWithoutRaw);
+        if (isNaN(costWithout) || costWithout < 0) {
+            if (taxEl) taxEl.value = "";
+            if (costWithEl) costWithEl.value = "";
+            return;
+        }
+
+        var taxAmount = computeTaxAmount(costWithout, meta.combinedRate);
+        if (taxEl) taxEl.value = taxAmount.toFixed(2);
+        if (costWithEl) costWithEl.value = computeBuyPrice(costWithout, meta.combinedRate).toFixed(2);
+    }
+
+    function updateAllRowPricing() {
+        getProductFormRows().forEach(updateRowPricing);
+    }
+
     function updateBuyPriceDisplay() {
         var buyEl = document.getElementById("product-purchase-price");
         if (!buyEl) return;
@@ -408,7 +501,9 @@ var InventoryProducts = (function () {
             ".inv-product-field-sku",
             ".inv-product-field-hsn-code",
             ".inv-product-field-quantity",
-            ".inv-product-field-price",
+            ".inv-product-field-cost-without-tax",
+            ".inv-product-field-tax-display",
+            ".inv-product-field-cost-with-tax",
             ".inv-product-field-mrp",
             ".inv-product-field-description"
         ];
@@ -421,6 +516,7 @@ var InventoryProducts = (function () {
             if (el) el.value = "";
         });
         refreshRowSelectDisplays(row);
+        updateRowPricing(row);
     }
 
     function refreshRowSelectDisplays(row) {
@@ -624,6 +720,7 @@ var InventoryProducts = (function () {
         container.appendChild(clone);
         fillRowSelects(clone);
         initRowSearchableSelects(clone);
+        updateRowPricing(clone);
         ensureRowHeads();
         updateSaveButtonLabel();
 
@@ -704,23 +801,24 @@ var InventoryProducts = (function () {
             return { ok: false };
         }
 
-        var priceWithTax = parsePriceFromRow(row, ".inv-product-field-price");
-        if (priceWithTax < 0) {
-            InventoryToast.error("Cost price with tax (per product) must be 0 or greater" + prefix + ".");
+        var costWithoutTax = parsePriceFromRow(row, ".inv-product-field-cost-without-tax");
+        if (costWithoutTax < 0) {
+            InventoryToast.error("Cost price without tax (per product) must be 0 or greater" + prefix + ".");
             return { ok: false };
         }
         if (openingStock > 0) {
-            var priceRaw = rowFieldValue(row, ".inv-product-field-price").trim();
-            if (priceRaw === "") {
-                InventoryToast.error("Cost price with tax (per product) is required" + prefix + ".");
+            var costRaw = rowFieldValue(row, ".inv-product-field-cost-without-tax").trim();
+            if (costRaw === "") {
+                InventoryToast.error("Cost price without tax (per product) is required" + prefix + ".");
                 return { ok: false };
             }
-            if (priceWithTax <= 0) {
-                InventoryToast.error("Cost price with tax (per product) must be greater than 0 when opening stock is added" + prefix + ".");
+            if (costWithoutTax <= 0) {
+                InventoryToast.error("Enter cost price without tax (per product) before saving opening stock" + prefix + ".");
                 return { ok: false };
             }
         }
-        priceWithTax = roundMoney(priceWithTax);
+        costWithoutTax = roundMoney(costWithoutTax);
+        var taxMeta = getRowTaxMeta(row);
 
         var mrp = parsePriceFromRow(row, ".inv-product-field-mrp");
         if (mrp < 0) {
@@ -738,8 +836,8 @@ var InventoryProducts = (function () {
             category_id: Number(categoryId),
             description: rowFieldValue(row, ".inv-product-field-description").trim(),
             quantity: openingStock,
-            actual_price: priceWithTax,
-            tax_ids: [],
+            actual_price: costWithoutTax,
+            tax_ids: taxMeta.taxIds,
             mrp: mrp
         };
         if (hsnCode) payload.hsn_code = hsnCode;
@@ -823,6 +921,7 @@ var InventoryProducts = (function () {
                 return item.name;
             });
             if (current) select.value = current;
+            updateRowPricing(row);
         });
     }
 
@@ -1116,11 +1215,15 @@ var InventoryProducts = (function () {
             taxes = body && body.isSuccess ? (body.data.items || []) : [];
             var current = selectedIds;
             if (current === undefined || current === null) {
-                current = InventoryTaxSelect.getSelected(getProductTaxRoot());
+                var root = getProductTaxRoot();
+                current = root && window.InventoryTaxSelect
+                    ? InventoryTaxSelect.getSelected(root)
+                    : [];
             } else if (!Array.isArray(current)) {
                 current = [current];
             }
             initProductTaxSelect(current);
+            updateAllRowPricing();
             return taxes;
         });
     }
@@ -1193,6 +1296,7 @@ var InventoryProducts = (function () {
             loadCategories(),
             loadBrands(),
             loadManufacturers(),
+            loadTaxes(),
         ]).then(function () {
             renderProductFilterSelects();
         });
@@ -1384,13 +1488,19 @@ var InventoryProducts = (function () {
         document.getElementById("product-manufacturer").value = product.manufacturer || "";
         document.getElementById("product-unit").value = product.unit || "";
         document.getElementById("product-quantity").value = product.quantity != null ? product.quantity : "";
-        var priceWithTax = product.purchase_price != null && Number(product.purchase_price) > 0
-            ? product.purchase_price
-            : product.actual_price;
-        document.getElementById("product-price-with-tax").value = priceWithTax != null ? priceWithTax : "";
+        document.getElementById("product-cost-without-tax").value =
+            product.actual_price != null ? product.actual_price : "";
         document.getElementById("product-mrp").value = product.mrp != null ? product.mrp : "";
         document.getElementById("product-description").value = product.description || "";
         syncProductSelectDisplays();
+        var firstRow = getProductFormRows()[0];
+        if (firstRow) {
+            updateRowPricing(firstRow);
+            var costWithEl = rowField(firstRow, ".inv-product-field-cost-with-tax");
+            if (costWithEl && product.purchase_price != null && Number(product.purchase_price) > 0) {
+                costWithEl.value = roundMoney(product.purchase_price).toFixed(2);
+            }
+        }
     }
 
     function renderViewDetails(product) {
@@ -1405,6 +1515,8 @@ var InventoryProducts = (function () {
             { label: "Category", value: displayValue(product.category_name) },
             { label: "Brand", value: displayValue(product.brand_name) },
             { label: "Manufacturer", value: displayValue(product.manufacturer_name) },
+            { label: "Cost Price without Tax (per product)", value: cellMoney(product.actual_price), num: true },
+            { label: "Tax (per product)", value: formatProductTaxAmount(product), num: true },
             { label: "Cost Price with Tax (per product)", value: cellMoney(product.purchase_price || product.actual_price), num: true },
             { label: "MRP", value: cellMoney(product.mrp), num: true },
             { label: "Unit", value: displayValue(product.unit_short_name || product.unit_name) },
@@ -1787,6 +1899,16 @@ var InventoryProducts = (function () {
 
         var formRowsContainer = getProductFormRowsContainer();
         if (formRowsContainer) {
+            formRowsContainer.addEventListener("change", function (e) {
+                if (e.target.matches(".inv-product-field-category")) {
+                    updateRowPricing(e.target.closest(".inv-product-form-row"));
+                }
+            });
+            formRowsContainer.addEventListener("input", function (e) {
+                if (e.target.matches(".inv-product-field-cost-without-tax")) {
+                    updateRowPricing(e.target.closest(".inv-product-form-row"));
+                }
+            });
             formRowsContainer.addEventListener("click", function (e) {
                 var removeBtn = e.target.closest(".inv-product-row-remove");
                 if (removeBtn) {

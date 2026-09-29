@@ -26,6 +26,12 @@ var InventorySettingsTax = (function () {
         return num + "%";
     }
 
+    function syncTableCards(tbody) {
+        if (!tbody || !window.InventoryTableCards) return;
+        var table = tbody.closest(".inv-mgmt-table");
+        if (table) InventoryTableCards.syncTable(table);
+    }
+
     function renderRows(items) {
         var tbody = document.getElementById("settings-tax-table-body");
         if (!tbody) return;
@@ -40,7 +46,7 @@ var InventorySettingsTax = (function () {
                 "<tr>" +
                 "<td><strong>" + InventoryApi.escapeHtml(item.key) + "</strong></td>" +
                 '<td class="inv-mgmt-cell--num">' + InventoryApi.escapeHtml(formatValue(item.value)) + "</td>" +
-                '<td class="inv-mgmt-cell--action"><div class="inv-row-actions">' +
+                '<td class="inv-col-action inv-mgmt-cell--action"><div class="inv-row-actions">' +
                 '<button type="button" class="inv-row-action-btn inv-row-action-btn--edit" data-tax-edit="' + item.id + '" title="Edit" aria-label="Edit">' +
                 '<span class="material-symbols-outlined">edit</span></button>' +
                 '<button type="button" class="inv-row-action-btn inv-row-action-btn--delete" data-tax-delete="' + item.id + '" title="Delete" aria-label="Delete">' +
@@ -48,6 +54,7 @@ var InventorySettingsTax = (function () {
                 "</div></td></tr>"
             );
         }).join("");
+        syncTableCards(tbody);
     }
 
     function loadTaxes(page) {

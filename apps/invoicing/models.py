@@ -41,13 +41,6 @@ class PurchaseInvoice(BaseEntity):
         verbose_name = "Purchase Invoice"
         verbose_name_plural = "Purchase Invoices"
         ordering = ("-invoice_date", "-created_at")
-        constraints = [
-            models.UniqueConstraint(
-                fields=["business", "invoice_number"],
-                condition=models.Q(is_deleted=False),
-                name="uniq_active_business_purchase_invoice_no",
-            )
-        ]
 
     def __str__(self):
         return self.invoice_number

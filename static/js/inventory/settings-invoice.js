@@ -27,6 +27,12 @@ var InventorySettingsInvoice = (function () {
         return InventoryApi.escapeHtml(String(value));
     }
 
+    function syncTableCards(tbody) {
+        if (!tbody || !window.InventoryTableCards) return;
+        var table = tbody.closest(".inv-mgmt-table");
+        if (table) InventoryTableCards.syncTable(table);
+    }
+
     function renderRows(items) {
         var tbody = document.getElementById("settings-invoice-table-body");
         if (!tbody) return;
@@ -45,7 +51,7 @@ var InventorySettingsInvoice = (function () {
                 '<td class="inv-mgmt-cell--num">' + displayText(item.counter) + "</td>" +
                 '<td class="inv-mgmt-cell--num">' + displayText(item.current_counter) + "</td>" +
                 "<td>" + displayText(InventoryApi.formatDisplayDate(item.end_counter, "—")) + "</td>" +
-                '<td class="inv-mgmt-cell--action"><div class="inv-row-actions">' +
+                '<td class="inv-col-action inv-mgmt-cell--action"><div class="inv-row-actions">' +
                 '<button type="button" class="inv-row-action-btn inv-row-action-btn--edit" data-invoice-edit="' + item.id + '" title="Edit" aria-label="Edit">' +
                 '<span class="material-symbols-outlined">edit</span></button>' +
                 '<button type="button" class="inv-row-action-btn inv-row-action-btn--delete" data-invoice-delete="' + item.id + '" title="Delete" aria-label="Delete">' +
@@ -53,6 +59,7 @@ var InventorySettingsInvoice = (function () {
                 "</div></td></tr>"
             );
         }).join("");
+        syncTableCards(tbody);
     }
 
     function loadSettings(page) {

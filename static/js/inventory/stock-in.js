@@ -734,6 +734,14 @@ var InventoryStockIn = (function () {
         data = data || {};
         var row = document.createElement("div");
         row.className = "inv-mgmt-item-row inv-mgmt-item-row--stockin";
+        if (data.existing) {
+            row.classList.add("inv-stockin-item-row--existing");
+            row.dataset.existingItem = "1";
+        }
+        if (data.sold) {
+            row.classList.add("inv-stockin-item-row--sold");
+            row.dataset.soldItem = "1";
+        }
         row.innerHTML =
             '<div class="inv-mgmt-field"><label>Product</label>' +
             '<div class="inv-field-inline">' +
@@ -786,6 +794,11 @@ var InventoryStockIn = (function () {
         } else {
             updateRowTotalPrice(row);
         }
+        if (data.sold) {
+            lockSoldItemRow(row, data.soldProductName);
+        } else if (data.existing) {
+            lockExistingItemRow(row);
+        }
         return row;
     }
 
@@ -796,6 +809,8 @@ var InventoryStockIn = (function () {
             '<span class="material-symbols-outlined">visibility</span></button>' +
             '<button type="button" class="inv-row-action-btn inv-row-action-btn--edit inv-stockin-edit" data-id="' + item.id + '" title="Edit" aria-label="Edit purchase">' +
             '<span class="material-symbols-outlined">edit</span></button>' +
+            '<button type="button" class="inv-row-action-btn inv-row-action-btn--recreate inv-stockin-recreate" data-id="' + item.id + '" title="Re-create purchase" aria-label="Re-create purchase">' +
+            '<span class="material-symbols-outlined">replay</span></button>' +
             '<button type="button" class="inv-row-action-btn inv-row-action-btn--delete inv-stockin-delete" data-id="' + item.id + '" title="Delete" aria-label="Delete purchase">' +
             '<span class="material-symbols-outlined">delete</span></button>' +
             "</div>"
@@ -873,7 +888,8 @@ var InventoryStockIn = (function () {
         updateAttachmentMeta();
     }
 
-    function buildInvoiceFormData(payload, items) {
+    function buildInvoiceFormData(payload, items, options) {
+        options = options || {};
         var fd = new FormData();
         fd.append("invoice_number", payload.invoice_number);
         if (payload.invoice_date) {
@@ -882,6 +898,9 @@ var InventoryStockIn = (function () {
         fd.append("remarks", payload.remarks || "");
         if (items) {
             fd.append("items", JSON.stringify(items));
+        }
+        if (options.newItems && options.newItems.length) {
+            fd.append("new_items", JSON.stringify(options.newItems));
         }
         var file = getSelectedAttachmentFile();
         if (file) {
@@ -1016,6 +1035,107 @@ var InventoryStockIn = (function () {
         if (footerActions) footerActions.classList.toggle("inv-hidden", !visible);
     }
 
+    function toggleFormHint(id, visible) {
+        var el = document.getElementById(id);
+        if (el) el.classList.toggle("inv-hidden", !visible);
+    }
+
+    function showRecreateBanner(visible) {
+        toggleFormHint("stockin-recreate-banner", visible);
+    }
+
+    function showEditHint(visible) {
+        toggleFormHint("stockin-edit-hint", visible);
+    }
+
+    function setRecreateButtonVisible(visible) {
+        var btn = document.getElementById("stockin-recreate-btn");
+        if (btn) btn.classList.toggle("inv-hidden", !visible);
+    }
+
+    function formatDeleteBlockerMessage(invoice) {
+        var blockers = (invoice && invoice.delete_blockers) || [];
+        if (!blockers.length) {
+            return "This purchase cannot be deleted because a sale has already been created from its stock.";
+        }
+        var names = blockers.map(function (item) {
+            return item.product_name;
+        }).join(", ");
+        return "This purchase cannot be deleted because a sale has already been created from its stock for: " + names + ".";
+    }
+
+    function getSoldProductMap(invoice) {
+        var map = {};
+        ((invoice && invoice.delete_blockers) || []).forEach(function (blocker) {
+            map[blocker.product_id] = blocker.product_name;
+        });
+        return map;
+    }
+
+    function isRecreateFullyBlocked(invoice) {
+        if (!invoice) return true;
+        if (invoice.can_recreate === false || invoice.can_recreate === "false") return true;
+        var items = invoice.items || [];
+        if (!items.length) return true;
+        var soldMap = getSoldProductMap(invoice);
+        return items.every(function (line) {
+            return !!soldMap[line.product];
+        });
+    }
+
+    function hasPartialRecreateSales(invoice) {
+        var soldMap = getSoldProductMap(invoice);
+        var soldCount = Object.keys(soldMap).length;
+        if (!soldCount) return false;
+        return !isRecreateFullyBlocked(invoice);
+    }
+
+    function formatRecreateAllSoldMessage(invoice) {
+        var blockers = (invoice && invoice.delete_blockers) || [];
+        if (!blockers.length) {
+            return "This purchase cannot be re-created because all products have already been sold.";
+        }
+        var names = blockers.map(function (item) {
+            return item.product_name;
+        }).join(", ");
+        return "This purchase cannot be re-created because all products have already been sold: " + names + ".";
+    }
+
+    function isDeleteBlocked(invoice) {
+        if (!invoice) return true;
+        if (invoice.can_delete === false || invoice.can_delete === "false") return true;
+        if (invoice.delete_blockers && invoice.delete_blockers.length) return true;
+        return false;
+    }
+
+    function showDeleteBlockedAlert(invoice) {
+        if (!window.InventoryConfirm || typeof InventoryConfirm.alert !== "function") {
+            InventoryToast.error(formatDeleteBlockerMessage(invoice));
+            return Promise.resolve();
+        }
+        return InventoryConfirm.alert({
+            title: "Cannot delete purchase",
+            message: formatDeleteBlockerMessage(invoice),
+            cancelText: "Cancel",
+            variant: "danger",
+            icon: "block"
+        });
+    }
+
+    function showRecreateBlockedAlert(invoice) {
+        if (!window.InventoryConfirm || typeof InventoryConfirm.alert !== "function") {
+            InventoryToast.error(formatRecreateAllSoldMessage(invoice));
+            return Promise.resolve();
+        }
+        return InventoryConfirm.alert({
+            title: "Cannot re-create purchase",
+            message: formatRecreateAllSoldMessage(invoice),
+            cancelText: "Cancel",
+            variant: "danger",
+            icon: "block"
+        });
+    }
+
     function setFormMode(mode) {
         var titleEl = document.getElementById("stockin-form-title");
         var saveBtn = document.getElementById("stockin-save-btn");
@@ -1025,35 +1145,76 @@ var InventoryStockIn = (function () {
             if (titleEl) titleEl.textContent = "Edit Purchase";
             if (saveBtn) saveBtn.textContent = "Update Purchase";
             toggleVendorPanel(false);
-            setStockinAddItemButtonsVisible(false);
-            if (itemsPanel) itemsPanel.classList.add("inv-stockin-items--readonly");
+            setStockinAddItemButtonsVisible(true);
+            setRecreateButtonVisible(true);
+            showEditHint(true);
+            showRecreateBanner(false);
+            if (itemsPanel) {
+                itemsPanel.classList.add("inv-stockin-items--edit");
+                itemsPanel.classList.remove("inv-stockin-items--readonly");
+            }
         } else {
             if (titleEl) titleEl.textContent = "Add Purchase";
             if (saveBtn) saveBtn.textContent = "Save Purchase";
             setStockinAddItemButtonsVisible(true);
-            if (itemsPanel) itemsPanel.classList.remove("inv-stockin-items--readonly");
+            setRecreateButtonVisible(false);
+            showEditHint(false);
+            if (itemsPanel) {
+                itemsPanel.classList.remove("inv-stockin-items--edit");
+                itemsPanel.classList.remove("inv-stockin-items--readonly");
+            }
         }
     }
 
+    function lockExistingItemRow(row) {
+        if (!row) return;
+        row.querySelectorAll("input, select, button.inv-item-product-add, button.inv-item-vendor-add, button.inv-item-remove").forEach(function (el) {
+            el.disabled = true;
+        });
+    }
+
+    function lockSoldItemRow(row, productName) {
+        if (!row) return;
+        lockExistingItemRow(row);
+        wireSoldRowHoverToast(row, productName);
+    }
+
+    function wireSoldRowHoverToast(row, productName) {
+        if (!row || row.dataset.soldToastWired === "1") return;
+        row.dataset.soldToastWired = "1";
+        var label = productName || "This product";
+        var message = label + " has already been sold and cannot be changed during re-create.";
+        var coolingDown = false;
+        row.addEventListener("mouseenter", function () {
+            if (coolingDown) return;
+            coolingDown = true;
+            InventoryToast.warning(message);
+            window.setTimeout(function () {
+                coolingDown = false;
+            }, 4000);
+        });
+    }
+
+    function lockExistingItemRows() {
+        document.querySelectorAll("#stockin-items-container .inv-stockin-item-row--existing").forEach(lockExistingItemRow);
+    }
+
     function setItemsEditable(editable) {
-        document.querySelectorAll("#stockin-items-container .inv-mgmt-item-row").forEach(function (row) {
+        document.querySelectorAll("#stockin-items-container .inv-mgmt-item-row:not(.inv-stockin-item-row--existing):not(.inv-stockin-item-row--sold)").forEach(function (row) {
             row.querySelectorAll("input, select, button.inv-item-product-add, button.inv-item-vendor-add, button.inv-item-remove").forEach(function (el) {
                 el.disabled = !editable;
             });
         });
     }
 
-    function populateForm(invoice) {
-        document.getElementById("stockin-invoice-no").value = invoice.invoice_number || "";
-        document.getElementById("stockin-remarks").value = invoice.remarks || "";
-        setExistingAttachment(invoice);
-        var dateEl = document.getElementById("stockin-invoice-date");
-        if (dateEl) InventoryApi.setDateInputValue(dateEl, invoice.invoice_date || "");
-
+    function populateItemRows(invoice, options) {
+        options = options || {};
         var container = document.getElementById("stockin-items-container");
+        var lines = invoice.items || [];
         container.innerHTML = "";
-        (invoice.items || []).forEach(function (line) {
+        lines.forEach(function (line) {
             container.appendChild(createItemRow({
+                existing: !!options.existing,
                 product_id: line.product,
                 quantity: line.quantity,
                 purchase_price: line.purchase_price,
@@ -1063,12 +1224,84 @@ var InventoryStockIn = (function () {
                 expiry_date: line.expiry_date || ""
             }));
         });
-        setItemsEditable(false);
+        if (!lines.length) {
+            container.appendChild(createItemRow());
+        }
+        if (options.existing) {
+            lockExistingItemRows();
+        } else {
+            setItemsEditable(true);
+        }
+        updateInvoiceTotals();
+    }
+
+    function populateFormHeader(invoice) {
+        document.getElementById("stockin-invoice-no").value = invoice.invoice_number || "";
+        document.getElementById("stockin-remarks").value = invoice.remarks || "";
+        setExistingAttachment(invoice);
+        var dateEl = document.getElementById("stockin-invoice-date");
+        if (dateEl) InventoryApi.setDateInputValue(dateEl, invoice.invoice_date || "");
+    }
+
+    function populateForm(invoice) {
+        populateFormHeader(invoice);
+        populateItemRows(invoice, { existing: true });
+    }
+
+    function populateFormForRecreate(invoice) {
+        editingInvoiceId = null;
+        setFormMode("add");
+        populateFormHeader(invoice);
+        var soldMap = getSoldProductMap(invoice);
+        var container = document.getElementById("stockin-items-container");
+        var lines = invoice.items || [];
+        container.innerHTML = "";
+        lines.forEach(function (line) {
+            var sold = !!soldMap[line.product];
+            container.appendChild(createItemRow({
+                existing: false,
+                sold: sold,
+                soldProductName: soldMap[line.product],
+                product_id: line.product,
+                quantity: line.quantity,
+                purchase_price: line.purchase_price,
+                vendor_id: line.vendor,
+                batch_number: line.batch_number,
+                barcode_id: "",
+                expiry_date: line.expiry_date || ""
+            }));
+        });
+        if (!lines.length) {
+            container.appendChild(createItemRow());
+        }
+        setItemsEditable(true);
+        updateInvoiceTotals();
+        updateRecreateBanner(invoice);
+        showRecreateBanner(true);
+    }
+
+    function updateRecreateBanner(invoice) {
+        var banner = document.getElementById("stockin-recreate-banner");
+        if (!banner) return;
+        var textEl = banner.querySelector("p");
+        if (!textEl) return;
+        if (hasPartialRecreateSales(invoice)) {
+            var soldNames = (invoice.delete_blockers || []).map(function (item) {
+                return item.product_name;
+            }).join(", ");
+            textEl.textContent =
+                "Unsold lines were removed from the previous purchase. Update the editable rows below and save. " +
+                "Sold products (" + soldNames + ") are locked and cannot be changed.";
+        } else {
+            textEl.textContent =
+                "The previous purchase was removed. Review the details below, fix any mistakes, then save to record it again.";
+        }
     }
 
     function resetForm() {
         editingInvoiceId = null;
         setFormMode("add");
+        showRecreateBanner(false);
         document.getElementById("stockin-invoice-no").value = "";
         document.getElementById("stockin-remarks").value = "";
         resetAttachmentField();
@@ -1129,28 +1362,150 @@ var InventoryStockIn = (function () {
             });
     }
 
-    function deleteInvoice(id, btn) {
-        InventoryConfirm.delete({
-            title: "Delete purchase?",
-            message: "This will remove the purchase invoice and reverse its stock batches if none have been sold."
-        }).then(function (confirmed) {
-            if (!confirmed) return;
-            InventoryLoader.button(btn, true, "");
-            request("/" + id + "/", { method: "DELETE" })
-                .then(function (body) {
-                    if (body && body.isSuccess) {
-                        InventoryToast.success(body.message || "Purchase deleted.");
-                        loadInvoices(currentPage);
-                    } else {
-                        InventoryToast.error(body.message || "Unable to delete purchase.");
-                    }
-                })
-                .catch(function () {
-                    InventoryToast.error("Network error. Please try again.");
-                })
-                .finally(function () {
-                    InventoryLoader.button(btn, false);
+    function deleteInvoice(id, btn, options) {
+        options = options || {};
+        InventoryLoader.show();
+        fetchInvoice(id)
+            .then(function (invoice) {
+                InventoryLoader.hide();
+                if (!invoice) return;
+                if (isDeleteBlocked(invoice)) {
+                    return showDeleteBlockedAlert(invoice);
+                }
+                return InventoryConfirm.delete({
+                    title: options.title || "Delete purchase?",
+                    message: options.message || "This will remove the purchase invoice and reverse its stock batches if none have been sold."
+                }).then(function (confirmed) {
+                    if (!confirmed) return;
+                    if (btn) InventoryLoader.button(btn, true, "");
+                    if (!btn) InventoryLoader.show();
+                    return request("/" + id + "/", { method: "DELETE" })
+                        .then(function (body) {
+                            if (body && body.isSuccess) {
+                                if (typeof options.onSuccess === "function") {
+                                    options.onSuccess(body);
+                                } else {
+                                    InventoryToast.success(body.message || "Purchase deleted.");
+                                    loadInvoices(currentPage);
+                                }
+                                return body;
+                            }
+                            var errMsg = body && body.message ? body.message : "Unable to delete purchase.";
+                            if (/sold|used|sale/i.test(errMsg) && window.InventoryConfirm && InventoryConfirm.alert) {
+                                return InventoryConfirm.alert({
+                                    title: "Cannot delete purchase",
+                                    message: errMsg,
+                                    cancelText: "Cancel",
+                                    variant: "danger",
+                                    icon: "block"
+                                });
+                            }
+                            InventoryToast.error(errMsg);
+                            return null;
+                        })
+                        .catch(function () {
+                            InventoryToast.error("Network error. Please try again.");
+                            return null;
+                        })
+                        .finally(function () {
+                            if (btn) InventoryLoader.button(btn, false);
+                            if (!btn) InventoryLoader.hide();
+                        });
                 });
+            })
+            .catch(function () {
+                InventoryLoader.hide();
+                InventoryToast.error("Network error while loading purchase.");
+            });
+    }
+
+    function loadInvoiceForRecreate(id) {
+        return loadProducts()
+            .then(function () {
+                return loadVendors();
+            })
+            .then(function () {
+                return loadBarcodes();
+            })
+            .then(function () {
+                return fetchInvoice(id);
+            });
+    }
+
+    function startRecreatePurchase(id, btn) {
+        InventoryLoader.show();
+        loadInvoiceForRecreate(id)
+            .then(function (invoice) {
+                InventoryLoader.hide();
+                if (!invoice) return;
+                if (isRecreateFullyBlocked(invoice)) {
+                    return showRecreateBlockedAlert(invoice);
+                }
+                var invoiceLabel = invoice.invoice_number || ("Purchase #" + invoice.id);
+                var partialSales = hasPartialRecreateSales(invoice);
+                var confirmMessage;
+                if (partialSales) {
+                    var soldNames = (invoice.delete_blockers || []).map(function (item) {
+                        return item.product_name;
+                    }).join(", ");
+                    confirmMessage =
+                        "This will remove unsold lines from " + invoiceLabel +
+                        " and open a form to fix them. Sold products (" + soldNames +
+                        ") will stay locked. Update the remaining rows, then save to record the purchase again.";
+                } else {
+                    confirmMessage =
+                        "This will delete " + invoiceLabel +
+                        " and open a new form with the same details. Fix any mistakes, then save to record the purchase again.";
+                }
+                return InventoryConfirm.ask({
+                    title: "Re-create purchase?",
+                    message: confirmMessage,
+                    confirmText: partialSales ? "Remove unsold and Re-create" : "Delete and Re-create",
+                    cancelText: "Cancel",
+                    variant: "danger",
+                    icon: "replay"
+                }).then(function (confirmed) {
+                    if (!confirmed) return;
+                    InventoryLoader.show();
+                    if (btn) InventoryLoader.button(btn, true, "");
+                    var deleteUrl = "/" + id + "/" + (partialSales ? "?partial_recreate=1" : "");
+                    return request(deleteUrl, { method: "DELETE" })
+                        .then(function (body) {
+                            if (!(body && body.isSuccess)) {
+                                var errMsg = body && body.message ? body.message : "Unable to delete purchase.";
+                                if (/sold|used/i.test(errMsg) && window.InventoryConfirm && InventoryConfirm.alert) {
+                                    return InventoryConfirm.alert({
+                                        title: "Cannot re-create purchase",
+                                        message: errMsg,
+                                        cancelText: "Cancel",
+                                        variant: "danger",
+                                        icon: "block"
+                                    });
+                                }
+                                InventoryToast.error(errMsg);
+                                return;
+                            }
+                            populateFormForRecreate(invoice);
+                            InventoryPagePanel.showPanel(STOCKIN_LIST_PANEL, STOCKIN_FORM_PANEL);
+                            InventoryToast.success(
+                                partialSales
+                                    ? "Unsold lines removed. Update the editable rows below and save again."
+                                    : "Purchase removed. Update the details below and save again."
+                            );
+                            document.getElementById("stockin-invoice-no").focus();
+                        })
+                        .catch(function () {
+                            InventoryToast.error("Network error while re-creating purchase.");
+                        })
+                        .finally(function () {
+                            if (btn) InventoryLoader.button(btn, false);
+                            InventoryLoader.hide();
+                        });
+                });
+            })
+            .catch(function () {
+                InventoryLoader.hide();
+                InventoryToast.error("Network error while loading purchase.");
         });
     }
 
@@ -1242,8 +1597,7 @@ var InventoryStockIn = (function () {
         });
     }
 
-    function collectItems() {
-        var rows = document.querySelectorAll("#stockin-items-container .inv-mgmt-item-row");
+    function collectItemsFromRows(rows) {
         var items = [];
         rows.forEach(function (row) {
             var productId = row.querySelector(".inv-item-product").value;
@@ -1276,6 +1630,18 @@ var InventoryStockIn = (function () {
         return items;
     }
 
+    function collectItems() {
+        return collectItemsFromRows(
+            document.querySelectorAll("#stockin-items-container .inv-mgmt-item-row:not(.inv-stockin-item-row--sold)")
+        );
+    }
+
+    function collectNewItems() {
+        return collectItemsFromRows(
+            document.querySelectorAll("#stockin-items-container .inv-mgmt-item-row:not(.inv-stockin-item-row--existing)")
+        );
+    }
+
     function saveInvoice() {
         var invoiceNumber = document.getElementById("stockin-invoice-no").value.trim();
         if (!invoiceNumber) {
@@ -1296,9 +1662,17 @@ var InventoryStockIn = (function () {
         };
 
         if (editingInvoiceId) {
+            var newItems = collectNewItems();
             InventoryLoader.show();
             assignBarcodesFromForm().then(function () {
-            var editBody = attachmentFile ? buildInvoiceFormData(payload) : payload;
+            var editBody;
+            if (attachmentFile) {
+                editBody = buildInvoiceFormData(payload, null, { newItems: newItems });
+            } else if (newItems.length) {
+                editBody = Object.assign({}, payload, { new_items: newItems });
+            } else {
+                editBody = payload;
+            }
             return request("/" + editingInvoiceId + "/", { method: "PATCH", body: editBody });
             })
                 .then(function (body) {
@@ -1432,6 +1806,14 @@ var InventoryStockIn = (function () {
         });
         if (saveBtn) saveBtn.addEventListener("click", saveInvoice);
 
+        var recreateBtn = document.getElementById("stockin-recreate-btn");
+        if (recreateBtn) {
+            recreateBtn.addEventListener("click", function () {
+                if (!editingInvoiceId) return;
+                startRecreatePurchase(editingInvoiceId, recreateBtn);
+            });
+        }
+
         var itemsContainer = document.getElementById("stockin-items-container");
         if (itemsContainer) {
             itemsContainer.addEventListener("input", function (e) {
@@ -1504,6 +1886,11 @@ var InventoryStockIn = (function () {
                 var editBtn = e.target.closest(".inv-stockin-edit");
                 if (editBtn) {
                     openEditInvoice(editBtn.getAttribute("data-id"));
+                    return;
+                }
+                var recreateRowBtn = e.target.closest(".inv-stockin-recreate");
+                if (recreateRowBtn) {
+                    startRecreatePurchase(recreateRowBtn.getAttribute("data-id"), recreateRowBtn);
                     return;
                 }
                 var deleteBtn = e.target.closest(".inv-stockin-delete");
