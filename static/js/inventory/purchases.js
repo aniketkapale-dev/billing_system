@@ -208,6 +208,39 @@ var InventoryPurchases = (function () {
             });
     }
 
+    function sendSaleInvoicePdf(id) {
+        InventoryLoader.show();
+        Promise.all([fetchPurchase(id), loadTaxes()])
+            .then(function (results) {
+                var sale = results[0];
+                var taxList = taxes || [];
+                if (!sale) throw new Error("Unable to load this sale.");
+                sale = mergeSalePrintMeta(sale);
+                return InventoryDocumentExport.generateSaleInvoicePdfBlob(sale, taxList).then(function (blob) {
+                    var form = new FormData();
+                    var name = (sale.reference_no || ("sale-" + sale.id)).replace(/[^\w.-]+/g, "_") + ".pdf";
+                    form.append("file", blob, name);
+                    return request("/" + sale.id + "/invoice-pdf/", {
+                        method: "POST",
+                        body: form
+                    });
+                });
+            })
+            .then(function (body) {
+                if (!(body && body.isSuccess && body.data && body.data.url)) {
+                    throw new Error(body && body.message ? body.message : "Unable to save the invoice PDF.");
+                }
+                console.log("Sale invoice PDF:", body.data.url);
+                InventoryToast.success("Invoice PDF saved. Link printed in the browser console.");
+            })
+            .catch(function (err) {
+                InventoryToast.error(err && err.message ? err.message : "Unable to create the invoice PDF.");
+            })
+            .finally(function () {
+                InventoryLoader.hide();
+            });
+    }
+
     function exportSalesPrint(ids) {
         InventoryLoader.show();
         Promise.all([fetchSalesDetails(ids), loadTaxes()])
@@ -1806,13 +1839,17 @@ var InventoryPurchases = (function () {
             '<button type="button" class="inv-row-action-btn inv-row-action-btn--print inv-purchase-print" data-id="' + purchase.id + '" title="Print" aria-label="Print sale">' +
             '<span class="material-symbols-outlined">print</span></button>';
 
+        var sendPdfBtn =
+            '<button type="button" class="inv-row-action-btn inv-row-action-btn--print inv-purchase-send-pdf" data-id="' + purchase.id + '" title="Send sale invoice PDF" aria-label="Send sale invoice PDF">' +
+            '<span class="material-symbols-outlined">picture_as_pdf</span></button>';
+
         return (
             '<div class="inv-row-actions inv-row-actions--stacked">' +
                 '<div class="inv-row-actions-row">' +
                     viewBtn + editBtn + paidBtn +
                 "</div>" +
                 '<div class="inv-row-actions-row">' +
-                    cancelBtn + historyBtn + printBtn +
+                    cancelBtn + historyBtn + printBtn + sendPdfBtn +
                 "</div>" +
             "</div>"
         );
@@ -3485,6 +3522,12 @@ var InventoryPurchases = (function () {
                 var printBtn = e.target.closest(".inv-purchase-print");
                 if (printBtn) {
                     exportSalesPrint([printBtn.getAttribute("data-id")]);
+                    return;
+                }
+
+                var sendPdfBtn = e.target.closest(".inv-purchase-send-pdf");
+                if (sendPdfBtn) {
+                    sendSaleInvoicePdf(sendPdfBtn.getAttribute("data-id"));
                     return;
                 }
 

@@ -37,6 +37,22 @@ var InventoryDocumentExport = (function () {
         return jsPdfPromise;
     }
 
+    function loadHtml2Canvas() {
+        if (window.html2canvas) return Promise.resolve(window.html2canvas);
+        return new Promise(function (resolve, reject) {
+            var script = document.createElement("script");
+            script.src = "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js";
+            script.onload = function () {
+                if (window.html2canvas) resolve(window.html2canvas);
+                else reject(new Error("html2canvas failed to load."));
+            };
+            script.onerror = function () {
+                reject(new Error("Unable to load invoice renderer."));
+            };
+            document.head.appendChild(script);
+        });
+    }
+
     function loadAutoTable(doc) {
         if (doc.autoTable) return Promise.resolve(doc);
 
@@ -46,6 +62,96 @@ var InventoryDocumentExport = (function () {
             script.onload = function () { resolve(doc); };
             script.onerror = function () { reject(new Error("Unable to load PDF table plugin.")); };
             document.head.appendChild(script);
+        });
+    }
+
+    function generateSaleInvoicePdfBlob(sale, taxes) {
+        return Promise.all([loadJsPdf(), loadHtml2Canvas()]).then(function (loaded) {
+            var jsPDF = loaded[0];
+            var html2canvas = loaded[1];
+            var html = buildSalesDocumentHtml([sale], { taxes: taxes || [] });
+            return renderInvoiceFrame(html).then(function (frame) {
+                var frameDoc = frame.contentDocument;
+                var page = frameDoc && frameDoc.querySelector(".sale-invoice-page");
+                if (!page) {
+                    frame.remove();
+                    throw new Error("Unable to prepare the sale invoice.");
+                }
+                return html2canvas(page, {
+                    scale: 2,
+                    useCORS: true,
+                    backgroundColor: "#ffffff",
+                    scrollX: 0,
+                    scrollY: 0
+                }).then(function (canvas) {
+                    var pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+                    var pageWidth = pdf.internal.pageSize.getWidth();
+                    var pageHeight = pdf.internal.pageSize.getHeight();
+                    var pageCanvasHeight = Math.floor(canvas.width * pageHeight / pageWidth);
+                    var sourceY = 0;
+                    var pageNumber = 0;
+
+                    while (sourceY < canvas.height) {
+                        var sliceHeight = Math.min(pageCanvasHeight, canvas.height - sourceY);
+                        var pageCanvas = document.createElement("canvas");
+                        pageCanvas.width = canvas.width;
+                        pageCanvas.height = sliceHeight;
+                        var context = pageCanvas.getContext("2d");
+                        context.fillStyle = "#ffffff";
+                        context.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+                        context.drawImage(
+                            canvas,
+                            0, sourceY, canvas.width, sliceHeight,
+                            0, 0, canvas.width, sliceHeight
+                        );
+
+                        if (pageNumber > 0) pdf.addPage();
+                        pdf.addImage(
+                            pageCanvas.toDataURL("image/jpeg", 0.95),
+                            "JPEG",
+                            0,
+                            0,
+                            pageWidth,
+                            sliceHeight * pageWidth / canvas.width
+                        );
+                        sourceY += sliceHeight;
+                        pageNumber += 1;
+                    }
+                    frame.remove();
+                    return pdf.output("blob");
+                }).catch(function (err) {
+                    frame.remove();
+                    throw err;
+                });
+            });
+        });
+    }
+
+    function renderInvoiceFrame(html) {
+        return new Promise(function (resolve) {
+            var frame = document.createElement("iframe");
+            frame.setAttribute("aria-hidden", "true");
+            frame.style.cssText = "position:fixed;left:0;top:0;width:210mm;height:297mm;border:0;opacity:0.01;pointer-events:none;background:#fff;";
+            document.body.appendChild(frame);
+            var frameDoc = frame.contentDocument || frame.contentWindow.document;
+            frameDoc.open();
+            frameDoc.write(html);
+            frameDoc.close();
+            var fit = frameDoc.createElement("style");
+            fit.textContent =
+                "@page{size:A4 portrait;margin:0;}" +
+                "html,body{margin:0!important;padding:0!important;background:#fff!important;width:210mm!important;min-height:297mm!important;overflow:visible!important;}" +
+                ".sale-invoice-page{width:210mm!important;height:auto!important;min-height:297mm!important;max-width:210mm!important;margin:0!important;border:0!important;box-sizing:border-box!important;padding:8mm 8mm 10mm!important;}";
+            frameDoc.head.appendChild(fit);
+            window.setTimeout(function () {
+                var contentHeight = Math.max(
+                    frameDoc.documentElement.scrollHeight,
+                    frameDoc.body.scrollHeight,
+                    1123
+                );
+                frame.style.height = contentHeight + "px";
+                resolve(frame);
+            }, 400);
         });
     }
 
@@ -688,8 +794,8 @@ var InventoryDocumentExport = (function () {
             "body{padding:16px 0;}" +
             ".sale-invoice-page{width:210mm;min-height:277mm;max-width:210mm;margin:0 auto 16px;padding:10mm 12mm 12mm;background:#fff;border:1px solid #cfcfcf;page-break-after:always;position:relative;font-family:'Segoe UI',Calibri,'Helvetica Neue',Helvetica,sans-serif;font-size:11px;line-height:1.5;color:#111;letter-spacing:.01em;}" +
             ".sale-invoice-page:last-child{page-break-after:auto;margin-bottom:0;}" +
-            ".inv-header-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%;max-width:100%;box-sizing:border-box;border:1px solid #333;margin:0 0 10px 0;}" +
-            ".inv-header-panel{padding:6px 8px;border-right:1px solid #333;min-width:0;font-size:10px;line-height:1.2;display:flex;flex-direction:column;gap:2px;}" +
+            ".inv-header-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%;max-width:100%;min-height:34mm;box-sizing:border-box;border:1px solid #333;margin:0 0 10px 0;}" +
+            ".inv-header-panel{padding:5px 8px;border-right:1px solid #333;min-width:0;overflow:hidden;font-size:10px;line-height:1.2;display:flex;flex-direction:column;gap:2px;}" +
             ".inv-header-panel:last-child{border-right:none;}" +
             ".inv-header-panel .inv-detail-field--table{display:grid;grid-template-columns:var(--inv-header-label-width,92px) 8px minmax(0,1fr);column-gap:2px;align-items:start;line-height:1.2;margin:0;}" +
             ".inv-header-panel--company{--inv-header-label-width:98px;}" +
@@ -697,7 +803,7 @@ var InventoryDocumentExport = (function () {
             ".inv-header-panel--invoice{--inv-header-label-width:98px;}" +
             ".inv-header-panel .inv-detail-label{text-align:left;font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#333;word-break:break-word;}" +
             ".inv-header-panel .inv-detail-colon{text-align:center;font-weight:800;color:#333;}" +
-            ".inv-header-panel .inv-detail-value{font-weight:700;color:#000;word-break:break-word;min-width:0;}" +
+            ".inv-header-panel .inv-detail-value{font-weight:700;color:#000;min-width:0;overflow-wrap:anywhere;word-break:break-all;}" +
             ".inv-header-panel-title{margin:0 0 2px;font-size:11px;font-weight:800;text-align:center;text-transform:uppercase;letter-spacing:.06em;color:#000;}" +
             ".inv-header-name-row{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;margin-bottom:2px;}" +
             ".inv-header-panel-heading{margin:0;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#333;flex-shrink:0;}" +
@@ -706,10 +812,10 @@ var InventoryDocumentExport = (function () {
             ".inv-header-business-name{margin:0 0 2px;font-size:10px;font-weight:800;text-transform:uppercase;line-height:1.15;color:#000;}" +
             ".inv-detail-field--inline{line-height:1.5;font-size:10px;}" +
             ".inv-detail-field--inline .inv-detail-label{font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#333;}" +
-            ".inv-detail-field--inline .inv-detail-value{font-weight:700;color:#000;word-break:break-word;}" +
+            ".inv-detail-field--inline .inv-detail-value{font-weight:700;color:#000;min-width:0;overflow-wrap:anywhere;word-break:break-all;}" +
             ".inv-detail-field--inline.inv-detail-field--multiline .inv-detail-value{display:block;margin-top:2px;}" +
             ".inv-detail-field--split{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;}" +
-            ".inv-contact-item{white-space:nowrap;}" +
+            ".inv-contact-item{white-space:normal;max-width:100%;overflow-wrap:anywhere;word-break:break-all;}" +
             ".inv-contact-sep{color:#999;font-weight:400;padding:0 2px;}" +
             ".inv-meta-block{display:flex;flex-direction:column;align-items:flex-end;gap:6px;font-size:11px;}" +
             ".inv-meta-line{display:flex;justify-content:flex-end;align-items:baseline;gap:8px;max-width:100%;}" +
@@ -737,12 +843,15 @@ var InventoryDocumentExport = (function () {
             ".inv-lines th.inv-col-product,.inv-lines td.inv-col-product{word-wrap:break-word;overflow-wrap:anywhere;}" +
             ".inv-lines-page-header-cell{padding:0 0 8px 0;border:none;vertical-align:top;background:#fff;width:100%;}" +
             ".inv-lines thead tr.inv-lines-page-header td{border:none;padding:0;}" +
-            ".inv-lines th,.inv-lines td{border:1px solid #333;padding:4px 5px;vertical-align:top;word-wrap:break-word;overflow-wrap:anywhere;}" +
-            ".inv-lines thead th{background:#f5f5f5;font-weight:800;font-size:8px;line-height:1.2;text-align:center;color:#000;}" +
+            ".inv-lines th,.inv-lines td{border:1px solid #333;padding:6px 5px;vertical-align:top;word-wrap:break-word;overflow-wrap:anywhere;}" +
+            ".inv-lines thead tr:not(.inv-lines-page-header){height:21mm;}" +
+            ".inv-lines thead th{padding:3px 4px;background:#f5f5f5;font-weight:800;font-size:8px;line-height:1.2;text-align:center;color:#000;}" +
+            ".inv-lines tbody tr{height:13mm;}" +
+            ".inv-lines tbody td{padding-top:3px;padding-bottom:3px;}" +
             ".inv-lines td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:700;}" +
             ".inv-lines td.center{text-align:center;font-weight:700;}" +
-            ".inv-lines td.item-name{font-weight:800;color:#000;font-size:9px;line-height:1.35;}" +
-            ".inv-item-sku{font-size:8px;color:#444;font-weight:600;margin-top:2px;}" +
+            ".inv-lines td.item-name{padding-bottom:4px;font-weight:800;color:#000;font-size:9px;line-height:1.25;}" +
+            ".inv-item-sku{font-size:8px;line-height:1.2;color:#444;font-weight:600;margin-top:1px;}" +
             ".inv-amount-words{margin:10px 0 12px;padding:0;font-size:12px;line-height:1.6;font-weight:600;}" +
             ".inv-amount-words strong{font-weight:800;color:#000;}" +
             ".inv-footer-grid{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;margin-bottom:16px;}" +
@@ -771,8 +880,12 @@ var InventoryDocumentExport = (function () {
             ".inv-invoice-bottom-row--single .inv-invoice-bottom-qr{text-align:center;}" +
             ".inv-terms{margin:0;padding:0;font-size:11px;line-height:1.6;color:#333;font-weight:600;}" +
             ".inv-terms-body{margin:0;}" +
-            ".inv-terms-body ol,.inv-terms-body ul{margin:0;padding-left:1.35em;}" +
-            ".inv-terms-body li{margin:4px 0;}" +
+            ".inv-terms-body ol{margin:0;padding:0;list-style:none;counter-reset:invoice-terms;}" +
+            ".inv-terms-body ul{margin:0;padding-left:1.35em;}" +
+            ".inv-terms-body ol>li{display:flex;align-items:baseline;gap:2px;margin:4px 0;counter-increment:invoice-terms;}" +
+            ".inv-terms-body ol>li::before{content:counter(invoice-terms) '.';flex:0 0 1em;text-align:right;}" +
+            ".inv-terms-body ul>li{margin:4px 0;}" +
+            ".inv-terms-body li>p{display:block;flex:1;margin:0;}" +
             ".inv-terms-body b,.inv-terms-body strong{font-weight:800;color:#000;}" +
             ".inv-terms p{margin:0;white-space:pre-wrap;}" +
             ".inv-qr-wrap{margin:0 auto;text-align:center;}" +
@@ -958,7 +1071,7 @@ var InventoryDocumentExport = (function () {
         printFrame = document.createElement("iframe");
         printFrame.setAttribute("title", "Print document");
         printFrame.setAttribute("aria-hidden", "true");
-        printFrame.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;opacity:0;pointer-events:none;";
+        printFrame.style.cssText = "position:fixed;left:0;top:0;width:210mm;height:297mm;border:0;opacity:0;pointer-events:none;";
         document.body.appendChild(printFrame);
         return printFrame;
     }
@@ -1097,6 +1210,7 @@ var InventoryDocumentExport = (function () {
         printHtml: printHtml,
         downloadTablePdf: downloadTablePdf,
         buildSalesDocumentHtml: buildSalesDocumentHtml,
-        downloadSalesPdf: downloadSalesPdf
+        downloadSalesPdf: downloadSalesPdf,
+        generateSaleInvoicePdfBlob: generateSaleInvoicePdfBlob
     };
 })();

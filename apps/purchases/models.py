@@ -63,6 +63,11 @@ class Purchase(BaseEntity):
     cancelled_at = models.DateTimeField(null=True, blank=True)
     cancellation_date = models.DateField(null=True, blank=True)
     cancellation_reason = models.TextField(blank=True, default="")
+    invoice_pdf = models.FileField(
+        upload_to="sale_invoices/",
+        blank=True,
+        null=True,
+    )
 
     class Meta:
         db_table = "purchases"

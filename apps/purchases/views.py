@@ -201,6 +201,32 @@ class PurchaseViewSet(BusinessScopedViewSetMixin, BaseViewSet):
         )
         return ApiResponse.success(data=payload, message=message)
 
+    def save_invoice_pdf(self, request, pk=None):
+        service = self.get_service()
+        purchase = service.get(pk)
+        business = self.get_active_business()
+        if purchase.business_id != business.id:
+            return ApiResponse.error(
+                message="Sale not found.",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        upload = request.FILES.get("file")
+        if not upload:
+            return ApiResponse.error(
+                message="PDF file is required.",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if purchase.invoice_pdf:
+            purchase.invoice_pdf.delete(save=False)
+        purchase.invoice_pdf.save("purchase-%s.pdf" % purchase.pk, upload, save=True)
+        url = request.build_absolute_uri(purchase.invoice_pdf.url)
+        return ApiResponse.success(
+            data={"url": url},
+            message="Sale invoice PDF saved.",
+        )
+
     def destroy(self, request, pk=None):
         return ApiResponse.error(
             message="Purchase delete is not supported.",
