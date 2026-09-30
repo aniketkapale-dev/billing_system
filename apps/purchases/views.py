@@ -7,6 +7,7 @@ from apps.purchases.serializers import (
     PurchaseHeaderWriteSerializer,
     PurchasePaymentSerializer,
     PurchasePaymentWriteSerializer,
+    PurchaseListSerializer,
     PurchaseSerializer,
     PurchaseWriteSerializer,
     SaleDueSettingSerializer,
@@ -37,6 +38,17 @@ class PurchaseViewSet(BusinessScopedViewSetMixin, BaseViewSet):
         "total_cost": "total_cost",
         "total_profit": "total_profit",
     }
+
+    def list(self, request):
+        queryset = self.get_service().repository.get_list_queryset()
+        queryset = self.filter_queryset(queryset)
+        queryset = self._apply_query(queryset)
+        from core.pagination import StandardPagination
+
+        paginator = StandardPagination()
+        page = paginator.paginate_queryset(queryset, request, view=self)
+        serializer = PurchaseListSerializer(page, many=True, context={"request": request})
+        return paginator.get_paginated_response(serializer.data)
 
     def filter_queryset(self, queryset):
         queryset = super().filter_queryset(queryset)

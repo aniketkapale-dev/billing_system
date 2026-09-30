@@ -156,6 +156,9 @@
             <div id="business-users-panel" class="inv-mgmt-card inv-business-users-card inv-hidden">
                 <div class="inv-business-users-section">
                     <h3 class="inv-business-section-title">Admin Users</h3>
+                    <div class="inv-mgmt-toolbar inv-mgmt-toolbar--filters">
+                        <input type="search" id="business-users-search" class="inv-mgmt-search" placeholder="Search users..." aria-label="Search users"/>
+                    </div>
                     <div class="inv-mgmt-table-wrap inv-business-users-table-wrap">
                         <table class="inv-mgmt-table">
                             <thead>
@@ -171,6 +174,7 @@
                             </tbody>
                         </table>
                     </div>
+                    <div id="business-users-pagination" class="inv-pagination"></div>
                 </div>
             </div>
         </div>
@@ -246,7 +250,7 @@
 
 {% block page_scripts %}
 <script src="{% static 'js/inventory/business-profile.js' %}"></script>
-<script src="{% static 'js/inventory/business-users.js' %}"></script>
+<script src="{% static 'js/inventory/business-users.js' %}?v=20260330-users-page"></script>
 <script>
 InventoryBusinessProfile.init();
 InventoryBusinessUsers.init();

@@ -2989,7 +2989,8 @@ body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sideb
     color: var(--inv-primary);
 }
 
-.inv-multi-select-option:hover {
+.inv-multi-select-option:hover,
+.inv-multi-select-option.is-highlighted {
     background: rgba(0, 103, 255, 0.06);
 }
 

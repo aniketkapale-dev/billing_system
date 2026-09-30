@@ -4,6 +4,8 @@ var InventoryDashboard = (function () {
     var API = "/api/dashboard";
     var salesChartPeriod = "week";
     var pendingPaymentsPeriod = "week";
+    var pendingPaymentsPage = 1;
+    var PENDING_PAGINATION_ID = "dashboard-pending-payments-pagination";
     var purchasesKpiPeriod = "week";
     var salesKpiPeriod = "week";
     var expiringProductsPeriod = "week";
@@ -520,14 +522,34 @@ var InventoryDashboard = (function () {
         }
     }
 
+    function renderPendingPaymentsPagination(pagination) {
+        if (!window.InventoryPagination) return;
+        InventoryPagination.render(PENDING_PAGINATION_ID, pagination, function (page) {
+            pendingPaymentsPage = page;
+            loadPendingPayments(null, { page: page, showLoading: true });
+        }, {
+            onPageSizeChange: function () {
+                pendingPaymentsPage = 1;
+                loadPendingPayments(null, { page: 1, showLoading: true });
+            }
+        });
+    }
+
     function loadPendingPayments(period, options) {
         options = options || {};
+        if (period && period !== pendingPaymentsPeriod) {
+            pendingPaymentsPage = 1;
+        }
         if (period) {
             setPendingPaymentsPeriod(period);
+        }
+        if (options.page) {
+            pendingPaymentsPage = options.page;
         }
 
         if (!InventoryBusiness.getActiveId()) {
             renderPendingPaymentsTable({ items: [] });
+            renderPendingPaymentsPagination(null);
             return Promise.resolve();
         }
 
@@ -539,12 +561,25 @@ var InventoryDashboard = (function () {
                 "</tr>";
         }
 
-        return apiRequest("/pending-payments/?period=" + encodeURIComponent(pendingPaymentsPeriod))
+        var pageSize = window.InventoryPagination
+            ? InventoryPagination.getPageSize(PENDING_PAGINATION_ID)
+            : 10;
+        var path = "/pending-payments/?period=" + encodeURIComponent(pendingPaymentsPeriod) +
+            "&page=" + encodeURIComponent(pendingPaymentsPage) +
+            "&page_size=" + encodeURIComponent(pageSize) +
+            "&ordering=-purchase_date";
+
+        return apiRequest(path)
             .then(function (body) {
                 if (body && body.isSuccess && body.data) {
+                    if (body.data.pagination && body.data.pagination.page) {
+                        pendingPaymentsPage = body.data.pagination.page;
+                    }
                     renderPendingPaymentsTable(body.data);
+                    renderPendingPaymentsPagination(body.data.pagination);
                 } else {
                     renderPendingPaymentsTable({ items: [] });
+                    renderPendingPaymentsPagination(null);
                     if (!options.silent) {
                         InventoryToast.error(body.message || "Failed to load pending payments.");
                     }
@@ -552,6 +587,7 @@ var InventoryDashboard = (function () {
             })
             .catch(function () {
                 renderPendingPaymentsTable({ items: [] });
+                renderPendingPaymentsPagination(null);
                 if (!options.silent) {
                     InventoryToast.error("Network error while loading pending payments.");
                 }

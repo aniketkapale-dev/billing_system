@@ -14,6 +14,9 @@ var InventorySettingsCategoryTax = (function () {
     var lastCategoryItems = [];
     var currentPage = 1;
     var MAX_VISIBLE_TAXES = 3;
+    var listSearch = "";
+    var listTaxAssignment = "";
+    var listTaxId = "";
 
     function requestCategories(path, opts) {
         return InventoryApi.request(CATEGORIES_API, path, opts);
@@ -28,7 +31,39 @@ var InventorySettingsCategoryTax = (function () {
         params.set("page", String(page || 1));
         params.set("page_size", String(InventoryPagination.getPageSize(PAGINATION_ID)));
         params.set("ordering", "name");
+        if (listSearch) params.set("search", listSearch);
+        if (listTaxAssignment) params.set("tax_assignment", listTaxAssignment);
+        if (listTaxId) params.set("sale_tax_id", listTaxId);
         return "?" + params.toString();
+    }
+
+    function hasActiveListFilters() {
+        return !!(listSearch || listTaxAssignment || listTaxId);
+    }
+
+    function renderTaxFilterOptions() {
+        var select = document.getElementById("settings-category-tax-tax-filter");
+        if (!select) return;
+        var current = select.value;
+        var html = '<option value="">All taxes</option>';
+        taxes.forEach(function (tax) {
+            html += '<option value="' + tax.id + '">' + InventoryApi.escapeHtml(formatTaxLabel(tax)) + "</option>";
+        });
+        select.innerHTML = html;
+        if (current) select.value = current;
+    }
+
+    function clearListFilters() {
+        listSearch = "";
+        listTaxAssignment = "";
+        listTaxId = "";
+        var searchEl = document.getElementById("settings-category-tax-search");
+        var assignmentEl = document.getElementById("settings-category-tax-assignment-filter");
+        var taxEl = document.getElementById("settings-category-tax-tax-filter");
+        if (searchEl) searchEl.value = "";
+        if (assignmentEl) assignmentEl.value = "";
+        if (taxEl) taxEl.value = "";
+        loadCategories(1);
     }
 
     function formatTaxLabel(tax) {
@@ -103,7 +138,9 @@ var InventorySettingsCategoryTax = (function () {
         lastCategoryItems = items || [];
 
         if (!lastCategoryItems.length) {
-            tbody.innerHTML = '<tr><td colspan="3" class="inv-mgmt-empty">No categories found. Add categories first.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="3" class="inv-mgmt-empty">' +
+                (hasActiveListFilters() ? "No categories match your filters." : "No categories found. Add categories first.") +
+                "</td></tr>";
             return;
         }
 
@@ -612,7 +649,41 @@ var InventorySettingsCategoryTax = (function () {
 
         InventoryModal.wire(MODAL_ID);
 
+        loadTaxes().then(function () {
+            renderTaxFilterOptions();
+        });
         loadCategories(1);
+
+        var listSearchEl = document.getElementById("settings-category-tax-search");
+        var listAssignmentEl = document.getElementById("settings-category-tax-assignment-filter");
+        var listTaxFilterEl = document.getElementById("settings-category-tax-tax-filter");
+        var clearFiltersBtn = document.getElementById("settings-category-tax-clear-filters");
+
+        if (listSearchEl) {
+            var listSearchTimer = null;
+            listSearchEl.addEventListener("input", function () {
+                window.clearTimeout(listSearchTimer);
+                listSearchTimer = window.setTimeout(function () {
+                    listSearch = listSearchEl.value.trim();
+                    loadCategories(1);
+                }, 300);
+            });
+        }
+        if (listAssignmentEl) {
+            listAssignmentEl.addEventListener("change", function () {
+                listTaxAssignment = listAssignmentEl.value || "";
+                loadCategories(1);
+            });
+        }
+        if (listTaxFilterEl) {
+            listTaxFilterEl.addEventListener("change", function () {
+                listTaxId = listTaxFilterEl.value || "";
+                loadCategories(1);
+            });
+        }
+        if (clearFiltersBtn) {
+            clearFiltersBtn.addEventListener("click", clearListFilters);
+        }
 
         var tableBody = document.getElementById("settings-category-tax-table-body");
         if (tableBody) {

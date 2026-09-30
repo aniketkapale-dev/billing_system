@@ -209,12 +209,10 @@ class PurchaseService(BaseService):
         purchase.save(update_fields=["total_cost", "total_profit", "updated_at"])
 
     def _clear_draft_items(self, purchase):
-        existing_items = PurchaseItem.objects.filter(
+        PurchaseItem.objects.filter(
             purchase=purchase,
             is_deleted=False,
-        )
-        for item in existing_items:
-            item.soft_delete()
+        ).soft_delete()
 
     def _release_draft_invoice_number(self, purchase):
         from apps.settings.models import InvoiceSetting
@@ -335,7 +333,7 @@ class PurchaseService(BaseService):
         for item in existing_items:
             self.batch_service.restore_purchase_item_consumptions(item)
             self.inventory_service.add_stock(business_id, item.product_id, item.quantity)
-            item.soft_delete()
+        existing_items.soft_delete()
 
     def _build_header_updates(self, purchase, data):
         updates = {}
@@ -745,7 +743,7 @@ class PurchaseService(BaseService):
         return purchase
 
     def update_header(self, pk, data):
-        purchase = self.repository.get_by_id(pk)
+        purchase = self.repository.get_for_header_update(pk)
         if purchase.is_cancelled:
             raise ValidationException("Cancelled invoices cannot be edited.")
         if purchase.is_draft:

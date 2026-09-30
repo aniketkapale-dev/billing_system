@@ -15,6 +15,10 @@
         </div>
 
         <div class="inv-mgmt-card">
+            <div class="inv-mgmt-toolbar inv-mgmt-toolbar--filters">
+                <input type="search" id="settings-tax-search" class="inv-mgmt-search" placeholder="Search tax key or value..." aria-label="Search taxes"/>
+                <button type="button" id="settings-tax-clear-filters" class="inv-mgmt-btn">Clear</button>
+            </div>
             <div class="inv-mgmt-table-wrap">
                 <table class="inv-mgmt-table inv-mgmt-table--settings-tax">
                     <colgroup>
@@ -99,6 +103,18 @@
         </div>
 
         <div class="inv-mgmt-card">
+            <div class="inv-mgmt-toolbar inv-mgmt-toolbar--filters">
+                <input type="search" id="settings-category-tax-search" class="inv-mgmt-search" placeholder="Search categories..." aria-label="Search categories"/>
+                <select id="settings-category-tax-assignment-filter" class="inv-mgmt-select inv-mgmt-filter-select" aria-label="Tax assignment">
+                    <option value="">All categories</option>
+                    <option value="with">With tax assigned</option>
+                    <option value="without">Without tax</option>
+                </select>
+                <select id="settings-category-tax-tax-filter" class="inv-mgmt-select inv-mgmt-filter-select" aria-label="Tax">
+                    <option value="">All taxes</option>
+                </select>
+                <button type="button" id="settings-category-tax-clear-filters" class="inv-mgmt-btn">Clear</button>
+            </div>
             <div class="inv-mgmt-table-wrap">
                 <table class="inv-mgmt-table inv-mgmt-table--settings-category-tax">
                     <thead>
@@ -507,14 +523,14 @@
 
 {% block page_scripts %}
 {% if settings_section == 'tax' %}
-<script src="{% static 'js/inventory/settings-tax.js' %}?v=20260329-settings-card-rows"></script>
+<script src="{% static 'js/inventory/settings-tax.js' %}?v=20260330-tax-filters"></script>
 <script>
 InventoryPagePanel.init();
 InventorySettingsTax.init();
 </script>
 {% elif settings_section == 'category-tax' %}
 <script src="{% static 'js/components/modal.js' %}"></script>
-<script src="{% static 'js/inventory/settings-category-tax.js' %}?v=20260328-category-tax-cards"></script>
+<script src="{% static 'js/inventory/settings-category-tax.js' %}?v=20260330-category-tax-filters"></script>
 <script>
 InventorySettingsCategoryTax.init();
 </script>

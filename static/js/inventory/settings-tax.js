@@ -7,6 +7,7 @@ var InventorySettingsTax = (function () {
     var PAGINATION_ID = "settings-tax-pagination";
     var currentPage = 1;
     var editingId = null;
+    var listSearch = "";
 
     function request(path, opts) {
         return InventoryApi.request(API, path, opts);
@@ -17,6 +18,7 @@ var InventorySettingsTax = (function () {
         params.set("page", String(page || 1));
         params.set("page_size", String(InventoryPagination.getPageSize(PAGINATION_ID)));
         params.set("ordering", "key");
+        if (listSearch) params.set("search", listSearch);
         return "?" + params.toString();
     }
 
@@ -37,7 +39,10 @@ var InventorySettingsTax = (function () {
         if (!tbody) return;
 
         if (!items || !items.length) {
-            tbody.innerHTML = '<tr><td colspan="3" class="inv-mgmt-empty">No taxes yet. Add one to get started.</td></tr>';
+            var emptyMessage = listSearch
+                ? "No taxes match your search."
+                : "No taxes yet. Add one to get started.";
+            tbody.innerHTML = '<tr><td colspan="3" class="inv-mgmt-empty">' + emptyMessage + "</td></tr>";
             return;
         }
 
@@ -462,6 +467,26 @@ var InventorySettingsTax = (function () {
         if (addBtn) {
             addBtn.addEventListener("click", function () {
                 openAddModal();
+            });
+        }
+
+        var taxSearchEl = document.getElementById("settings-tax-search");
+        var clearTaxFiltersBtn = document.getElementById("settings-tax-clear-filters");
+        if (taxSearchEl) {
+            var taxSearchTimer = null;
+            taxSearchEl.addEventListener("input", function () {
+                window.clearTimeout(taxSearchTimer);
+                taxSearchTimer = window.setTimeout(function () {
+                    listSearch = taxSearchEl.value.trim();
+                    loadTaxes(1);
+                }, 300);
+            });
+        }
+        if (clearTaxFiltersBtn) {
+            clearTaxFiltersBtn.addEventListener("click", function () {
+                listSearch = "";
+                if (taxSearchEl) taxSearchEl.value = "";
+                loadTaxes(1);
             });
         }
 

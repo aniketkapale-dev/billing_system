@@ -377,7 +377,10 @@ var InventoryProducts = (function () {
     }
 
     function cellOpeningQty(item) {
-        var qtyText = cellQty(item.opening_quantity != null ? item.opening_quantity : 0);
+        if (item.opening_quantity == null || item.opening_quantity === "") {
+            return "—";
+        }
+        var qtyText = cellQty(item.opening_quantity);
         var dateText = formatDate(item.opening_added_at || item.created_at);
         if (qtyText === "—" && dateText === "—") return "—";
         return (
@@ -912,15 +915,15 @@ var InventoryProducts = (function () {
     function renderCategorySelect(selectedId, targetRow) {
         getProductFormRows().forEach(function (row) {
             var select = rowField(row, ".inv-product-field-category");
-            if (!select) return;
+        if (!select) return;
             var current = select.value;
             if (targetRow && row === targetRow && selectedId !== undefined && selectedId !== null) {
                 current = String(selectedId);
             }
             fillSelect(select, categories, "Select category", function (item) {
-                return item.name;
-            });
-            if (current) select.value = current;
+            return item.name;
+        });
+        if (current) select.value = current;
             updateRowPricing(row);
         });
     }
@@ -987,15 +990,15 @@ var InventoryProducts = (function () {
     function renderBrandSelect(selectedId, targetRow) {
         getProductFormRows().forEach(function (row) {
             var select = rowField(row, ".inv-product-field-brand");
-            if (!select) return;
+        if (!select) return;
             var current = select.value;
             if (targetRow && row === targetRow && selectedId !== undefined && selectedId !== null) {
                 current = String(selectedId);
             }
             fillSelect(select, brands, "Select brand (optional)", function (item) {
-                return item.name;
-            });
-            if (current) select.value = current;
+            return item.name;
+        });
+        if (current) select.value = current;
         });
     }
 
@@ -1054,15 +1057,15 @@ var InventoryProducts = (function () {
     function renderManufacturerSelect(selectedId, targetRow) {
         getProductFormRows().forEach(function (row) {
             var select = rowField(row, ".inv-product-field-manufacturer");
-            if (!select) return;
+        if (!select) return;
             var current = select.value;
             if (targetRow && row === targetRow && selectedId !== undefined && selectedId !== null) {
                 current = String(selectedId);
             }
             fillSelect(select, manufacturers, "Select manufacturer (optional)", function (item) {
-                return item.name;
-            });
-            if (current) select.value = current;
+            return item.name;
+        });
+        if (current) select.value = current;
         });
     }
 
@@ -1121,15 +1124,15 @@ var InventoryProducts = (function () {
     function renderUnitSelect(selectedId, targetRow) {
         getProductFormRows().forEach(function (row) {
             var select = rowField(row, ".inv-product-field-unit");
-            if (!select) return;
+        if (!select) return;
             var current = select.value;
             if (targetRow && row === targetRow && selectedId !== undefined && selectedId !== null) {
                 current = String(selectedId);
             }
             fillSelect(select, units, "Select unit", function (item) {
-                return item.name + " (" + item.short_name + ")";
-            });
-            if (current) select.value = current;
+            return item.name + " (" + item.short_name + ")";
+        });
+        if (current) select.value = current;
         });
     }
 
@@ -1521,6 +1524,8 @@ var InventoryProducts = (function () {
             { label: "MRP", value: cellMoney(product.mrp), num: true },
             { label: "Unit", value: displayValue(product.unit_short_name || product.unit_name) },
             { label: "Quantity", value: displayValue(formatQty(product.quantity)), num: true },
+            { label: "Opening Stock", value: displayValue(formatQty(product.opening_quantity)), num: true },
+            { label: "Sold Quantity", value: displayValue(formatQty(product.sold_quantity)), num: true },
             { label: "Description", value: displayValue(product.description), full: true }
         ];
 
@@ -1624,11 +1629,11 @@ var InventoryProducts = (function () {
                 resetForm();
                 return fetchNextSku();
             }).then(function (sku) {
-                if (sku) {
-                    document.getElementById("product-sku").value = sku;
-                }
-                showProductFormPanel();
-                document.getElementById("product-name").focus();
+                    if (sku) {
+                        document.getElementById("product-sku").value = sku;
+                    }
+                    showProductFormPanel();
+                    document.getElementById("product-name").focus();
             });
     }
 
@@ -1693,9 +1698,9 @@ var InventoryProducts = (function () {
 
             var editPayload = editResult.payload;
             if (!editPayload.category_id) {
-                InventoryToast.error("Category is required.");
-                return;
-            }
+            InventoryToast.error("Category is required.");
+            return;
+        }
 
             InventoryLoader.button(btn, true, "Updating...");
             request("/" + editingId + "/", {
@@ -1728,8 +1733,8 @@ var InventoryProducts = (function () {
                 .finally(function () {
                     InventoryLoader.button(btn, false);
                 });
-            return;
-        }
+                return;
+            }
 
         if (!rows.length) return;
 
@@ -1743,8 +1748,8 @@ var InventoryProducts = (function () {
             var skuKey = result.payload.sku.toLowerCase();
             if (seenSkus[skuKey]) {
                 InventoryToast.error("Duplicate SKU in Product " + seenSkus[skuKey] + " and Product " + (i + 1) + ".");
-                return;
-            }
+            return;
+        }
             seenSkus[skuKey] = i + 1;
             payloads.push(result.payload);
         }
@@ -1753,32 +1758,32 @@ var InventoryProducts = (function () {
             var singlePayload = payloads[0];
             InventoryLoader.button(btn, true, "Saving...");
             request("", { method: "POST", body: singlePayload })
-                .then(function (body) {
-                    if (body && body.isSuccess) {
-                        var savedProduct = body.data;
+            .then(function (body) {
+                if (body && body.isSuccess) {
+                    var savedProduct = body.data;
                         InventoryToast.success("Product added successfully.");
-                        resetForm();
-                        hideProductFormPanel();
-                        if (document.getElementById("products-table-body")) {
+                    resetForm();
+                    hideProductFormPanel();
+                    if (document.getElementById("products-table-body")) {
                             loadProducts(currentSearch, 1);
-                        }
+                    }
                         if (savedProduct) {
-                            window.dispatchEvent(new CustomEvent("inventory:product-created", {
-                                detail: { product: savedProduct }
-                            }));
-                        }
-                    } else {
+                        window.dispatchEvent(new CustomEvent("inventory:product-created", {
+                            detail: { product: savedProduct }
+                        }));
+                    }
+                } else {
                         var singleErr = body.message || "Unable to save product.";
                         if (body.errors && body.errors.length) singleErr = body.errors.join(" • ");
                         InventoryToast.error(singleErr);
-                    }
-                })
-                .catch(function () {
-                    InventoryToast.error("Network error. Please try again.");
-                })
-                .finally(function () {
-                    InventoryLoader.button(btn, false);
-                });
+                }
+            })
+            .catch(function () {
+                InventoryToast.error("Network error. Please try again.");
+            })
+            .finally(function () {
+                InventoryLoader.button(btn, false);
+            });
             return;
         }
 
