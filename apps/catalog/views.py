@@ -25,6 +25,7 @@ from core.base_viewset import BaseViewSet
 from core.business_access import resolve_business_access, user_has_tab
 from core.business_viewset import BusinessScopedViewSetMixin
 from core.permissions import HasRole, IsAuthenticatedUser
+from django.db.models import Q
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied
 
@@ -68,6 +69,27 @@ class CategoryViewSet(BusinessScopedViewSetMixin, BaseViewSet):
 
     def get_permissions(self):
         return [IsAuthenticatedUser(), HasRole()]
+
+    def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
+        request = self.request
+
+        assignment = (request.query_params.get("tax_assignment") or "").strip().lower()
+        if assignment == "with":
+            queryset = queryset.exclude(sale_tax_ids=[]).exclude(sale_tax_ids__isnull=True)
+        elif assignment == "without":
+            queryset = queryset.filter(Q(sale_tax_ids=[]) | Q(sale_tax_ids__isnull=True))
+
+        sale_tax_id = request.query_params.get("sale_tax_id")
+        if sale_tax_id:
+            try:
+                tax_id = int(sale_tax_id)
+            except (TypeError, ValueError):
+                tax_id = None
+            if tax_id is not None:
+                queryset = queryset.filter(sale_tax_ids__contains=[tax_id])
+
+        return queryset
 
     def get_active_business(self):
         if hasattr(self, "_active_business"):

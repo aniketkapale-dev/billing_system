@@ -651,7 +651,7 @@ var InventoryPurchases = (function () {
             return product.sale_tax_ids.map(String);
         }
         if (product.category_sale_tax_ids && product.category_sale_tax_ids.length) {
-            return product.category_sale_tax_ids.map(String);
+            return product.category_sale_tax_ids.slice(0, 1).map(String);
         }
         if (product.tax) return [String(product.tax)];
         return [];
@@ -2275,13 +2275,6 @@ var InventoryPurchases = (function () {
     function formatPaymentScheduleViewField(purchase) {
         purchase = mergeSalePrintMeta(purchase || {});
 
-        if (purchase.is_draft) {
-            return {
-                label: "Due Date",
-                value: displayValue(formatViewDateValue(purchase.due_date))
-            };
-        }
-
         if (purchase.is_paid) {
             return {
                 label: "Payment Date",
@@ -2290,7 +2283,7 @@ var InventoryPurchases = (function () {
         }
 
         return {
-            label: "Due Date",
+            label: "Payment Due Date",
             value: displayValue(formatViewDateValue(purchase.due_date))
         };
     }
@@ -2316,18 +2309,19 @@ var InventoryPurchases = (function () {
 
         var rows = [
             { label: "Sale Date", value: displayValue(InventoryApi.formatDisplayDate(purchase.purchase_date, "—")) },
-            { label: "Customer", value: formatCustomerDisplay(purchase) }
+            { label: "Invoice No.", value: displayValue(purchase.reference_no || "—") },
+            { label: "Customer", value: formatCustomerDisplay(purchase) },
+            formatPaymentScheduleViewField(purchase)
         ];
-
-        if (purchase.reference_no) {
-            rows.push({ label: "Invoice No.", value: displayValue(purchase.reference_no) });
-        }
-
-        rows.push(formatPaymentScheduleViewField(purchase));
 
         var lines = purchase.items || [];
         var isDraft = !!purchase.is_draft;
         var totalTax = isDraft ? null : sumSaleLineField(lines, "tax_amount");
+        var soldTotalWithTax = isDraft ? null : roundMoney(Number(purchase.total_amount || 0));
+        var soldTotalWithoutTax = null;
+        if (!isDraft && soldTotalWithTax != null) {
+            soldTotalWithoutTax = roundMoney(Math.max(0, soldTotalWithTax - Number(totalTax || 0)));
+        }
         var totalProfit = null;
         if (!isDraft) {
             if (purchase.total_profit != null && purchase.total_profit !== "") {
@@ -2344,10 +2338,19 @@ var InventoryPurchases = (function () {
             { label: "Payment Status", value: formatPaymentStatusLabel(purchase) },
             { label: "Payment Type", value: displayValue(purchase.payment_type_name) },
             { label: "Bill Amount", value: InventoryApi.formatMoney(purchase.total_amount), colStart: 1, num: true, emphasis: true },
-            { label: "Total Tax", value: isDraft ? "—" : InventoryApi.formatMoney(totalTax), num: true },
             { label: "Total Paid", value: InventoryApi.formatMoney(purchase.total_paid), num: true },
             { label: "Pending Bill", value: formatPendingBillValue(purchase), num: true },
-            { label: "Total Cost", value: isDraft ? "—" : InventoryApi.formatMoney(purchase.total_cost), num: true },
+            {
+                label: "Total Cost without Tax",
+                value: isDraft ? "—" : InventoryApi.formatMoney(soldTotalWithoutTax),
+                num: true
+            },
+            { label: "Total Tax", value: isDraft ? "—" : InventoryApi.formatMoney(totalTax), num: true },
+            {
+                label: "Total Cost with Tax",
+                value: isDraft ? "—" : InventoryApi.formatMoney(soldTotalWithTax),
+                num: true
+            },
             {
                 label: "Total Profit / Loss",
                 value: (function () {
