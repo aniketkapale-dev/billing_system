@@ -111,6 +111,9 @@ class PurchaseSerializer(BaseModelSerializer):
     total_paid = serializers.SerializerMethodField()
     pending_bill = serializers.SerializerMethodField()
     payment_status = serializers.SerializerMethodField()
+    total_cost_without_tax = serializers.SerializerMethodField()
+    total_cost_tax = serializers.SerializerMethodField()
+    total_cost_with_tax = serializers.SerializerMethodField()
     invoice_setting_id = serializers.IntegerField(read_only=True)
     next_invoice_no = serializers.SerializerMethodField()
 
@@ -144,6 +147,9 @@ class PurchaseSerializer(BaseModelSerializer):
             "payment_type_name",
             "total_amount",
             "total_cost",
+            "total_cost_without_tax",
+            "total_cost_tax",
+            "total_cost_with_tax",
             "total_profit",
             "total_paid",
             "pending_bill",
@@ -213,6 +219,75 @@ class PurchaseSerializer(BaseModelSerializer):
         if total_paid + Decimal("0.0001") < total_amount:
             return "partial"
         return "paid"
+
+    def _cost_breakdown(self, obj):
+        cached = getattr(obj, "_cached_cost_breakdown", None)
+        if cached is not None:
+            return cached
+
+        total_with_tax = Decimal(obj.total_cost or 0)
+        total_tax = Decimal("0")
+        has_consumption_tax = False
+
+        items = getattr(obj, "_prefetched_objects_cache", {}).get("items")
+        if items is None:
+            items = obj.items.filter(is_deleted=False)
+
+        for item in items:
+            if getattr(item, "is_deleted", False):
+                continue
+            consumptions = getattr(item, "_prefetched_objects_cache", {}).get("batch_consumptions")
+            if consumptions is None:
+                consumptions = item.batch_consumptions.filter(is_deleted=False)
+
+            for consumption in consumptions:
+                if getattr(consumption, "is_deleted", False):
+                    continue
+                qty = Decimal(consumption.quantity_sold or 0)
+                if qty <= 0:
+                    continue
+
+                invoice_item = None
+                batch = getattr(consumption, "inventory_batch", None)
+                if batch is not None:
+                    invoice_item = getattr(batch, "purchase_invoice_item", None)
+
+                if (
+                    invoice_item
+                    and invoice_item.quantity
+                    and Decimal(invoice_item.quantity) > 0
+                ):
+                    tax_per_unit = Decimal(invoice_item.tax or 0) / Decimal(invoice_item.quantity)
+                    total_tax += tax_per_unit * qty
+                    has_consumption_tax = True
+
+        total_tax = total_tax.quantize(Decimal("0.01"))
+        if not has_consumption_tax:
+            total_tax = Decimal("0")
+
+        total_with_tax = total_with_tax.quantize(Decimal("0.01"))
+        total_without_tax = (total_with_tax - total_tax).quantize(Decimal("0.01"))
+        if total_without_tax < 0:
+            total_without_tax = Decimal("0.00")
+
+        breakdown = (total_without_tax, total_tax, total_with_tax)
+        obj._cached_cost_breakdown = breakdown
+        return breakdown
+
+    def get_total_cost_without_tax(self, obj):
+        if obj.is_draft:
+            return None
+        return _decimal_str(self._cost_breakdown(obj)[0])
+
+    def get_total_cost_tax(self, obj):
+        if obj.is_draft:
+            return None
+        return _decimal_str(self._cost_breakdown(obj)[1])
+
+    def get_total_cost_with_tax(self, obj):
+        if obj.is_draft:
+            return None
+        return _decimal_str(self._cost_breakdown(obj)[2])
 
     def get_next_invoice_no(self, obj):
         reference_no = (obj.reference_no or "").strip()
