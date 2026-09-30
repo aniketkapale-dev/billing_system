@@ -90,6 +90,81 @@ class PurchasePaymentSerializer(BaseModelSerializer):
         )
 
 
+class PurchaseListItemSerializer(serializers.Serializer):
+    product_name = serializers.CharField(source="product.name", read_only=True)
+    quantity = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
+
+
+class PurchaseListSerializer(BaseModelSerializer):
+    items = PurchaseListItemSerializer(many=True, read_only=True)
+    company_name = serializers.SerializerMethodField()
+    customer_mobile = serializers.SerializerMethodField()
+    total_paid = serializers.SerializerMethodField()
+    pending_bill = serializers.SerializerMethodField()
+    payment_status = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Purchase
+        fields = (
+            "id",
+            "customer_name",
+            "company_name",
+            "customer_mobile",
+            "reference_no",
+            "purchase_date",
+            "total_amount",
+            "total_paid",
+            "pending_bill",
+            "payment_status",
+            "is_paid",
+            "is_draft",
+            "is_cancelled",
+            "items",
+        )
+
+    def get_company_name(self, obj):
+        customer = getattr(obj, "customer", None)
+        return customer.company_name if customer else ""
+
+    def get_customer_mobile(self, obj):
+        customer = getattr(obj, "customer", None)
+        return customer.mobile if customer else ""
+
+    def _paid_amount(self, obj):
+        annotated = getattr(obj, "total_paid_amount", None)
+        if annotated is not None:
+            return Decimal(annotated or 0)
+        return Decimal("0")
+
+    def get_total_paid(self, obj):
+        if obj.is_draft or obj.is_cancelled:
+            return "0.00"
+        return _decimal_str(self._paid_amount(obj))
+
+    def get_pending_bill(self, obj):
+        if obj.is_draft or obj.is_cancelled:
+            return "0.00"
+        pending = Decimal(obj.total_amount or 0) - self._paid_amount(obj)
+        if pending < 0:
+            return "0.00"
+        return _decimal_str(pending)
+
+    def get_payment_status(self, obj):
+        if obj.is_draft:
+            return "draft"
+        if obj.is_cancelled:
+            return "cancelled"
+        if obj.is_paid:
+            return "paid"
+        total_paid = self._paid_amount(obj)
+        total_amount = Decimal(obj.total_amount or 0)
+        if total_paid <= 0:
+            return "unpaid"
+        if total_paid + Decimal("0.0001") < total_amount:
+            return "partial"
+        return "paid"
+
+
 class PurchaseSerializer(BaseModelSerializer):
     items = PurchaseItemSerializer(many=True, read_only=True)
     payments = PurchasePaymentSerializer(many=True, read_only=True)

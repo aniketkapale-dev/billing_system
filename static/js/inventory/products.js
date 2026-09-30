@@ -377,7 +377,10 @@ var InventoryProducts = (function () {
     }
 
     function cellOpeningQty(item) {
-        var qtyText = cellQty(item.opening_quantity != null ? item.opening_quantity : 0);
+        if (item.opening_quantity == null || item.opening_quantity === "") {
+            return "—";
+        }
+        var qtyText = cellQty(item.opening_quantity);
         var dateText = formatDate(item.opening_added_at || item.created_at);
         if (qtyText === "—" && dateText === "—") return "—";
         return (
@@ -1521,6 +1524,8 @@ var InventoryProducts = (function () {
             { label: "MRP", value: cellMoney(product.mrp), num: true },
             { label: "Unit", value: displayValue(product.unit_short_name || product.unit_name) },
             { label: "Quantity", value: displayValue(formatQty(product.quantity)), num: true },
+            { label: "Opening Stock", value: displayValue(formatQty(product.opening_quantity)), num: true },
+            { label: "Sold Quantity", value: displayValue(formatQty(product.sold_quantity)), num: true },
             { label: "Description", value: displayValue(product.description), full: true }
         ];
 

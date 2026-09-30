@@ -69,6 +69,20 @@ class Purchase(BaseEntity):
         verbose_name = "Purchase"
         verbose_name_plural = "Purchases"
         ordering = ("-purchase_date", "-created_at")
+        indexes = [
+            models.Index(
+                fields=["business", "is_deleted", "is_draft", "purchase_date"],
+                name="idx_purch_biz_status_date",
+            ),
+            models.Index(
+                fields=["business", "reference_no"],
+                name="idx_purch_biz_reference",
+            ),
+            models.Index(
+                fields=["business", "customer_name"],
+                name="idx_purch_biz_customer",
+            ),
+        ]
 
     def __str__(self):
         return self.reference_no or f"Purchase #{self.pk}"
