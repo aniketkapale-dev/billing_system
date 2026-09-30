@@ -308,7 +308,7 @@ class ProductService(BaseService):
             return
         category = data.get("category")
         if category is not None:
-            data["sale_tax_ids"] = list(category.sale_tax_ids or [])
+            data["sale_tax_ids"] = list(category.sale_tax_ids or [])[:1]
         elif instance is None:
             data["sale_tax_ids"] = []
 

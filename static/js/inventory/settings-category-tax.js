@@ -10,10 +10,9 @@ var InventorySettingsCategoryTax = (function () {
     var allCategories = [];
     var modalCategorySelection = {};
     var modalTaxSelection = {};
-    var expandedTaxRows = {};
     var lastCategoryItems = [];
     var currentPage = 1;
-    var MAX_VISIBLE_TAXES = 3;
+    var MODAL_TAX_RADIO_NAME = "category-tax-modal-tax";
     var listSearch = "";
     var listTaxAssignment = "";
     var listTaxId = "";
@@ -70,40 +69,16 @@ var InventorySettingsCategoryTax = (function () {
         return tax.key + " (" + tax.value + "%)";
     }
 
-    function formatTaxesAssignedCell(labels, categoryId) {
+    function formatTaxesAssignedCell(labels) {
         if (!labels || !labels.length) {
             return '<span class="inv-text-muted">—</span>';
         }
-
-        var taxTexts = labels.map(function (tax) {
-            return InventoryApi.escapeHtml(formatTaxLabel(tax));
-        });
-        var isExpanded = !!expandedTaxRows[String(categoryId)];
-        var hiddenCount = taxTexts.length - MAX_VISIBLE_TAXES;
-
-        if (taxTexts.length <= MAX_VISIBLE_TAXES) {
-            return (
-                '<div class="inv-category-tax-assigned-wrap">' +
-                '<span class="inv-category-tax-assigned-text">' + taxTexts.join(", ") + "</span>" +
-                "</div>"
-            );
-        }
-
-        if (isExpanded) {
-            return (
-                '<div class="inv-category-tax-assigned-wrap">' +
-                '<span class="inv-category-tax-assigned-text">' + taxTexts.join(", ") + "</span> " +
-                '<button type="button" class="inv-category-tax-toggle-more" data-category-id="' + categoryId + '">Show less</button>' +
-                "</div>"
-            );
-        }
-
+        var tax = labels[0];
         return (
             '<div class="inv-category-tax-assigned-wrap">' +
-            '<span class="inv-category-tax-assigned-text">' + taxTexts.slice(0, MAX_VISIBLE_TAXES).join(", ") + "</span> " +
-            '<button type="button" class="inv-category-tax-toggle-more" data-category-id="' + categoryId + '">+' +
-            hiddenCount + " more</button>" +
-            "</div>"
+            '<span class="inv-category-tax-assigned-text">' +
+            InventoryApi.escapeHtml(formatTaxLabel(tax)) +
+            "</span></div>"
         );
     }
 
@@ -119,16 +94,16 @@ var InventorySettingsCategoryTax = (function () {
                 "</div>"
             );
         }
-        return (
-            '<div class="inv-row-actions">' +
-            '<button type="button" class="inv-row-action-btn inv-row-action-btn--edit inv-category-tax-row-add-more"' +
-            ' data-category-id="' + categoryId + '" title="Add more taxes" aria-label="Add more taxes">' +
-            '<span class="material-symbols-outlined">add</span></button>' +
-            '<button type="button" class="inv-row-action-btn inv-row-action-btn--delete inv-category-tax-row-clear"' +
-            ' data-category-id="' + categoryId + '" title="Remove all taxes" aria-label="Remove all taxes">' +
-            '<span class="material-symbols-outlined">delete</span></button>' +
-            "</div>"
-        );
+            return (
+                '<div class="inv-row-actions">' +
+                '<button type="button" class="inv-row-action-btn inv-row-action-btn--edit inv-category-tax-row-change"' +
+                ' data-category-id="' + categoryId + '" title="Change tax" aria-label="Change tax">' +
+                '<span class="material-symbols-outlined">edit</span></button>' +
+                '<button type="button" class="inv-row-action-btn inv-row-action-btn--delete inv-category-tax-row-clear"' +
+                ' data-category-id="' + categoryId + '" title="Remove tax" aria-label="Remove tax">' +
+                '<span class="material-symbols-outlined">delete</span></button>' +
+                "</div>"
+            );
     }
 
     function renderRows(items) {
@@ -138,9 +113,10 @@ var InventorySettingsCategoryTax = (function () {
         lastCategoryItems = items || [];
 
         if (!lastCategoryItems.length) {
-            tbody.innerHTML = '<tr><td colspan="3" class="inv-mgmt-empty">' +
-                (hasActiveListFilters() ? "No categories match your filters." : "No categories found. Add categories first.") +
-                "</td></tr>";
+            var emptyMessage = hasActiveListFilters()
+                ? "No categories match your filters."
+                : "No categories found. Add categories first.";
+            tbody.innerHTML = '<tr><td colspan="3" class="inv-mgmt-empty">' + emptyMessage + "</td></tr>";
             return;
         }
 
@@ -150,7 +126,7 @@ var InventorySettingsCategoryTax = (function () {
                 "<tr data-category-id=\"" + item.id + "\" data-sale-tax-ids=\"" + taxIds + "\">" +
                 "<td>" + InventoryApi.escapeHtml(item.name) + "</td>" +
                 '<td class="inv-category-tax-assigned-cell">' +
-                formatTaxesAssignedCell(item.sale_tax_labels, item.id) +
+                formatTaxesAssignedCell(item.sale_tax_labels) +
                 "</td>" +
                 '<td class="inv-col-action inv-mgmt-cell--action">' + formatRowActions(item) + "</td>" +
                 "</tr>"
@@ -294,30 +270,29 @@ var InventorySettingsCategoryTax = (function () {
         if (!taxes.length) {
             container.innerHTML =
                 '<p class="inv-mgmt-empty">No taxes yet. Click Add to create one.</p>';
-            syncModalSelectAll("tax");
-            updatePanelCount("category-tax-tax-count", countSelected(modalTaxSelection), 0);
+            updatePanelCount("category-tax-tax-count", 0, 0);
             return;
         }
 
         if (!items.length) {
             container.innerHTML = '<p class="inv-mgmt-empty">No taxes match your search.</p>';
-            syncModalSelectAll("tax");
-            updatePanelCount("category-tax-tax-count", countSelected(modalTaxSelection), taxes.length);
+            updatePanelCount("category-tax-tax-count", getModalTaxIds().length ? 1 : 0, taxes.length);
             return;
         }
 
+        var selectedTaxId = getModalTaxIds()[0] || null;
         container.innerHTML = items.map(function (item) {
             var id = String(item.id);
-            var checked = modalTaxSelection[id] ? " checked" : "";
+            var checked = selectedTaxId === id ? " checked" : "";
             return (
                 '<label class="inv-category-tax-check-item">' +
-                '<input type="checkbox" class="category-tax-modal-tax-check" data-id="' + id + '"' + checked + "/>" +
+                '<input type="radio" class="category-tax-modal-tax-check" name="' + MODAL_TAX_RADIO_NAME +
+                '" data-id="' + id + '"' + checked + "/>" +
                 "<span>" + InventoryApi.escapeHtml(formatTaxLabel(item)) + "</span>" +
                 "</label>"
             );
         }).join("");
-        syncModalSelectAll("tax");
-        updatePanelCount("category-tax-tax-count", countSelected(modalTaxSelection), taxes.length);
+        updatePanelCount("category-tax-tax-count", selectedTaxId ? 1 : 0, taxes.length);
     }
 
     function syncModalSelectAll(kind) {
@@ -328,9 +303,6 @@ var InventorySettingsCategoryTax = (function () {
             return;
         }
 
-        var taxSelectAll = document.getElementById("category-tax-modal-select-all-taxes");
-        var taxChecks = document.querySelectorAll("#category-tax-modal-taxes .category-tax-modal-tax-check");
-        syncSelectAllState(taxSelectAll, taxChecks);
     }
 
     function syncSelectAllState(selectAll, checks) {
@@ -465,6 +437,7 @@ var InventorySettingsCategoryTax = (function () {
                     InventoryToast.success("Tax added.");
                     toggleInlinePanel("category-tax-new-tax-panel", false);
                     clearTaxPanel();
+                    modalTaxSelection = {};
                     modalTaxSelection[String(body.data.id)] = true;
                     return loadTaxes().then(function () {
                         renderModalTaxes();
@@ -488,9 +461,10 @@ var InventorySettingsCategoryTax = (function () {
         (categoryIds || []).forEach(function (id) {
             modalCategorySelection[String(id)] = true;
         });
-        (taxIds || []).forEach(function (id) {
-            modalTaxSelection[String(id)] = true;
-        });
+        var firstTaxId = (taxIds || [])[0];
+        if (firstTaxId != null && firstTaxId !== "") {
+            modalTaxSelection[String(firstTaxId)] = true;
+        }
     }
 
     function parseRowTaxIds(row) {
@@ -526,7 +500,11 @@ var InventorySettingsCategoryTax = (function () {
     function updateCategoryTaxes(categoryId, taxIds) {
         return requestCategories("/" + categoryId + "/", {
             method: "PATCH",
-            body: { sale_tax_ids: (taxIds || []).map(function (id) { return Number(id); }) }
+            body: {
+                sale_tax_ids: (taxIds || [])
+                    .map(function (id) { return Number(id); })
+                    .slice(0, 1)
+            }
         }).then(function (body) {
             if (!body || !body.isSuccess) {
                 throw new Error(body && body.message ? body.message : "Unable to update taxes.");
@@ -539,7 +517,7 @@ var InventorySettingsCategoryTax = (function () {
         InventoryLoader.show();
         return updateCategoryTaxes(categoryId, [])
             .then(function () {
-                InventoryToast.success("All taxes removed.");
+                InventoryToast.success("Tax removed.");
                 return loadCategories(currentPage, true);
             })
             .catch(function (err) {
@@ -550,32 +528,19 @@ var InventorySettingsCategoryTax = (function () {
             });
     }
 
-    function toggleTaxesExpanded(categoryId) {
-        var key = String(categoryId);
-        expandedTaxRows[key] = !expandedTaxRows[key];
-        renderRows(lastCategoryItems);
-    }
-
     function handleRowActionsClick(e) {
-        var toggleMoreBtn = e.target.closest(".inv-category-tax-toggle-more");
-        if (toggleMoreBtn) {
-            e.preventDefault();
-            toggleTaxesExpanded(toggleMoreBtn.getAttribute("data-category-id"));
-            return;
-        }
-
         var applyBtn = e.target.closest(".inv-category-tax-row-apply");
         if (applyBtn) {
             openApplyModalForRow(applyBtn.getAttribute("data-category-id"), []);
             return;
         }
 
-        var addMoreBtn = e.target.closest(".inv-category-tax-row-add-more");
-        if (addMoreBtn) {
-            var addRow = addMoreBtn.closest("tr[data-category-id]");
+        var changeBtn = e.target.closest(".inv-category-tax-row-change");
+        if (changeBtn) {
+            var changeRow = changeBtn.closest("tr[data-category-id]");
             openApplyModalForRow(
-                addMoreBtn.getAttribute("data-category-id"),
-                parseRowTaxIds(addRow)
+                changeBtn.getAttribute("data-category-id"),
+                parseRowTaxIds(changeRow)
             );
             return;
         }
@@ -595,7 +560,7 @@ var InventorySettingsCategoryTax = (function () {
     function getModalTaxIds() {
         return Object.keys(modalTaxSelection).filter(function (id) {
             return modalTaxSelection[id];
-        });
+        }).slice(0, 1);
     }
 
     function applyTaxesFromModal() {
@@ -605,7 +570,12 @@ var InventorySettingsCategoryTax = (function () {
             return;
         }
 
-        var taxIds = getModalTaxIds();
+        var taxIds = getModalTaxIds().map(function (id) { return Number(id); });
+        if (taxIds.length > 1) {
+            InventoryToast.error("Select only one tax per category.");
+            return;
+        }
+
         var btn = document.getElementById("category-tax-modal-apply-btn");
         InventoryLoader.button(btn, true, "Applying...");
 
@@ -625,7 +595,7 @@ var InventorySettingsCategoryTax = (function () {
 
         chain
             .then(function () {
-                InventoryToast.success("Taxes applied to selected categories.");
+                InventoryToast.success("Tax applied to selected categories.");
                 InventoryModal.close(MODAL_ID);
                 return loadCategories(currentPage);
             })
@@ -641,7 +611,6 @@ var InventorySettingsCategoryTax = (function () {
         var openBtn = document.getElementById("settings-category-tax-apply-open-btn");
         var applyBtn = document.getElementById("category-tax-modal-apply-btn");
         var selectAllCategories = document.getElementById("category-tax-modal-select-all-categories");
-        var selectAllTaxes = document.getElementById("category-tax-modal-select-all-taxes");
         var searchEl = document.getElementById("category-tax-modal-search");
         var taxSearchEl = document.getElementById("category-tax-modal-tax-search");
         var categoriesContainer = document.getElementById("category-tax-modal-categories");
@@ -718,16 +687,6 @@ var InventorySettingsCategoryTax = (function () {
             });
         }
 
-        if (selectAllTaxes) {
-            selectAllTaxes.addEventListener("change", function () {
-                var checked = !!selectAllTaxes.checked;
-                getFilteredModalTaxes().forEach(function (item) {
-                    modalTaxSelection[String(item.id)] = checked;
-                });
-                renderModalTaxes();
-            });
-        }
-
         if (categoriesContainer) {
             categoriesContainer.addEventListener("change", function (e) {
                 var check = e.target.closest(".category-tax-modal-check");
@@ -748,11 +707,13 @@ var InventorySettingsCategoryTax = (function () {
                 var check = e.target.closest(".category-tax-modal-tax-check");
                 if (!check) return;
                 var id = check.getAttribute("data-id");
-                if (id) modalTaxSelection[id] = check.checked;
-                syncModalSelectAll("tax");
+                modalTaxSelection = {};
+                if (id && check.checked) {
+                    modalTaxSelection[id] = true;
+                }
                 updatePanelCount(
                     "category-tax-tax-count",
-                    countSelected(modalTaxSelection),
+                    getModalTaxIds().length ? 1 : 0,
                     taxes.length
                 );
             });

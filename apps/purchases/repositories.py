@@ -42,7 +42,7 @@ class PurchaseRepository(BaseRepository):
             .select_related("owner", "payment_type", "customer", "invoice_setting")
             .prefetch_related(
                 "items__product",
-                "items__batch_consumptions__inventory_batch",
+                "items__batch_consumptions__inventory_batch__purchase_invoice_item",
                 Prefetch(
                     "payments",
                     queryset=PurchasePayment.objects.filter(is_deleted=False).select_related(

@@ -282,7 +282,7 @@ var InventoryProducts = (function () {
         var meta = { labels: [], combinedRate: 0, taxIds: [] };
         if (!category) return meta;
 
-        var taxIds = category.sale_tax_ids || [];
+        var taxIds = (category.sale_tax_ids || []).slice(0, 1);
         meta.taxIds = taxIds.slice();
 
         if (taxIds.length && taxes.length) {
@@ -298,10 +298,9 @@ var InventoryProducts = (function () {
         }
 
         if (!meta.labels.length && category.sale_tax_labels && category.sale_tax_labels.length) {
-            category.sale_tax_labels.forEach(function (item) {
-                meta.labels.push(item.key + " (" + item.value + "%)");
-                meta.combinedRate += parseFloat(item.value) || 0;
-            });
+            var labelItem = category.sale_tax_labels[0];
+            meta.labels.push(labelItem.key + " (" + labelItem.value + "%)");
+            meta.combinedRate += parseFloat(labelItem.value) || 0;
         }
 
         return meta;
