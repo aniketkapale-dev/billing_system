@@ -651,7 +651,7 @@ var InventoryPurchases = (function () {
             return product.sale_tax_ids.map(String);
         }
         if (product.category_sale_tax_ids && product.category_sale_tax_ids.length) {
-            return product.category_sale_tax_ids.map(String);
+            return product.category_sale_tax_ids.slice(0, 1).map(String);
         }
         if (product.tax) return [String(product.tax)];
         return [];
