@@ -332,7 +332,9 @@ var InventoryUsers = (function () {
                     InventoryToast.success(body.message || "Business owner created successfully.");
                     InventoryModal.close("user-create-modal");
                     resetCreateForm();
-                    return loadUsers(currentSearch, 1);
+                    var searchEl = document.getElementById("users-search");
+                    if (searchEl) searchEl.value = "";
+                    return loadUsers("", 1);
                 }
                 InventoryToast.error(body.message || "Unable to create business owner.");
             })
@@ -345,6 +347,7 @@ var InventoryUsers = (function () {
     }
 
     function init() {
+        InventoryApi.watch(["/api/users"], function () { return loadUsers(currentSearch, currentPage); });
         var tbody = document.getElementById("users-table-body");
         var searchEl = document.getElementById("users-search");
         var createOpenBtn = document.getElementById("user-create-open-btn");
