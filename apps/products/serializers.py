@@ -19,12 +19,13 @@ class ProductSerializer(BaseModelSerializer):
     tax_key = serializers.CharField(source="tax.key", read_only=True)
     tax_value = serializers.DecimalField(source="tax.value", max_digits=6, decimal_places=2, read_only=True)
     quantity = serializers.SerializerMethodField()
-    opening_quantity = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
-    opening_added_at = serializers.DateTimeField(read_only=True)
-    sold_quantity = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
+    opening_quantity = serializers.SerializerMethodField()
+    opening_added_at = serializers.SerializerMethodField()
+    sold_quantity = serializers.SerializerMethodField()
     has_sales = serializers.SerializerMethodField()
     max_batch_mrp = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
     category_sale_tax_ids = serializers.SerializerMethodField()
+    current_gst_rate = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
@@ -37,7 +38,9 @@ class ProductSerializer(BaseModelSerializer):
             "category",
             "category_name",
             "category_sale_tax_ids",
+            "current_gst_rate",
             "sale_tax_ids",
+            "gst_rate",
             "brand",
             "brand_name",
             "manufacturer",
@@ -76,6 +79,20 @@ class ProductSerializer(BaseModelSerializer):
             return stocks[0].quantity
         return 0
 
+    def get_opening_quantity(self, obj):
+        return getattr(obj, "opening_quantity", None)
+
+    def get_opening_added_at(self, obj):
+        return getattr(obj, "opening_added_at", None)
+
+    def get_sold_quantity(self, obj):
+        return getattr(obj, "sold_quantity", None)
+
+    def get_current_gst_rate(self, obj):
+        from apps.settings.tax_snapshot import gst_rate_for_tax_ids
+
+        return str(gst_rate_for_tax_ids(self.get_category_sale_tax_ids(obj)))
+
     def get_category_sale_tax_ids(self, obj):
         category = getattr(obj, "category", None)
         if not category:
@@ -83,6 +100,8 @@ class ProductSerializer(BaseModelSerializer):
         return list(category.sale_tax_ids or [])
 
     def get_has_sales(self, obj):
+        if getattr(obj, "sales_exist", None):
+            return True
         sold = getattr(obj, "sold_quantity", None)
         if sold is not None:
             return Decimal(str(sold)) > 0

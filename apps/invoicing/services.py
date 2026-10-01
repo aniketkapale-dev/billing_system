@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 
 from django.db import transaction
 from django.db.models import Sum
@@ -18,6 +18,14 @@ class PurchaseInvoiceService(BaseService):
         super().__init__(repository=PurchaseInvoiceRepository())
         self.batch_service = BatchInventoryService()
         self.inventory_service = InventoryStockService()
+
+    @staticmethod
+    def _gst_rate_for_product(product):
+        from apps.settings.tax_snapshot import gst_rate_for_tax_ids
+
+        category = getattr(product, "category", None)
+        tax_ids = list(getattr(category, "sale_tax_ids", None) or [])
+        return gst_rate_for_tax_ids(tax_ids)
 
     def _resolve_vendor(self, business_id, vendor_id):
         if not vendor_id:
@@ -39,7 +47,6 @@ class PurchaseInvoiceService(BaseService):
         quantity = Decimal(str(item.get("quantity", 0)))
         purchase_price = Decimal(str(item.get("purchase_price", 0)))
         discount = Decimal(str(item.get("discount", 0)))
-        tax = Decimal(str(item.get("tax", 0)))
 
         if quantity <= 0:
             raise ValidationException("Item quantity must be greater than zero.")
@@ -47,7 +54,7 @@ class PurchaseInvoiceService(BaseService):
             raise ValidationException("Purchase price cannot be negative.")
 
         try:
-            product = Product.objects.get(
+            product = Product.objects.select_related("category").get(
                 pk=product_id,
                 business_id=business_id,
                 is_deleted=False,
@@ -67,6 +74,10 @@ class PurchaseInvoiceService(BaseService):
         vendor = self._resolve_vendor(business_id, item.get("vendor_id"))
 
         line_total = (quantity * purchase_price) - discount
+        gst_rate = self._gst_rate_for_product(product)
+        tax = (line_total - line_total / (1 + gst_rate / 100)).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP,
+        )
         return {
             "product": product,
             "quantity": quantity,
@@ -75,6 +86,7 @@ class PurchaseInvoiceService(BaseService):
             "mrp": batch_mrp,
             "discount": discount,
             "tax": tax,
+            "gst_rate": gst_rate,
             "batch_number": item.get("batch_number", "") or "",
             "vendor": vendor,
             "expiry_date": item.get("expiry_date"),
@@ -91,6 +103,7 @@ class PurchaseInvoiceService(BaseService):
                 selling_price=item["selling_price"],
                 discount=item["discount"],
                 tax=item["tax"],
+                gst_rate=item["gst_rate"],
                 batch_number=item["batch_number"],
                 vendor=item["vendor"],
                 expiry_date=item["expiry_date"],

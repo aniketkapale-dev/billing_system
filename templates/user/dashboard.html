@@ -63,6 +63,7 @@
                     </tbody>
                 </table>
             </div>
+            <div id="dashboard-pending-payments-pagination" class="inv-pagination"></div>
             <div id="dashboard-pending-payments-total" class="inv-dashboard-pending-total" hidden></div>
         </div>
     </div>
@@ -71,7 +72,7 @@
 
 {% block page_scripts %}
 {% load static %}
-<script src="{% static 'js/inventory/dashboard.js' %}?v=20260317-view-all-unfiltered"></script>
+<script src="{% static 'js/inventory/dashboard.js' %}?v=20260330-pending-page"></script>
 <script>
 InventoryDashboard.init();
 </script>

@@ -1,0 +1,78 @@
+    <div id="category-tax-apply-modal" class="inv-modal inv-hidden" aria-hidden="true">
+        <div class="inv-modal-backdrop" data-modal-close></div>
+        <div class="inv-modal-dialog inv-modal-dialog--category-tax" role="dialog" aria-modal="true" aria-labelledby="category-tax-apply-modal-title">
+            <div class="inv-modal-header">
+                <h3 id="category-tax-apply-modal-title">Apply Tax to Categories</h3>
+                <button type="button" class="inv-modal-close" data-modal-close aria-label="Close">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="inv-modal-body inv-category-tax-modal-body">
+                <p class="inv-category-tax-modal-intro">Select one or more categories and one tax per category, then click Apply Tax.</p>
+                <div class="inv-category-tax-modal-grid">
+                    <section class="inv-category-tax-panel">
+                        <header class="inv-category-tax-panel-header">
+                            <div class="inv-category-tax-panel-title">
+                                <span class="material-symbols-outlined" aria-hidden="true">category</span>
+                                <h4>Categories</h4>
+                                <span id="category-tax-category-count" class="inv-category-tax-count"></span>
+                            </div>
+                            <button id="category-tax-add-category-btn" type="button" class="inv-category-tax-add-btn">
+                                <span class="material-symbols-outlined" aria-hidden="true">add</span>
+                                Add
+                            </button>
+                        </header>
+                        <div id="category-tax-new-panel" class="inv-category-tax-inline-form inv-hidden">
+                            <input id="category-tax-new-name" class="inv-mgmt-input" type="text" placeholder="Category name"/>
+                            <input id="category-tax-new-desc" class="inv-mgmt-input" type="text" placeholder="Description (optional)"/>
+                            <div class="inv-category-tax-inline-form-actions">
+                                <button id="category-tax-save-category-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary inv-mgmt-btn--sm">Save</button>
+                                <button id="category-tax-cancel-category-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--sm">Cancel</button>
+                            </div>
+                        </div>
+                        <div class="inv-category-tax-toolbar">
+                            <input id="category-tax-modal-search" class="inv-mgmt-input" type="search" placeholder="Search categories..."/>
+                            <label class="inv-category-tax-select-all">
+                                <input type="checkbox" id="category-tax-modal-select-all-categories"/>
+                                Select all
+                            </label>
+                        </div>
+                        <div id="category-tax-modal-categories" class="inv-category-tax-check-list">
+                            <p class="inv-mgmt-empty">Loading categories...</p>
+                        </div>
+                    </section>
+                    <section class="inv-category-tax-panel">
+                        <header class="inv-category-tax-panel-header">
+                            <div class="inv-category-tax-panel-title">
+                                <span class="material-symbols-outlined" aria-hidden="true">percent</span>
+                                <h4>Taxes</h4>
+                                <span id="category-tax-tax-count" class="inv-category-tax-count"></span>
+                            </div>
+                            <button id="category-tax-add-tax-btn" type="button" class="inv-category-tax-add-btn">
+                                <span class="material-symbols-outlined" aria-hidden="true">add</span>
+                                Add
+                            </button>
+                        </header>
+                        <div id="category-tax-new-tax-panel" class="inv-category-tax-inline-form inv-category-tax-inline-form--tax inv-hidden">
+                            <input id="category-tax-new-key" class="inv-mgmt-input" type="text" placeholder="Tax key (e.g. gst12%)"/>
+                            <input id="category-tax-new-value" class="inv-mgmt-input" type="number" min="0" max="100" step="0.01" placeholder="Value %"/>
+                            <div class="inv-category-tax-inline-form-actions">
+                                <button id="category-tax-save-tax-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary inv-mgmt-btn--sm">Save</button>
+                                <button id="category-tax-cancel-tax-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--sm">Cancel</button>
+                            </div>
+                        </div>
+                        <div class="inv-category-tax-toolbar">
+                            <input id="category-tax-modal-tax-search" class="inv-mgmt-input" type="search" placeholder="Search taxes..."/>
+                        </div>
+                        <div id="category-tax-modal-taxes" class="inv-category-tax-check-list">
+                            <p class="inv-mgmt-empty">Loading taxes...</p>
+                        </div>
+                    </section>
+                </div>
+            </div>
+            <div class="inv-modal-footer">
+                <button type="button" class="inv-mgmt-btn" data-modal-close>Cancel</button>
+                <button id="category-tax-modal-apply-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Apply Tax</button>
+            </div>
+        </div>
+    </div>

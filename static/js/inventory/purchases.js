@@ -208,6 +208,39 @@ var InventoryPurchases = (function () {
             });
     }
 
+    function sendSaleInvoicePdf(id) {
+        InventoryLoader.show();
+        Promise.all([fetchPurchase(id), loadTaxes()])
+            .then(function (results) {
+                var sale = results[0];
+                var taxList = taxes || [];
+                if (!sale) throw new Error("Unable to load this sale.");
+                sale = mergeSalePrintMeta(sale);
+                return InventoryDocumentExport.generateSaleInvoicePdfBlob(sale, taxList).then(function (blob) {
+                    var form = new FormData();
+                    var name = (sale.reference_no || ("sale-" + sale.id)).replace(/[^\w.-]+/g, "_") + ".pdf";
+                    form.append("file", blob, name);
+                    return request("/" + sale.id + "/invoice-pdf/", {
+                        method: "POST",
+                        body: form
+                    });
+                });
+            })
+            .then(function (body) {
+                if (!(body && body.isSuccess && body.data && body.data.url)) {
+                    throw new Error(body && body.message ? body.message : "Unable to save the invoice PDF.");
+                }
+                console.log("Sale invoice PDF:", body.data.url);
+                InventoryToast.success("Invoice PDF saved. Link printed in the browser console.");
+            })
+            .catch(function (err) {
+                InventoryToast.error(err && err.message ? err.message : "Unable to create the invoice PDF.");
+            })
+            .finally(function () {
+                InventoryLoader.hide();
+            });
+    }
+
     function exportSalesPrint(ids) {
         InventoryLoader.show();
         Promise.all([fetchSalesDetails(ids), loadTaxes()])
@@ -647,13 +680,9 @@ var InventoryPurchases = (function () {
 
     function getProductDefaultSaleTaxIds(product) {
         if (!product) return [];
-        if (product.sale_tax_ids && product.sale_tax_ids.length) {
-            return product.sale_tax_ids.map(String);
+        if (Array.isArray(product.category_sale_tax_ids)) {
+            return product.category_sale_tax_ids.slice(0, 1).map(String);
         }
-        if (product.category_sale_tax_ids && product.category_sale_tax_ids.length) {
-            return product.category_sale_tax_ids.map(String);
-        }
-        if (product.tax) return [String(product.tax)];
         return [];
     }
 
@@ -679,10 +708,6 @@ var InventoryPurchases = (function () {
         );
     }
 
-    function productHasCategoryTax(product) {
-        return !!(product && product.category_sale_tax_ids && product.category_sale_tax_ids.length);
-    }
-
     function getRowUnitTaxAmount(row) {
         var rate = getRowTaxRate(row);
         if (rate <= 0) return 0;
@@ -695,7 +720,7 @@ var InventoryPurchases = (function () {
 
         var select = row.querySelector(".inv-item-product");
         var product = select && select.value ? getProduct(select.value) : null;
-        if (!product || !productHasCategoryTax(product) || getRowTaxRate(row) <= 0 || qty <= 0) {
+        if (!product || getRowTaxRate(row) <= 0 || qty <= 0) {
             taxAmountEl.value = "";
             return;
         }
@@ -734,6 +759,7 @@ var InventoryPurchases = (function () {
     }
 
     function getRowTaxRate(row) {
+        if (row.dataset.gstRate != null) return Number(row.dataset.gstRate);
         var root = row.querySelector(".inv-item-sale-gst");
         if (!root || !window.InventoryTaxSelect) return 0;
         return getCombinedTaxRate(InventoryTaxSelect.getSelected(root));
@@ -753,10 +779,14 @@ var InventoryPurchases = (function () {
     function refreshAllRowTaxSelects() {
         InventoryTaxSelect.refreshAll("#purchase-items-container .inv-item-sale-gst", taxes);
         syncRowTaxesFromProducts();
+        document.querySelectorAll("#purchase-items-container .inv-mgmt-item-row").forEach(function (row) {
+            updateRowPricing(row);
+        });
     }
 
     function syncRowTaxesFromProducts() {
         document.querySelectorAll("#purchase-items-container .inv-mgmt-item-row").forEach(function (row) {
+            if (row.dataset.saleLineId) return;
             var select = row.querySelector(".inv-item-product");
             if (!select || !select.value) return;
             var product = getProduct(select.value);
@@ -945,6 +975,15 @@ var InventoryPurchases = (function () {
 
     function updateRowPricing(row, skipTotals) {
         if (!row) return;
+        var taxRoot = row.querySelector(".inv-item-sale-gst");
+        if (taxRoot) {
+            var trigger = taxRoot.querySelector(".inv-multi-select-trigger");
+            if (trigger) trigger.disabled = row.dataset.gstRate != null;
+            if (row.dataset.gstRate != null) {
+                var label = taxRoot.querySelector(".inv-multi-select-label");
+                if (label) label.textContent = "GST (" + row.dataset.gstRate + "%)";
+            }
+        }
         var totalEl = row.querySelector(".inv-item-total");
 
         var qty = Number(row.querySelector(".inv-item-qty").value || 0);
@@ -1253,6 +1292,11 @@ var InventoryPurchases = (function () {
 
     function applyProductToRow(row, product, options) {
         options = options || {};
+        if (!options.preserveSalePricing) {
+            delete row.dataset.gstRate;
+            delete row.dataset.saleLineId;
+            delete row.dataset.savedTaxIds;
+        }
         var saleActualInput = row.querySelector(".inv-item-sale-actual");
         if (!product) {
             updateRowQtyLimits(row, null);
@@ -1286,6 +1330,9 @@ var InventoryPurchases = (function () {
         data = data || {};
         var row = document.createElement("div");
         row.className = "inv-mgmt-item-row inv-mgmt-item-row--sale";
+        if (data.id) row.dataset.saleLineId = data.id;
+        if (data.gst_rate != null) row.dataset.gstRate = data.gst_rate;
+        if (data.id) row.dataset.savedTaxIds = JSON.stringify(data.sale_tax_ids || []);
         row.innerHTML =
             '<div class="inv-mgmt-field"><label>Available Product</label><select class="inv-mgmt-select inv-item-product" required>' + productOptions(data.product_id, row) + "</select></div>" +
             '<div class="inv-mgmt-field"><label>MRP Price</label><input class="inv-mgmt-input inv-item-sale-actual" type="number" min="0" step="0.01" placeholder="0.00" value="' + (data.sale_actual_price != null && data.sale_actual_price !== "" ? data.sale_actual_price : "") + '" required/></div>' +
@@ -1557,11 +1604,10 @@ var InventoryPurchases = (function () {
             discountValue = roundMoney(Number(line.discount_amount) / qty);
         }
 
-        if (!saleTaxIds.length && Number(line.tax_amount || 0) > 0 && product) {
-            saleTaxIds = getProductDefaultSaleTaxIds(product);
-        }
-
         return {
+            id: line.id,
+            gst_rate: line.gst_rate != null ? line.gst_rate : (Number(line.line_total) > Number(line.tax_amount)
+                ? roundMoney(Number(line.tax_amount || 0) * 100 / (Number(line.line_total) - Number(line.tax_amount || 0))) : 0),
             product_id: productId,
             quantity: line.quantity,
             sale_actual_price: listPrice,
@@ -1806,13 +1852,17 @@ var InventoryPurchases = (function () {
             '<button type="button" class="inv-row-action-btn inv-row-action-btn--print inv-purchase-print" data-id="' + purchase.id + '" title="Print" aria-label="Print sale">' +
             '<span class="material-symbols-outlined">print</span></button>';
 
+        var sendPdfBtn =
+            '<button type="button" class="inv-row-action-btn inv-row-action-btn--print inv-purchase-send-pdf" data-id="' + purchase.id + '" title="Send sale invoice PDF" aria-label="Send sale invoice PDF">' +
+            '<span class="material-symbols-outlined">picture_as_pdf</span></button>';
+
         return (
             '<div class="inv-row-actions inv-row-actions--stacked">' +
                 '<div class="inv-row-actions-row">' +
                     viewBtn + editBtn + paidBtn +
                 "</div>" +
                 '<div class="inv-row-actions-row">' +
-                    cancelBtn + historyBtn + printBtn +
+                    cancelBtn + historyBtn + printBtn + sendPdfBtn +
                 "</div>" +
             "</div>"
         );
@@ -2275,13 +2325,6 @@ var InventoryPurchases = (function () {
     function formatPaymentScheduleViewField(purchase) {
         purchase = mergeSalePrintMeta(purchase || {});
 
-        if (purchase.is_draft) {
-            return {
-                label: "Due Date",
-                value: displayValue(formatViewDateValue(purchase.due_date))
-            };
-        }
-
         if (purchase.is_paid) {
             return {
                 label: "Payment Date",
@@ -2290,7 +2333,7 @@ var InventoryPurchases = (function () {
         }
 
         return {
-            label: "Due Date",
+            label: "Payment Due Date",
             value: displayValue(formatViewDateValue(purchase.due_date))
         };
     }
@@ -2316,18 +2359,19 @@ var InventoryPurchases = (function () {
 
         var rows = [
             { label: "Sale Date", value: displayValue(InventoryApi.formatDisplayDate(purchase.purchase_date, "—")) },
-            { label: "Customer", value: formatCustomerDisplay(purchase) }
+            { label: "Invoice No.", value: displayValue(purchase.reference_no || "—") },
+            { label: "Customer", value: formatCustomerDisplay(purchase) },
+            formatPaymentScheduleViewField(purchase)
         ];
-
-        if (purchase.reference_no) {
-            rows.push({ label: "Invoice No.", value: displayValue(purchase.reference_no) });
-        }
-
-        rows.push(formatPaymentScheduleViewField(purchase));
 
         var lines = purchase.items || [];
         var isDraft = !!purchase.is_draft;
         var totalTax = isDraft ? null : sumSaleLineField(lines, "tax_amount");
+        var soldTotalWithTax = isDraft ? null : roundMoney(Number(purchase.total_amount || 0));
+        var soldTotalWithoutTax = null;
+        if (!isDraft && soldTotalWithTax != null) {
+            soldTotalWithoutTax = roundMoney(Math.max(0, soldTotalWithTax - Number(totalTax || 0)));
+        }
         var totalProfit = null;
         if (!isDraft) {
             if (purchase.total_profit != null && purchase.total_profit !== "") {
@@ -2344,10 +2388,19 @@ var InventoryPurchases = (function () {
             { label: "Payment Status", value: formatPaymentStatusLabel(purchase) },
             { label: "Payment Type", value: displayValue(purchase.payment_type_name) },
             { label: "Bill Amount", value: InventoryApi.formatMoney(purchase.total_amount), colStart: 1, num: true, emphasis: true },
-            { label: "Total Tax", value: isDraft ? "—" : InventoryApi.formatMoney(totalTax), num: true },
             { label: "Total Paid", value: InventoryApi.formatMoney(purchase.total_paid), num: true },
             { label: "Pending Bill", value: formatPendingBillValue(purchase), num: true },
-            { label: "Total Cost", value: isDraft ? "—" : InventoryApi.formatMoney(purchase.total_cost), num: true },
+            {
+                label: "Total Cost without Tax",
+                value: isDraft ? "—" : InventoryApi.formatMoney(soldTotalWithoutTax),
+                num: true
+            },
+            { label: "Total Tax", value: isDraft ? "—" : InventoryApi.formatMoney(totalTax), num: true },
+            {
+                label: "Total Cost with Tax",
+                value: isDraft ? "—" : InventoryApi.formatMoney(soldTotalWithTax),
+                num: true
+            },
             {
                 label: "Total Profit / Loss",
                 value: (function () {
@@ -2778,6 +2831,7 @@ var InventoryPurchases = (function () {
             }
 
             items.push({
+                id: row.dataset.saleLineId ? Number(row.dataset.saleLineId) : null,
                 product_id: Number(productId),
                 quantity: quantity,
                 unit_price: unitPrice,
@@ -2786,7 +2840,7 @@ var InventoryPurchases = (function () {
                 discount_value: getRowDiscountValue(row),
                 distributor_discount_type: getRowDiscountType(row, ".inv-item-distributor-discount-type-toggle"),
                 distributor_discount_value: getRowDiscountValue(row, ".inv-item-distributor-discount-value"),
-                sale_tax_ids: getRowTaxRate(row) > 0
+                sale_tax_ids: row.dataset.savedTaxIds ? JSON.parse(row.dataset.savedTaxIds) : getRowTaxRate(row) > 0
                     ? InventoryTaxSelect.getSelected(row.querySelector(".inv-item-sale-gst")).map(function (id) { return Number(id); })
                     : [],
                 discount_amount: getRowDiscountAmount(row, quantity),
@@ -3482,6 +3536,12 @@ var InventoryPurchases = (function () {
                 var printBtn = e.target.closest(".inv-purchase-print");
                 if (printBtn) {
                     exportSalesPrint([printBtn.getAttribute("data-id")]);
+                    return;
+                }
+
+                var sendPdfBtn = e.target.closest(".inv-purchase-send-pdf");
+                if (sendPdfBtn) {
+                    sendSaleInvoicePdf(sendPdfBtn.getAttribute("data-id"));
                     return;
                 }
 
