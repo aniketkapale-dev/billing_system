@@ -769,6 +769,7 @@ var InventoryCustomers = (function () {
     }
 
     function init() {
+        InventoryApi.watch(["/api/customers"], function () { if (document.getElementById("customers-table-body")) return loadCustomers(currentPage); });
         if (init._wired) return;
         init._wired = true;
 

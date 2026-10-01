@@ -535,6 +535,7 @@ var InventorySettingsBarcode = (function () {
     }
 
     function init() {
+        InventoryApi.watch(["/api/settings/barcodes"], function () { if (document.getElementById(PAGINATION_ID)) return loadBarcodes(currentPage); });
         if (init._wired) return;
         if (!isModalMode() && !isListPage()) return;
         init._wired = true;

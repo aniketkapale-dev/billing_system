@@ -3,6 +3,7 @@ from django.urls import path
 from apps.businesses.views import BusinessViewSet
 
 urlpatterns = [
+    path("revision/", BusinessViewSet.as_view({"get": "revision"}), name="business-data-revision"),
     path("", BusinessViewSet.as_view({"get": "list", "post": "create"}), name="business-list"),
     path(
         "<int:pk>/",

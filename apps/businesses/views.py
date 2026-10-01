@@ -55,6 +55,16 @@ class BusinessViewSet(BaseViewSet):
         data = self.serializer_class(instance, context={"request": request}).data
         return ApiResponse.success(data=data, message="Record fetched")
 
+    def revision(self, request):
+        from core.base_response import ApiResponse
+        from core.business_access import get_active_business
+
+        business = get_active_business(request)
+        return ApiResponse.success(
+            data={"revision": business.data_revision},
+            message="Business data revision",
+        )
+
     def update(self, request, pk=None):
         self._get_owned_instance(pk)
         return super().update(request, pk)

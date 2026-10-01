@@ -610,6 +610,7 @@ var InventorySettingsCategoryTax = (function () {
     }
 
     function init() {
+        InventoryApi.watch(["/api/catalog"], function () { if (document.getElementById(PAGINATION_ID)) return loadCategories(currentPage, true); });
         var openBtn = document.getElementById("settings-category-tax-apply-open-btn");
         var applyBtn = document.getElementById("category-tax-modal-apply-btn");
         var selectAllCategories = document.getElementById("category-tax-modal-select-all-categories");

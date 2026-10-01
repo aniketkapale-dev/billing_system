@@ -398,6 +398,7 @@ var InventoryPurchases = (function () {
     function renderInvoiceSettingSelect(selectedId) {
         var select = document.getElementById("purchase-invoice-setting");
         if (!select) return;
+        if (selectedId === undefined || selectedId === null) selectedId = select.value;
 
         var html;
         if (!invoiceSettings.length) {
@@ -445,6 +446,7 @@ var InventoryPurchases = (function () {
     function renderCustomerSelect(selectedId) {
         var select = document.getElementById("purchase-customer");
         if (!select) return;
+        if (selectedId === undefined || selectedId === null) selectedId = select.value;
 
         var applyOptions = function (el) {
             var html;
@@ -514,6 +516,7 @@ var InventoryPurchases = (function () {
 
     function fillPaymentTypeSelect(select, selectedId) {
         if (!select) return;
+        if (selectedId === undefined || selectedId === null) selectedId = select.value;
         var html = '<option value="">Select payment type (optional)</option>';
         paymentTypes.forEach(function (item) {
             var selected = String(item.id) === String(selectedId) ? " selected" : "";
@@ -1214,13 +1217,19 @@ var InventoryPurchases = (function () {
         return options;
     }
 
-    function refreshAllProductSelects() {
+    function refreshAllProductSelects(preserveCurrentValues) {
         document.querySelectorAll("#purchase-items-container .inv-mgmt-item-row").forEach(function (row) {
             var select = row.querySelector(".inv-item-product");
             if (!select) return;
             var selectedId = select.value;
+            var selectedOption = select.selectedOptions.length ? select.selectedOptions[0].cloneNode(true) : null;
             select.innerHTML = productOptions(selectedId, row);
-            if (selectedId && getRemainingQty(selectedId, row) <= 0) {
+            if (selectedId && !Array.prototype.some.call(select.options, function (option) {
+                return option.value === selectedId;
+            }) && preserveCurrentValues && selectedOption) {
+                select.appendChild(selectedOption);
+            }
+            if (selectedId && getRemainingQty(selectedId, row) <= 0 && !preserveCurrentValues) {
                 select.value = "";
                 applyProductToRow(row, null);
                 return;
@@ -1228,7 +1237,7 @@ var InventoryPurchases = (function () {
             if (selectedId) {
                 select.value = String(selectedId);
                 var product = getProduct(select.value);
-                updateRowQtyLimits(row, product);
+                if (!preserveCurrentValues) updateRowQtyLimits(row, product);
                 if (product) {
                     var taxRoot = row.querySelector(".inv-item-sale-gst");
                     if (taxRoot && window.InventoryTaxSelect && !InventoryTaxSelect.getSelected(taxRoot).length) {
@@ -3273,6 +3282,16 @@ var InventoryPurchases = (function () {
     }
 
     function init() {
+        InventoryApi.watch(["/api/catalog", "/api/settings", "/api/products", "/api/customers", "/api/invoicing", "/api/purchases"], function () {
+            return Promise.all([loadTaxes(), loadProducts({ includeProductIds: getIncludedEditProductIds() }), loadCustomers(), loadPaymentTypes(), loadInvoiceSettings(), loadSaleDueSetting()]).then(function () {
+                refreshAllProductSelects(true);
+                document.querySelectorAll("#purchase-items-container .inv-mgmt-item-row").forEach(function (row) {
+                    if (row.dataset.saleLineId) return;
+                    updateRowPricing(row);
+                });
+                return loadPurchases(currentPage);
+            });
+        });
         if (init._wired) return;
         init._wired = true;
 

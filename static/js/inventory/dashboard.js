@@ -738,6 +738,9 @@ var InventoryDashboard = (function () {
     }
 
     function init() {
+        if (typeof InventoryApi.watch === "function") {
+            InventoryApi.watch(["/api/"], loadDashboard);
+        }
         initChartFilters();
         initPendingPaymentsFilters();
         initStatKpiFilters();

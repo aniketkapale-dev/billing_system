@@ -911,6 +911,8 @@ var InventoryProducts = (function () {
     function fillSelect(selectOrId, items, placeholder, labelFn) {
         var select = typeof selectOrId === "string" ? document.getElementById(selectOrId) : selectOrId;
         if (!select) return;
+        var selectedValue = select.value;
+        var selectedOption = select.selectedOptions.length ? select.selectedOptions[0].cloneNode(true) : null;
         select.innerHTML = '<option value="">' + placeholder + "</option>";
         items.forEach(function (item) {
             var option = document.createElement("option");
@@ -918,6 +920,12 @@ var InventoryProducts = (function () {
             option.textContent = labelFn(item);
             select.appendChild(option);
         });
+        if (selectedValue && !Array.prototype.some.call(select.options, function (option) {
+            return option.value === selectedValue;
+        }) && selectedOption) {
+            select.appendChild(selectedOption);
+        }
+        select.value = selectedValue;
         if (window.InventorySearchableSelect) {
             InventorySearchableSelect.refresh(select);
         }
@@ -1842,6 +1850,12 @@ var InventoryProducts = (function () {
     }
 
     function init() {
+        InventoryApi.watch(["/api/catalog", "/api/settings/taxes", "/api/products", "/api/invoicing", "/api/purchases"], function () {
+            return loadCatalogOptions().then(function () {
+                updateAllRowPricing();
+                if (document.getElementById("products-table-body")) return loadProducts(currentSearch, currentPage);
+            });
+        });
         var searchEl = document.getElementById("products-search");
         var saveBtn = document.getElementById("product-save-btn");
         var openBtn = document.getElementById("product-open-modal-btn");

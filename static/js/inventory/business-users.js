@@ -233,7 +233,7 @@ var InventoryBusinessUsers = (function () {
             e.stopPropagation();
             setPasswordVisible(input.type === "password");
             input.focus();
-        });
+            });
     }
 
     function resetForm() {
@@ -446,6 +446,7 @@ var InventoryBusinessUsers = (function () {
     }
 
     function init() {
+        InventoryApi.watch(["/api/business-users"], function () { if (true) return loadMembers(usersPage); });
         if (init._wired) return;
         init._wired = true;
         wireEvents();

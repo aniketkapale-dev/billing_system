@@ -685,6 +685,7 @@ var InventoryCatalog = (function () {
     }
 
     function init() {
+        InventoryApi.watch(["/api/catalog"], function () { if (true) return loadList(currentPage); });
         var root = document.getElementById("catalog-page");
         if (!root) return;
 

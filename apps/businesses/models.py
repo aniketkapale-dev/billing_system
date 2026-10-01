@@ -19,6 +19,7 @@ class Business(BaseEntity):
     state_code = models.CharField(max_length=2, blank=True, default="")
     pin_code = models.CharField(max_length=10, blank=True, default="")
     logo = models.ImageField(upload_to="business_logos/", blank=True, null=True)
+    data_revision = models.PositiveBigIntegerField(default=0)
 
     class Meta:
         db_table = "businesses"

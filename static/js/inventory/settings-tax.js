@@ -448,6 +448,7 @@ var InventorySettingsTax = (function () {
     }
 
     function init() {
+        InventoryApi.watch(["/api/settings/taxes"], function () { if (document.getElementById("settings-tax-table-body")) return loadTaxes(currentPage); });
         if (init._wired) return;
         if (!isModalMode() && !isListPage()) return;
 

@@ -442,32 +442,32 @@
 
 {% block page_scripts %}
 {% if settings_section == 'tax' %}
-<script src="{% static 'js/inventory/settings-tax.js' %}?v=20260330-tax-filters"></script>
+<script src="{% static 'js/inventory/settings-tax.js' %}?v=20261001-cross-tab-refresh"></script>
 <script>
 InventoryPagePanel.init();
 InventorySettingsTax.init();
 </script>
 {% elif settings_section == 'category-tax' %}
 <script src="{% static 'js/components/modal.js' %}"></script>
-<script src="{% static 'js/inventory/settings-category-tax.js' %}?v=20260330-category-tax-filters"></script>
+<script src="{% static 'js/inventory/settings-category-tax.js' %}?v=20261001-cross-tab-refresh"></script>
 <script>
 InventorySettingsCategoryTax.init();
 </script>
 {% elif settings_section == 'invoice' %}
-<script src="{% static 'js/inventory/settings-invoice.js' %}?v=20260329-settings-card-rows"></script>
+<script src="{% static 'js/inventory/settings-invoice.js' %}?v=20261001-cross-tab-refresh"></script>
 <script>
 InventoryPagePanel.init();
 InventorySettingsInvoice.init();
 </script>
 {% elif settings_section == 'barcode' %}
 <script src="{% static 'js/components/barcode-pdf.js' %}?v=20260310-barcode-size"></script>
-<script src="{% static 'js/inventory/settings-barcode.js' %}?v=20260329-settings-card-rows"></script>
+<script src="{% static 'js/inventory/settings-barcode.js' %}?v=20261001-cross-tab-refresh"></script>
 <script>
 InventoryPagePanel.init();
 InventorySettingsBarcode.init();
 </script>
 {% elif settings_section == 'whatsapp' %}
-<script src="{% static 'js/inventory/settings-whatsapp.js' %}?v=20260318-whatsapp-per-invoice"></script>
+<script src="{% static 'js/inventory/settings-whatsapp.js' %}?v=20261001-cross-tab-refresh"></script>
 <script>
 InventoryPagePanel.init();
 InventorySettingsWhatsApp.init();

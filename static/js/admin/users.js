@@ -347,6 +347,7 @@ var InventoryUsers = (function () {
     }
 
     function init() {
+        InventoryApi.watch(["/api/users"], function () { return loadUsers(currentSearch, currentPage); });
         var tbody = document.getElementById("users-table-body");
         var searchEl = document.getElementById("users-search");
         var createOpenBtn = document.getElementById("user-create-open-btn");

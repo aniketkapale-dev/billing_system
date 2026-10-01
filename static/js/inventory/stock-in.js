@@ -654,6 +654,18 @@ var InventoryStockIn = (function () {
         });
     }
 
+    function suggestedPurchasePrice(product) {
+        var rate = Number(product.current_gst_rate || 0);
+        var basePrice = Number(product.actual_price || 0);
+        if (!basePrice && product.purchase_price) {
+            // Recover the original base only when its saved rate is known.
+            basePrice = product.gst_rate != null
+                ? Number(product.purchase_price) / (1 + Number(product.gst_rate) / 100)
+                : Number(product.purchase_price);
+        }
+        return roundMoney(basePrice * (1 + rate / 100));
+    }
+
     function applyProductToRow(row, product, preferredBarcodeId) {
         var priceEl = row.querySelector(".inv-item-price-with-tax");
         if (!product) {
@@ -664,15 +676,7 @@ var InventoryStockIn = (function () {
             return;
         }
         if (priceEl) {
-            var rate = Number(product.current_gst_rate || 0);
-            var basePrice = Number(product.actual_price || 0);
-            if (!basePrice && product.purchase_price) {
-                // Recover the original base only when its saved rate is known.
-                basePrice = product.gst_rate != null
-                    ? Number(product.purchase_price) / (1 + Number(product.gst_rate) / 100)
-                    : Number(product.purchase_price);
-            }
-            var price = roundMoney(basePrice * (1 + rate / 100));
+            var price = suggestedPurchasePrice(product);
             priceEl.value = price != null && Number(price) > 0 ? price : "";
         }
         var selectedBarcodeId = preferredBarcodeId || getRowBarcodeId(row);
@@ -1384,18 +1388,18 @@ var InventoryStockIn = (function () {
                 return InventoryConfirm.delete({
                     title: options.title || "Delete purchase?",
                     message: options.message || "This will remove the purchase invoice and reverse its stock batches if none have been sold."
-                }).then(function (confirmed) {
-                    if (!confirmed) return;
+        }).then(function (confirmed) {
+            if (!confirmed) return;
                     if (btn) InventoryLoader.button(btn, true, "");
                     if (!btn) InventoryLoader.show();
                     return request("/" + id + "/", { method: "DELETE" })
-                        .then(function (body) {
-                            if (body && body.isSuccess) {
+                .then(function (body) {
+                    if (body && body.isSuccess) {
                                 if (typeof options.onSuccess === "function") {
                                     options.onSuccess(body);
                                 } else {
-                                    InventoryToast.success(body.message || "Purchase deleted.");
-                                    loadInvoices(currentPage);
+                        InventoryToast.success(body.message || "Purchase deleted.");
+                        loadInvoices(currentPage);
                                 }
                                 return body;
                             }
@@ -1411,12 +1415,12 @@ var InventoryStockIn = (function () {
                             }
                             InventoryToast.error(errMsg);
                             return null;
-                        })
-                        .catch(function () {
-                            InventoryToast.error("Network error. Please try again.");
+                })
+                .catch(function () {
+                    InventoryToast.error("Network error. Please try again.");
                             return null;
-                        })
-                        .finally(function () {
+                })
+                .finally(function () {
                             if (btn) InventoryLoader.button(btn, false);
                             if (!btn) InventoryLoader.hide();
                         });
@@ -1739,6 +1743,22 @@ var InventoryStockIn = (function () {
     }
 
     function init() {
+        InventoryApi.watch(["/api/catalog", "/api/settings", "/api/products", "/api/invoicing", "/api/purchases"], function () {
+            var previous = products.slice();
+            return Promise.all([loadProducts(), loadVendors(), loadBarcodes()]).then(function () {
+                updateAllProductSelects();
+                document.querySelectorAll("#stockin-items-container .inv-mgmt-item-row").forEach(function (row) {
+                    var product = getProduct(row.querySelector(".inv-item-product").value);
+                    var before = previous.find(function (item) { return product && String(item.id) === String(product.id); });
+                    var input = row.querySelector(".inv-item-price-with-tax");
+                    if (before && product && input && !input.readOnly && !input.disabled && Number(input.value) === suggestedPurchasePrice(before)) {
+                        input.value = suggestedPurchasePrice(product);
+                    }
+                    updateRowTotalPrice(row);
+                });
+                return loadInvoices(currentPage);
+            });
+        });
         if (document.getElementById("product-modal")) {
             InventoryModal.wire("product-modal");
         }
