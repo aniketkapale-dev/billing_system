@@ -303,9 +303,12 @@ var InventoryStockIn = (function () {
         var qty = Number(row.querySelector(".inv-item-qty").value || 0);
         if (isNaN(qty) || qty <= 0) qty = 0;
         var lineTotal = roundMoney(unitPrice * (qty || 1));
+        var product = getProduct(row.querySelector(".inv-item-product").value);
+        var rate = Number(product && product.current_gst_rate || 0);
+        var tax = roundMoney(lineTotal - lineTotal / (1 + rate / 100));
         return {
-            subtotal: lineTotal,
-            tax: 0,
+            subtotal: roundMoney(lineTotal - tax),
+            tax: tax,
             grand: lineTotal
         };
     }
@@ -661,9 +664,15 @@ var InventoryStockIn = (function () {
             return;
         }
         if (priceEl) {
-            var price = product.purchase_price != null && Number(product.purchase_price) > 0
-                ? product.purchase_price
-                : product.actual_price;
+            var rate = Number(product.current_gst_rate || 0);
+            var basePrice = Number(product.actual_price || 0);
+            if (!basePrice && product.purchase_price) {
+                // Recover the original base only when its saved rate is known.
+                basePrice = product.gst_rate != null
+                    ? Number(product.purchase_price) / (1 + Number(product.gst_rate) / 100)
+                    : Number(product.purchase_price);
+            }
+            var price = roundMoney(basePrice * (1 + rate / 100));
             priceEl.value = price != null && Number(price) > 0 ? price : "";
         }
         var selectedBarcodeId = preferredBarcodeId || getRowBarcodeId(row);

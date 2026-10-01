@@ -125,6 +125,7 @@ class ProductService(BaseService):
         data["sku"] = self._resolve_sku(data, business_id)
         self._validate_catalog_refs(data, business_id)
         self._apply_category_sale_tax_ids(data)
+        data["gst_rate"] = self._category_gst_rate(data.get("sale_tax_ids"))
         self._validate(data, business_id=business_id)
 
     def after_create(self, instance):
@@ -311,6 +312,12 @@ class ProductService(BaseService):
             data["sale_tax_ids"] = list(category.sale_tax_ids or [])[:1]
         elif instance is None:
             data["sale_tax_ids"] = []
+
+    @staticmethod
+    def _category_gst_rate(tax_ids):
+        from apps.settings.tax_snapshot import gst_rate_for_tax_ids
+
+        return gst_rate_for_tax_ids(tax_ids)
 
     def _validate_catalog_refs(self, data, business_id, instance=None):
         category = data.get("category")

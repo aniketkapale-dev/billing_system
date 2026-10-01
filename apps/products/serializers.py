@@ -25,6 +25,7 @@ class ProductSerializer(BaseModelSerializer):
     has_sales = serializers.SerializerMethodField()
     max_batch_mrp = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
     category_sale_tax_ids = serializers.SerializerMethodField()
+    current_gst_rate = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
@@ -37,7 +38,9 @@ class ProductSerializer(BaseModelSerializer):
             "category",
             "category_name",
             "category_sale_tax_ids",
+            "current_gst_rate",
             "sale_tax_ids",
+            "gst_rate",
             "brand",
             "brand_name",
             "manufacturer",
@@ -84,6 +87,11 @@ class ProductSerializer(BaseModelSerializer):
 
     def get_sold_quantity(self, obj):
         return getattr(obj, "sold_quantity", None)
+
+    def get_current_gst_rate(self, obj):
+        from apps.settings.tax_snapshot import gst_rate_for_tax_ids
+
+        return str(gst_rate_for_tax_ids(self.get_category_sale_tax_ids(obj)))
 
     def get_category_sale_tax_ids(self, obj):
         category = getattr(obj, "category", None)

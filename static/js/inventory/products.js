@@ -324,10 +324,21 @@ var InventoryProducts = (function () {
         return "—";
     }
 
+    function openMissingCategoryTaxPanel(row) {
+        if (!row) return;
+        var category = getCategoryById(rowFieldValue(row, ".inv-product-field-category"));
+        if (category && !(category.sale_tax_ids || []).length) {
+            InventorySettingsCategoryTax.openApplyModal([category.id], []);
+        }
+    }
+
     function updateRowPricing(row) {
         if (!row) return;
         // Per-product pricing only; opening stock quantity is not used here.
         var meta = getRowTaxMeta(row);
+        var addTaxBtn = row.querySelector(".inv-product-tax-add");
+        var canAddTax = !!rowFieldValue(row, ".inv-product-field-category") && !meta.taxIds.length;
+        if (addTaxBtn) addTaxBtn.classList.toggle("inv-hidden", !canAddTax);
         var taxEl = rowField(row, ".inv-product-field-tax-display");
         var costWithoutRaw = rowFieldValue(row, ".inv-product-field-cost-without-tax").trim();
         var costWithEl = rowField(row, ".inv-product-field-cost-with-tax");
@@ -646,6 +657,7 @@ var InventoryProducts = (function () {
                     var selectedId = response.data.id;
                     return reloadFn(selectedId, row).then(function () {
                         refreshRowSelectDisplays(row);
+                        if (catalog === "category") openMissingCategoryTaxPanel(row);
                     });
                 }
                 var err = response.message || "Unable to save.";
@@ -972,7 +984,10 @@ var InventoryProducts = (function () {
                 if (body && body.isSuccess && body.data) {
                     InventoryToast.success("Category added.");
                     toggleCategoryPanel(false);
-                    return loadCategories(body.data.id, getProductFormRows()[0] || null);
+                    var row = getProductFormRows()[0] || null;
+                    return loadCategories(body.data.id, row).then(function () {
+                        openMissingCategoryTaxPanel(row);
+                    });
                 }
                 var err = body.message || "Unable to add category.";
                 if (body.errors && body.errors.length) err = body.errors.join(" • ");
@@ -1901,11 +1916,17 @@ var InventoryProducts = (function () {
             addMoreBtn.addEventListener("click", addProductFormRow);
         }
 
+        window.addEventListener("inventory:category-tax-applied", function () {
+            Promise.all([loadTaxes(), loadCategories()]).then(updateAllRowPricing);
+        });
+
         var formRowsContainer = getProductFormRowsContainer();
         if (formRowsContainer) {
             formRowsContainer.addEventListener("change", function (e) {
                 if (e.target.matches(".inv-product-field-category")) {
-                    updateRowPricing(e.target.closest(".inv-product-form-row"));
+                    var row = e.target.closest(".inv-product-form-row");
+                    updateRowPricing(row);
+                    openMissingCategoryTaxPanel(row);
                 }
             });
             formRowsContainer.addEventListener("input", function (e) {
@@ -1914,6 +1935,11 @@ var InventoryProducts = (function () {
                 }
             });
             formRowsContainer.addEventListener("click", function (e) {
+                var taxAction = e.target.closest(".inv-product-tax-add");
+                if (taxAction) {
+                    openMissingCategoryTaxPanel(taxAction.closest(".inv-product-form-row"));
+                    return;
+                }
                 var removeBtn = e.target.closest(".inv-product-row-remove");
                 if (removeBtn) {
                     var removeRow = removeBtn.closest(".inv-product-form-row");

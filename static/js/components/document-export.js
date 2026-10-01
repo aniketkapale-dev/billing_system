@@ -561,24 +561,9 @@ var InventoryDocumentExport = (function () {
         };
     }
 
-    function getCombinedTaxRate(taxes, taxIds) {
-        if (window.InventoryTaxSelect && typeof InventoryTaxSelect.getCombinedRate === "function") {
-            return InventoryTaxSelect.getCombinedRate(taxes, taxIds);
-        }
-        var ids = Array.isArray(taxIds) ? taxIds : [];
-        return ids.reduce(function (sum, id) {
-            var tax = (taxes || []).find(function (item) {
-                return String(item.id) === String(id);
-            });
-            return sum + (tax ? Number(tax.value || 0) : 0);
-        }, 0);
-    }
-
     function getLineTaxPercent(line, discounts, taxes) {
-        var taxIds = Array.isArray(line.sale_tax_ids) ? line.sale_tax_ids : [];
-        if (taxIds.length) {
-            var selectedRate = getCombinedTaxRate(taxes, taxIds);
-            if (selectedRate > 0) return selectedRate;
+        if (line.gst_rate != null && line.gst_rate !== "") {
+            return Number(line.gst_rate);
         }
 
         discounts = discounts || getLineDiscountAmounts(line);
@@ -622,9 +607,10 @@ var InventoryDocumentExport = (function () {
         var order = [];
 
         rows.forEach(function (row) {
-            var key = getProductMergeKey(row);
+            var key = getProductMergeKey(row) + ":gst:" + row.tax_percent;
             if (!mergedMap[key]) {
                 mergedMap[key] = {
+                    tax_percent: row.tax_percent,
                     product_id: row.product_id,
                     product_name: row.product_name,
                     product_sku: row.product_sku,
@@ -660,7 +646,7 @@ var InventoryDocumentExport = (function () {
             var distributorPercent = afterSimple > 0
                 ? roundMoney((entry.distributor_discount / afterSimple) * 100)
                 : 0;
-            var taxPercent = entry.amount > 0 ? roundMoney((entry.tax / entry.amount) * 100) : 0;
+            var taxPercent = entry.tax_percent;
 
             var afterDistributorTotal = Math.max(0, afterSimple - entry.distributor_discount);
 

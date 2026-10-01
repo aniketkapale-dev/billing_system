@@ -81,14 +81,17 @@
     </div>
 </div>
 
+{% include "partials/category_tax_apply_modal.html" %}
 {% endblock %}
 
 {% block page_scripts %}
 <script src="{% static 'js/components/modal.js' %}"></script>
 <script src="{% static 'js/components/page-panel.js' %}"></script>
-<script src="{% static 'js/inventory/products.js' %}?v=20260329-hsn-468"></script>
+<script src="{% static 'js/inventory/settings-category-tax.js' %}?v=20261001-shared-modal"></script>
+<script src="{% static 'js/inventory/products.js' %}?v=20261001-category-tax-on-select"></script>
 <script>
 InventoryPagePanel.init();
+InventorySettingsCategoryTax.init();
 InventoryProducts.init();
 </script>
 {% endblock %}

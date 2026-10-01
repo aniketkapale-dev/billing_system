@@ -44,6 +44,7 @@ class PurchaseItemSerializer(BaseModelSerializer):
             "distributor_discount_value",
             "sale_tax_ids",
             "tax_amount",
+            "gst_rate",
             "cost_amount",
             "profit_amount",
             "batch_lines",
@@ -380,6 +381,7 @@ class PurchaseSerializer(BaseModelSerializer):
 
 
 class PurchaseItemWriteSerializer(serializers.Serializer):
+    id = serializers.IntegerField(required=False, allow_null=True)
     product_id = serializers.IntegerField()
     quantity = serializers.DecimalField(max_digits=12, decimal_places=2)
     unit_price = serializers.DecimalField(max_digits=12, decimal_places=2)

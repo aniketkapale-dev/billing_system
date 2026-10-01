@@ -166,6 +166,7 @@ var InventorySettingsCategoryTax = (function () {
     }
 
     function loadCategories(page, silent) {
+        if (!document.getElementById(PAGINATION_ID)) return Promise.resolve();
         currentPage = page || 1;
         if (!silent) InventoryLoader.show();
 
@@ -595,6 +596,7 @@ var InventorySettingsCategoryTax = (function () {
 
         chain
             .then(function () {
+                window.dispatchEvent(new CustomEvent("inventory:category-tax-applied"));
                 InventoryToast.success("Tax applied to selected categories.");
                 InventoryModal.close(MODAL_ID);
                 return loadCategories(currentPage);
@@ -759,5 +761,5 @@ var InventorySettingsCategoryTax = (function () {
         }
     }
 
-    return { init: init };
+    return { init: init, openApplyModal: openApplyModal };
 })();

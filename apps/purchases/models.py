@@ -117,6 +117,7 @@ class PurchaseItem(BaseEntity):
     distributor_discount_value = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0"))
     sale_tax_ids = models.JSONField(default=list, blank=True)
     tax_amount = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
+    gst_rate = models.DecimalField(max_digits=6, decimal_places=2, null=True, default=Decimal("0"))
     cost_amount = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
     profit_amount = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
 
