@@ -561,6 +561,7 @@ var InventoryStock = (function () {
     }
 
     function init() {
+        InventoryApi.watch(["/api/"], function () { if (true) return Promise.all([loadUnits(), loadSummary(currentSearch, currentPage), loadBatches(batchSearch, batchPage)]); });
         getSummaryColumnCtrl();
         getBatchColumnCtrl();
 

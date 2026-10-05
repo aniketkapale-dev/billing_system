@@ -90,14 +90,35 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 
 # ---------------------------------------------------------------------------
-# Database (SQLite)
+# Database (MySQL by default; set DB_ENGINE=sqlite for local SQLite)
 # ---------------------------------------------------------------------------
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+DB_ENGINE = config("DB_ENGINE", default="mysql").strip().lower()
+if DB_ENGINE == "mysql":
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.mysql",
+            "NAME": config("DB_NAME", default="Billing_System_db"),
+            "USER": config("DB_USER", default="root").strip(),
+            "PASSWORD": config("DB_PASSWORD", default=""),
+            "HOST": config("DB_HOST", default="127.0.0.1"),
+            "PORT": config("DB_PORT", default="3306"),
+            "OPTIONS": {
+                "charset": "utf8mb4",
+                "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+            },
+        }
     }
-}
+elif DB_ENGINE == "sqlite":
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / config("SQLITE_DB_NAME", default="db.sqlite3"),
+        }
+    }
+else:
+    from django.core.exceptions import ImproperlyConfigured
+
+    raise ImproperlyConfigured("DB_ENGINE must be 'mysql' or 'sqlite'.")
 
 # ---------------------------------------------------------------------------
 # Password hashing (we use Django's hashers, NOT its auth User model)
@@ -175,6 +196,6 @@ FRONTEND_URL = "http://127.0.0.1:8000"
 # System/admin accounts hidden from the superadmin business-owner user list.
 USER_MANAGEMENT_EXCLUDED_EMAILS = config(
     "USER_MANAGEMENT_EXCLUDED_EMAILS",
-    default="aniket@gmail.com",
+    default="",
     cast=Csv(),
 )

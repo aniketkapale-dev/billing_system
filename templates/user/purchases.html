@@ -348,13 +348,13 @@
 {% block page_scripts %}
 <script src="{% static 'js/components/modal.js' %}"></script>
 <script src="{% static 'js/components/page-panel.js' %}"></script>
-<script src="{% static 'js/components/multi-select.js' %}"></script>
+<script src="{% static 'js/components/multi-select.js' %}?v=20260330-select-arrows"></script>
 <script src="{% static 'js/components/tax-select.js' %}"></script>
-<script src="{% static 'js/inventory/customers.js' %}"></script>
-<script src="{% static 'js/inventory/settings-tax.js' %}?v=20260309-sale-add-modals"></script>
-<script src="{% static 'js/inventory/settings-invoice.js' %}?v=20260318-form-date-input"></script>
+<script src="{% static 'js/inventory/customers.js' %}?v=20261001-cross-tab-refresh"></script>
+<script src="{% static 'js/inventory/settings-tax.js' %}?v=20261001-cross-tab-refresh"></script>
+<script src="{% static 'js/inventory/settings-invoice.js' %}?v=20261001-cross-tab-refresh"></script>
 <script src="{% static 'js/components/sale-invoice-print-preview.js' %}?v=20260311-no-caption"></script>
-<script src="{% static 'js/inventory/purchases.js' %}?v=20260328-sale-items-footer"></script>
+<script src="{% static 'js/inventory/purchases.js' %}?v=20261001-cross-tab-refresh"></script>
 <script>
 InventoryPagePanel.init();
 InventoryCustomers.init();
