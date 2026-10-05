@@ -48,11 +48,9 @@ var InventorySalePrintPreview = (function () {
 
     function getFirstPageTermsTarget(doc) {
         if (!doc) return null;
-        var firstPage = doc.querySelector(".sale-invoice-page");
-        if (!firstPage) return null;
-        return firstPage.querySelector(".inv-invoice-bottom")
-            || firstPage.querySelector(".inv-terms")
-            || firstPage;
+        return doc.querySelector(".inv-invoice-bottom")
+            || doc.querySelector(".inv-terms")
+            || doc.querySelector(".sale-invoice-page");
     }
 
     function scrollPreviewToFirstPageTerms() {
@@ -141,8 +139,10 @@ var InventorySalePrintPreview = (function () {
         doc.open();
         doc.write(html);
         doc.close();
-        window.requestAnimationFrame(function () {
-            fitPreviewToFrame();
+        InventoryDocumentExport.prepareSalesDocument(doc).then(function () {
+            if (frame.contentDocument === doc) fitPreviewToFrame();
+        }).catch(function (err) {
+            if (window.InventoryToast) InventoryToast.error(err.message || "Unable to prepare invoice preview.");
         });
     }
 

@@ -186,6 +186,7 @@ var InventoryBusiness = (function () {
             "business-state-code",
             "business-pin-code",
             "business-address",
+            "business-bank-details",
             "business-logo"
         ];
         fields.forEach(function (id) {
@@ -202,6 +203,7 @@ var InventoryBusiness = (function () {
         var stateCode = document.getElementById("business-state-code").value.trim();
         var pinCode = document.getElementById("business-pin-code").value.trim();
         var address = document.getElementById("business-address").value.trim();
+        var bankDetails = document.getElementById("business-bank-details").value.trim();
         var logoInput = document.getElementById("business-logo");
         var logoFile = logoInput && logoInput.files && logoInput.files[0] ? logoInput.files[0] : null;
 
@@ -248,6 +250,7 @@ var InventoryBusiness = (function () {
             if (stateCode) formData.append("state_code", stateCode);
             if (pinCode) formData.append("pin_code", pinCode);
             if (address) formData.append("address", address);
+            if (bankDetails) formData.append("bank_details", bankDetails);
             if (logoFile) formData.append("logo", logoFile);
             return formData;
         }
@@ -259,6 +262,7 @@ var InventoryBusiness = (function () {
         if (stateCode) payload.state_code = stateCode;
         if (pinCode) payload.pin_code = pinCode;
         if (address) payload.address = address;
+        if (bankDetails) payload.bank_details = bankDetails;
         return payload;
     }
 

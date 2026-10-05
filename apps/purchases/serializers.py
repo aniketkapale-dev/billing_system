@@ -22,7 +22,9 @@ class OptionalDateField(serializers.DateField):
 class PurchaseItemSerializer(BaseModelSerializer):
     product_name = serializers.CharField(source="product.name", read_only=True)
     product_sku = serializers.CharField(source="product.sku", read_only=True)
+    product_hsn_code = serializers.CharField(source="product.hsn_code", read_only=True, default="")
     product_unit = serializers.CharField(source="product.unit.short_name", read_only=True)
+    sale_tax_name = serializers.SerializerMethodField()
     batch_lines = serializers.SerializerMethodField()
 
     class Meta:
@@ -32,6 +34,7 @@ class PurchaseItemSerializer(BaseModelSerializer):
             "product",
             "product_name",
             "product_sku",
+            "product_hsn_code",
             "product_unit",
             "quantity",
             "list_price",
@@ -43,12 +46,34 @@ class PurchaseItemSerializer(BaseModelSerializer):
             "distributor_discount_type",
             "distributor_discount_value",
             "sale_tax_ids",
+            "sale_tax_name",
             "tax_amount",
             "gst_rate",
             "cost_amount",
             "profit_amount",
             "batch_lines",
         )
+
+    def get_sale_tax_name(self, obj):
+        from apps.settings.models import Tax
+
+        tax_id = None
+        for value in obj.sale_tax_ids or []:
+            try:
+                tax_id = int(value)
+                break
+            except (TypeError, ValueError):
+                continue
+        if tax_id is None:
+            return ""
+
+        business_id = obj.purchase.business_id
+        cache = self.context.setdefault("invoice_tax_names", {})
+        if business_id not in cache:
+            cache[business_id] = dict(
+                Tax.all_objects.filter(business_id=business_id).values_list("id", "key")
+            )
+        return cache[business_id].get(tax_id, "")
 
     def get_batch_lines(self, obj):
         consumptions = [
@@ -184,6 +209,7 @@ class PurchaseSerializer(BaseModelSerializer):
     company_name = serializers.CharField(source="customer.company_name", read_only=True, default="")
     company_mobile = serializers.CharField(source="customer.company_mobile", read_only=True, default="")
     company_address = serializers.CharField(source="customer.business_address", read_only=True, default="")
+    customer_place_of_supply = serializers.CharField(source="customer.place_of_supply", read_only=True, default="")
     total_paid = serializers.SerializerMethodField()
     pending_bill = serializers.SerializerMethodField()
     payment_status = serializers.SerializerMethodField()
@@ -209,6 +235,7 @@ class PurchaseSerializer(BaseModelSerializer):
             "company_name",
             "company_mobile",
             "company_address",
+            "customer_place_of_supply",
             "supplier_name",
             "reference_no",
             "invoice_setting_id",

@@ -66,69 +66,60 @@ var InventoryDocumentExport = (function () {
     }
 
     function generateSaleInvoicePdfBlob(sale, taxes) {
+        return appendSaleInvoicePdf(sale, taxes).then(function (pdf) {
+            return pdf.output("blob");
+        });
+    }
+
+    function appendSaleInvoicePdf(sale, taxes, existingPdf) {
         return Promise.all([loadJsPdf(), loadHtml2Canvas()]).then(function (loaded) {
             var jsPDF = loaded[0];
             var html2canvas = loaded[1];
-            var html = buildSalesDocumentHtml([sale], { taxes: taxes || [] });
-            return renderInvoiceFrame(html).then(function (frame) {
+            return renderInvoiceFrame(buildSalesDocumentHtml([sale], { taxes: taxes || [] })).then(function (frame) {
                 var frameDoc = frame.contentDocument;
-                var page = frameDoc && frameDoc.querySelector(".sale-invoice-page");
-                if (!page) {
-                    frame.remove();
-                    throw new Error("Unable to prepare the sale invoice.");
-                }
-                return html2canvas(page, {
-                    scale: 2,
-                    useCORS: true,
-                    backgroundColor: "#ffffff",
-                    scrollX: 0,
-                    scrollY: 0
-                }).then(function (canvas) {
-                    var pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-                    var pageWidth = pdf.internal.pageSize.getWidth();
-                    var pageHeight = pdf.internal.pageSize.getHeight();
-                    var pageCanvasHeight = Math.floor(canvas.width * pageHeight / pageWidth);
-                    var sourceY = 0;
-                    var pageNumber = 0;
-
-                    while (sourceY < canvas.height) {
-                        var sliceHeight = Math.min(pageCanvasHeight, canvas.height - sourceY);
-                        var pageCanvas = document.createElement("canvas");
-                        pageCanvas.width = canvas.width;
-                        pageCanvas.height = sliceHeight;
-                        var context = pageCanvas.getContext("2d");
-                        context.fillStyle = "#ffffff";
-                        context.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-                        context.drawImage(
-                            canvas,
-                            0, sourceY, canvas.width, sliceHeight,
-                            0, 0, canvas.width, sliceHeight
-                        );
-
-                        if (pageNumber > 0) pdf.addPage();
-                        pdf.addImage(
-                            pageCanvas.toDataURL("image/jpeg", 0.95),
-                            "JPEG",
-                            0,
-                            0,
-                            pageWidth,
-                            sliceHeight * pageWidth / canvas.width
-                        );
-                        sourceY += sliceHeight;
-                        pageNumber += 1;
-                    }
-                    frame.remove();
-                    return pdf.output("blob");
-                }).catch(function (err) {
-                    frame.remove();
-                    throw err;
+                var pages = Array.prototype.slice.call(frameDoc.querySelectorAll(".sale-invoice-page"));
+                var captureWidth = Math.max(frameDoc.documentElement.scrollWidth, frameDoc.body.scrollWidth);
+                var captureHeight = Math.max(frameDoc.documentElement.scrollHeight, frameDoc.body.scrollHeight);
+                var pdf = existingPdf || new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
+                var chain = Promise.resolve();
+                pages.forEach(function (page, index) {
+                    chain = chain.then(function () {
+                        var originalStyle = page.getAttribute("style");
+                        var pageWidth = page.offsetWidth;
+                        var pageHeight = page.offsetHeight;
+                        page.style.position = "fixed";
+                        page.style.top = "0";
+                        page.style.left = "0";
+                        page.style.margin = "0";
+                        page.style.zoom = "1";
+                        return html2canvas(page, {
+                            scale: 2,
+                            foreignObjectRendering: true,
+                            useCORS: true,
+                            backgroundColor: "#ffffff",
+                            width: pageWidth,
+                            height: pageHeight,
+                            windowWidth: Math.max(captureWidth, pageWidth),
+                            windowHeight: Math.max(captureHeight, pageHeight),
+                            scrollX: 0,
+                            scrollY: 0
+                        }).finally(function () {
+                            if (originalStyle === null) page.removeAttribute("style");
+                            else page.setAttribute("style", originalStyle);
+                        });
+                    }).then(function (canvas) {
+                        if (existingPdf || index > 0) pdf.addPage("a4", "portrait");
+                        pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0,
+                            pdf.internal.pageSize.getWidth(), pdf.internal.pageSize.getHeight(), undefined, "FAST");
+                    });
                 });
+                return chain.then(function () { return pdf; }).finally(function () { frame.remove(); });
             });
         });
     }
 
     function renderInvoiceFrame(html) {
-        return new Promise(function (resolve) {
+        return new Promise(function (resolve, reject) {
             var frame = document.createElement("iframe");
             frame.setAttribute("aria-hidden", "true");
             frame.style.cssText = "position:fixed;left:0;top:0;width:210mm;height:297mm;border:0;opacity:0.01;pointer-events:none;background:#fff;";
@@ -141,17 +132,229 @@ var InventoryDocumentExport = (function () {
             fit.textContent =
                 "@page{size:A4 portrait;margin:0;}" +
                 "html,body{margin:0!important;padding:0!important;background:#fff!important;width:210mm!important;min-height:297mm!important;overflow:visible!important;}" +
-                ".sale-invoice-page{width:210mm!important;height:auto!important;min-height:297mm!important;max-width:210mm!important;margin:0!important;border:0!important;box-sizing:border-box!important;padding:8mm 8mm 10mm!important;}";
+                ".sale-invoice-page{width:210mm!important;height:297mm!important;min-height:297mm!important;max-width:210mm!important;margin:0!important;border:0!important;box-sizing:border-box!important;padding:10mm 12mm 12mm!important;}";
             frameDoc.head.appendChild(fit);
-            window.setTimeout(function () {
-                var contentHeight = Math.max(
-                    frameDoc.documentElement.scrollHeight,
-                    frameDoc.body.scrollHeight,
-                    1123
-                );
-                frame.style.height = contentHeight + "px";
+            prepareSalesDocument(frameDoc, true).then(function () {
+                frame.style.height = Math.max(frameDoc.documentElement.scrollHeight, frameDoc.body.scrollHeight, 1123) + "px";
                 resolve(frame);
-            }, 400);
+            }).catch(function (err) {
+                frame.remove();
+                reject(err);
+            });
+        });
+    }
+
+    function prepareSalesDocument(doc, embedImages) {
+        var assets = Array.prototype.map.call(doc.images, function (img) {
+            return new Promise(function (resolve, reject) {
+                var timer;
+                function finish() {
+                    window.clearTimeout(timer);
+                    img.removeEventListener("load", finish);
+                    img.removeEventListener("error", finish);
+                    if (!img.complete || !img.naturalWidth) {
+                        reject(new Error("Unable to load the invoice image. Please try again."));
+                        return;
+                    }
+                    if (!embedImages) { resolve(); return; }
+                    try {
+                        var canvas = doc.createElement("canvas");
+                        canvas.width = img.naturalWidth;
+                        canvas.height = img.naturalHeight;
+                        canvas.getContext("2d").drawImage(img, 0, 0);
+                        img.src = canvas.toDataURL("image/png");
+                        if (img.decode) img.decode().then(resolve, reject);
+                        else resolve();
+                    } catch (err) {
+                        reject(new Error("Unable to prepare the invoice image. Please try again."));
+                    }
+                }
+                if (img.complete) { finish(); return; }
+                img.addEventListener("load", finish);
+                img.addEventListener("error", finish);
+                timer = window.setTimeout(finish, 15000);
+            });
+        });
+        if (doc.fonts) assets.push(doc.fonts.ready);
+        return Promise.all(assets).then(function () {
+            paginateSalesDocument(doc);
+        });
+    }
+
+    // Measure real DOM rows before capture. Preview, browser print and PDF all
+    // consume these same A4 sheets; no bitmap is cut through text or table cells.
+    function paginateSalesDocument(doc) {
+        var sources = Array.prototype.slice.call(doc.querySelectorAll('.sale-invoice-page:not([data-paginated])'));
+        sources.forEach(function (source) {
+            var header = source.querySelector('.inv-invoice-header');
+            var sourceTable = source.querySelector('.inv-lines');
+            if (!header || !sourceTable) return;
+            var pages = [];
+            var content;
+            var currentTable;
+            var currentBody;
+            function newPage() {
+                var page = source.cloneNode(false);
+                page.setAttribute('data-paginated', 'true');
+                page.style.zoom = '1';
+                content = doc.createElement('div');
+                content.className = 'inv-page-content';
+                if (!pages.length) content.appendChild(header.cloneNode(true));
+                page.appendChild(content);
+                source.parentNode.insertBefore(page, source);
+                pages.push(page);
+                currentTable = null;
+                currentBody = null;
+            }
+            function fits() {
+                return content.lastElementChild.getBoundingClientRect().bottom <= content.getBoundingClientRect().bottom + 0.25;
+            }
+            function hasContent() { return content.children.length > 1; }
+            function fitOversized(block) {
+                // A single exceptionally large row/block cannot be divided safely.
+                // Scale that block to the printable space instead of clipping text.
+                var room = content.getBoundingClientRect().bottom - block.getBoundingClientRect().top;
+                var height = block.getBoundingClientRect().height;
+                if (height > room && room > 0) block.style.zoom = String(Math.max(0.01, (room - 1) / height));
+            }
+            function makeItemTable() {
+                var wrap = doc.createElement('div');
+                wrap.className = 'inv-lines-wrap';
+                currentTable = sourceTable.cloneNode(false);
+                currentTable.appendChild(sourceTable.querySelector('colgroup').cloneNode(true));
+                var head = sourceTable.tHead.cloneNode(true);
+                head.querySelector('.inv-lines-page-header').remove();
+                currentTable.appendChild(head);
+                currentBody = doc.createElement('tbody');
+                currentTable.appendChild(currentBody);
+                wrap.appendChild(currentTable);
+                content.appendChild(wrap);
+                return wrap;
+            }
+            function appendBlock(block) {
+                var alreadyPopulated = hasContent();
+                content.appendChild(block);
+                if (fits()) return;
+                block.remove();
+                if (alreadyPopulated) newPage();
+                content.appendChild(block);
+                if (!fits()) fitOversized(block);
+            }
+            function appendTaxSection(sourceSection) {
+                var completeSection = sourceSection.cloneNode(true);
+                var alreadyPopulated = hasContent();
+                content.appendChild(completeSection);
+                if (fits()) return;
+
+                completeSection.remove();
+                if (alreadyPopulated) newPage();
+                completeSection = sourceSection.cloneNode(true);
+                content.appendChild(completeSection);
+                if (fits()) return;
+                completeSection.remove();
+
+                var sourceTaxTable = sourceSection.querySelector(".inv-tax-summary");
+                var sourceTaxBody = sourceTaxTable && sourceTaxTable.tBodies[0];
+                if (!sourceTaxTable || !sourceTaxBody) {
+                    appendBlock(sourceSection.cloneNode(true));
+                    return;
+                }
+
+                var currentTaxSection;
+                var currentTaxTable;
+                var currentTaxBody;
+                function startTaxSection() {
+                    currentTaxSection = sourceSection.cloneNode(false);
+                    currentTaxTable = sourceTaxTable.cloneNode(false);
+                    currentTaxTable.appendChild(sourceTaxTable.tHead.cloneNode(true));
+                    currentTaxBody = doc.createElement("tbody");
+                    currentTaxTable.appendChild(currentTaxBody);
+                    currentTaxSection.appendChild(currentTaxTable);
+                    content.appendChild(currentTaxSection);
+                }
+                function startTaxPage() {
+                    newPage();
+                    startTaxSection();
+                }
+                function addTaxRow(originalRow) {
+                    var row = originalRow.cloneNode(true);
+                    currentTaxBody.appendChild(row);
+                    if (fits()) return;
+
+                    row.remove();
+                    if (currentTaxBody.rows.length) {
+                        startTaxPage();
+                        currentTaxBody.appendChild(row);
+                    } else {
+                        currentTaxBody.appendChild(row);
+                        fitOversized(currentTaxSection);
+                        return;
+                    }
+                    if (!fits()) fitOversized(row);
+                }
+
+                startTaxSection();
+                Array.prototype.forEach.call(sourceTaxBody.rows, addTaxRow);
+
+                if (sourceTaxTable.tFoot) {
+                    currentTaxTable.appendChild(sourceTaxTable.tFoot.cloneNode(true));
+                    if (!fits()) {
+                        currentTaxTable.tFoot.remove();
+                        startTaxPage();
+                        currentTaxTable.appendChild(sourceTaxTable.tFoot.cloneNode(true));
+                        if (!fits()) fitOversized(currentTaxSection);
+                    }
+                }
+
+                var amountWords = sourceSection.querySelector(".inv-amount-words");
+                if (amountWords) {
+                    var words = amountWords.cloneNode(true);
+                    currentTaxSection.appendChild(words);
+                    if (!fits()) {
+                        words.remove();
+                        startTaxPage();
+                        currentTaxSection.appendChild(words);
+                        if (!fits()) fitOversized(words);
+                    }
+                }
+            }
+            newPage();
+            var wrap = makeItemTable();
+            Array.prototype.forEach.call(sourceTable.tBodies[0].rows, function (original) {
+                var row = original.cloneNode(true);
+                currentBody.appendChild(row);
+                if (!fits()) {
+                    row.remove();
+                    if (currentBody.rows.length) {
+                        newPage();
+                        wrap = makeItemTable();
+                    }
+                    currentBody.appendChild(row);
+                    if (!fits()) fitOversized(wrap);
+                }
+            });
+            var totals = sourceTable.querySelector('.inv-invoice-totals').cloneNode(true);
+            currentTable.appendChild(totals);
+            if (!fits()) {
+                totals.remove();
+                newPage();
+                var totalsWrap = doc.createElement('div');
+                totalsWrap.className = 'inv-lines-wrap';
+                var totalsTable = sourceTable.cloneNode(false);
+                totalsTable.appendChild(sourceTable.querySelector('colgroup').cloneNode(true));
+                totalsTable.appendChild(totals);
+                totalsWrap.appendChild(totalsTable);
+                appendBlock(totalsWrap);
+            }
+            appendTaxSection(source.querySelector('.inv-tax-section'));
+            appendBlock(source.querySelector('.inv-invoice-bottom').cloneNode(true));
+            pages.forEach(function (page, index) {
+                var label = doc.createElement('div');
+                label.className = 'inv-page-number';
+                label.textContent = 'Page ' + (index + 1) + ' of ' + pages.length;
+                page.appendChild(label);
+            });
+            source.remove();
         });
     }
 
@@ -250,6 +453,7 @@ var InventoryDocumentExport = (function () {
     function getPaymentInfo(business) {
         business = business || {};
         return {
+            details: business.bank_details || "",
             accountHolder: business.account_holder_name || business.account_holder || "",
             accountNumber: business.account_number || "",
             ifsc: business.ifsc || business.ifsc_code || "",
@@ -261,6 +465,7 @@ var InventoryDocumentExport = (function () {
     function hasPaymentInfo(info) {
         if (!info) return false;
         return !!(
+            String(info.details || "").trim() ||
             String(info.accountHolder || "").trim() ||
             String(info.accountNumber || "").trim() ||
             String(info.ifsc || "").trim() ||
@@ -335,68 +540,60 @@ var InventoryDocumentExport = (function () {
         return '<div class="inv-header-address-lines">' + formatMultiline(value) + "</div>";
     }
 
-    function buildCustomerCompanyColumn(sale) {
-        var companyName = getCustomerCompanyDisplayName(sale);
-        var gstNo = sale.customer_gst_number || "";
-        var companyAddress = hasCustomerCompany(sale)
-            ? (sale.company_address || sale.billing_address || "")
-            : (sale.customer_address || sale.billing_address || "");
-
-        var body =
-            '<p class="inv-header-customer-name">' + escapeHtml(companyName) + "</p>" +
-            buildHeaderAddressLines(companyAddress);
-        if (hasCustomerCompany(sale)) {
-            body += buildInlineDetailField("GST No", gstNo, true);
-            var companyContact = sale.company_mobile || sale.customer_mobile || "";
-            body += buildInlineDetailField("Mob. No.", companyContact, true);
-            body += buildInlineDetailField("Email", sale.customer_email, true);
-        }
-
+    function buildCustomerCompanyColumn(sale, shipping) {
+        var billingAddress = sale.billing_address || sale.company_address || sale.customer_address || "";
+        var address = shipping ? (sale.shipping_address || billingAddress) : billingAddress;
+        var body = '<p class="inv-party-title">' + (shipping ? "Shipped to :" : "Billed to :") + "</p>" +
+            '<p class="inv-header-customer-name">' + escapeHtml(getCustomerCompanyDisplayName(sale)) + "</p>" +
+            buildHeaderAddressLines(address) +
+            buildInlineDetailField("GSTIN / UIN", sale.customer_gst_number, false) +
+            buildInlineDetailField("Mobile", sale.company_mobile || sale.customer_mobile, true) +
+            buildInlineDetailField("Email", sale.customer_email, true);
         return wrapHeaderPanel(body, "inv-header-panel--company");
     }
 
     function buildBusinessColumn(business, businessName) {
-        var body =
-            '<p class="inv-header-panel-title">GST Invoice</p>' +
-            '<p class="inv-header-business-name">' + escapeHtml(businessName) + "</p>" +
-            buildInlineDetailField("GST No", business.gst_number, false) +
-            buildInlineDetailField("Address", business.address, false);
-
-        if (business.phone) {
-            body += buildInlineDetailField("Mob. No.", business.phone, true);
-        }
-        if (business.email) {
-            body += buildInlineDetailField("Email", business.email, true);
-        }
-
-        return wrapHeaderPanel(body, "inv-header-panel--business");
+        return '<div class="inv-business-heading">' +
+            '<div class="inv-business-topline"><strong>GSTIN / UIN : ' + displayText(business.gst_number) + '</strong><em>Original Copy</em></div>' +
+            '<p class="inv-header-panel-title">TAX INVOICE</p>' +
+            '<h1 class="inv-header-business-name">' + escapeHtml(businessName) + '</h1>' +
+            '<div class="inv-business-address">' + formatMultiline(business.address) + '</div>' +
+            (business.phone || business.email ? '<div class="inv-business-contact">' +
+                buildInlineContactRow(business.phone, business.email) + '</div>' : '') + '</div>';
     }
 
     function buildInvoiceDetailsColumn(sale, invoiceNo, invoiceDate) {
         return wrapHeaderPanel(
-            '<p class="inv-header-panel-title">Original Copy</p>' +
-            buildInlineDetailField("Invoice No", invoiceNo, false) +
-            buildInlineDetailField("Invoice Date", invoiceDate, false) +
-            buildInlineDetailField("Bill Date", invoiceDate, false) +
-            buildInlineDetailField("Transport", sale.invoice_transport, true) +
-            buildInlineDetailField("No. of Cartons", sale.invoice_cartons, true) +
-            buildInlineDetailField("E-Way Bill No", sale.invoice_eway_bill_no, true) +
+            '<p class="inv-box-title">Invoice Details</p>' +
+            buildInlineDetailField("Invoice No.", invoiceNo, false) +
+            buildInlineDetailField("Dated", invoiceDate, false) +
+            buildInlineDetailField("Place of Supply", sale.customer_place_of_supply || sale.place_of_supply, false) +
+            buildInlineDetailField("Reverse Charge", sale.reverse_charge || "N", false) +
             buildInlineDetailField("Due Date", sale.due_date ? formatDisplayDate(sale.due_date) : "", true) +
             buildInlineDetailField("Terms", sale.invoice_print_terms, true) +
-            buildInlineDetailField("PO Number", sale.po_number || sale.po_no || "", true) +
-            buildInlineDetailField("Payment", sale.payment_type_name || "", true),
-            "inv-header-panel--invoice"
-        );
+            buildInlineDetailField("PO Number", sale.po_number || sale.po_no, true) +
+            buildInlineDetailField("Payment", sale.payment_type_name, true),
+            "inv-header-panel--invoice");
+    }
+
+    function buildTransportDetailsColumn(sale) {
+        return wrapHeaderPanel(
+            '<p class="inv-box-title">Transport Details</p>' +
+            buildInlineDetailField("GR/RR No.", sale.invoice_gr_rr_no, false) +
+            buildInlineDetailField("Transport", sale.invoice_transport, false) +
+            buildInlineDetailField("Vehicle No.", sale.invoice_vehicle_no, false) +
+            buildInlineDetailField("Station", sale.invoice_station, false) +
+            buildInlineDetailField("No. of Cartons", sale.invoice_cartons, true) +
+            buildInlineDetailField("E-Way Bill No", sale.invoice_eway_bill_no, true),
+            "inv-header-panel--transport");
     }
 
     function buildInvoiceHeaderRow(sale, business, businessName, invoiceNo, invoiceDate) {
-        return (
-            '<section class="inv-header-row">' +
-            buildCustomerCompanyColumn(sale) +
-            buildBusinessColumn(business, businessName) +
-            buildInvoiceDetailsColumn(sale, invoiceNo, invoiceDate) +
-            "</section>"
-        );
+        return '<section class="inv-invoice-header">' + buildBusinessColumn(business, businessName) +
+            '<div class="inv-header-row inv-header-row--details">' +
+            buildInvoiceDetailsColumn(sale, invoiceNo, invoiceDate) + buildTransportDetailsColumn(sale) + '</div>' +
+            '<div class="inv-header-row inv-header-row--parties">' +
+            buildCustomerCompanyColumn(sale, false) + buildCustomerCompanyColumn(sale, true) + '</div></section>';
     }
 
     function buildMetaLine(label, value, hideIfEmpty) {
@@ -412,12 +609,12 @@ var InventoryDocumentExport = (function () {
     }
 
     function buildPaymentInfoSection(paymentInfo) {
-        if (!hasPaymentInfo(paymentInfo)) return "";
-
         return (
             '<section class="inv-payment-info">' +
-            "<h3>Payment Information</h3>" +
+            "<h3>Bank Details <span>:</span></h3>" +
             '<div class="inv-info-list">' +
+            (!hasPaymentInfo(paymentInfo) ? "&mdash;" : "") +
+            (paymentInfo.details ? '<div class="inv-bank-details">' + formatMultiline(paymentInfo.details) + "</div>" : "") +
             buildMetaLine("Account Holder", paymentInfo.accountHolder, true) +
             buildMetaLine("Account Number", paymentInfo.accountNumber, true) +
             buildMetaLine("IFSC", paymentInfo.ifsc, true) +
@@ -427,17 +624,13 @@ var InventoryDocumentExport = (function () {
         );
     }
 
-    function buildAuthorizedSignatureSection(sale) {
-        var customerCompany = getCustomerCompanyDisplayName(sale);
-
-        return (
-            '<div class="inv-signature-block">' +
+    function buildAuthorizedSignatureSection(businessName) {
+        return '<div class="inv-signature-block">' +
+            '<div class="inv-receiver-signature">Receiver&#39;s Signature <span>:</span></div>' +
             '<div class="inv-signature-inner">' +
-            '<p class="inv-signature-company">For ' + escapeHtml(customerCompany) + "</p>" +
-            '<div class="inv-signature-line"></div>' +
-            '<p class="inv-signature-label">Authorized Signature</p>' +
-            "</div></div>"
-        );
+            '<p class="inv-signature-company">For ' + escapeHtml(businessName) + '</p>' +
+            '<p class="inv-signature-label">Authorised Signatory</p>' +
+            '</div></div>';
     }
 
     function buildTermsBodyHtml(sale) {
@@ -455,45 +648,21 @@ var InventoryDocumentExport = (function () {
         return escapeHtml("Terms & Conditions");
     }
 
-    function buildTermsAndPaymentFooterSection(sale) {
+    function buildTermsAndPaymentFooterSection(sale, businessName, paymentInfo) {
         var termsBodyHtml = buildTermsBodyHtml(sale);
         var qrUrl = sale.invoice_qr_image_url && String(sale.invoice_qr_image_url).trim()
             ? String(sale.invoice_qr_image_url).trim()
             : "";
-
-        if (!termsBodyHtml && !qrUrl) return "";
-
-        var termsBlock = termsBodyHtml
-            ? (
-                '<div class="inv-invoice-bottom-terms">' +
-                '<section class="inv-terms">' +
-                "<h3>" + getTermsCaption() + "</h3>" +
-                '<div class="inv-terms-body">' + termsBodyHtml + "</div>" +
-                "</section></div>"
-            )
-            : "";
-
-        var qrBlock = qrUrl
-            ? (
-                '<div class="inv-invoice-bottom-qr">' +
-                "<h3>Scan to Pay</h3>" +
-                '<div class="inv-qr-wrap">' +
-                '<img class="inv-qr" src="' + escapeHtml(qrUrl) + '" alt="Payment QR Code"/>' +
-                "</div></div>"
-            )
-            : "";
-
-        var rowClass = termsBlock && qrBlock
-            ? "inv-invoice-bottom-row"
-            : "inv-invoice-bottom-row inv-invoice-bottom-row--single";
-
-        return (
-            '<footer class="inv-invoice-bottom">' +
-            '<div class="' + rowClass + '">' +
-            termsBlock +
-            qrBlock +
-            "</div></footer>"
-        );
+        return '<footer class="inv-invoice-bottom">' +
+            buildPaymentInfoSection(paymentInfo) +
+            '<div class="inv-invoice-bottom-row">' +
+            '<section class="inv-invoice-bottom-terms inv-terms">' +
+            '<h3>' + getTermsCaption() + '</h3>' +
+            '<div class="inv-terms-body">' + (termsBodyHtml || '&mdash;') + '</div></section>' +
+            '<section class="inv-invoice-bottom-qr"><h3>Payment QR Code</h3>' +
+            (qrUrl ? '<div class="inv-qr-wrap"><img class="inv-qr" crossorigin="anonymous" src="' + escapeHtml(qrUrl) + '" alt="Payment QR Code"/></div>' : '') +
+            '</section>' + buildAuthorizedSignatureSection(businessName) +
+            '</div></footer>';
     }
 
     function applyLineDiscount(basePrice, discountValue, discountType) {
@@ -592,184 +761,129 @@ var InventoryDocumentExport = (function () {
         return num.toFixed(2) + "%";
     }
 
-    function getProductMergeKey(row) {
-        if (row.product_id != null && row.product_id !== "") {
-            return "p:" + row.product_id;
-        }
-        if (row.product_sku) {
-            return "sku:" + String(row.product_sku).trim().toLowerCase();
-        }
-        return "name:" + String(row.product_name || "").trim().toLowerCase();
+    function invoiceMoney(value) {
+        return Number(value || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
-    function mergePrintRowsByProduct(rows) {
-        var mergedMap = {};
-        var order = [];
+    function getLineTaxName(line, taxes) {
+        if (line.sale_tax_name) return line.sale_tax_name;
+        var taxIds = line.sale_tax_ids || [];
+        var taxId = taxIds.find(function (id) { return /^\d+$/.test(String(id)); });
+        var tax = (taxes || []).find(function (item) { return String(item.id) === String(taxId); });
+        return tax && tax.key ? tax.key : "Tax";
+    }
 
-        rows.forEach(function (row) {
-            var key = getProductMergeKey(row) + ":gst:" + row.tax_percent;
-            if (!mergedMap[key]) {
-                mergedMap[key] = {
-                    tax_percent: row.tax_percent,
-                    product_id: row.product_id,
-                    product_name: row.product_name,
-                    product_sku: row.product_sku,
-                    quantity: 0,
-                    unit: row.unit,
-                    priceWeightedSum: 0,
-                    simple_discount: 0,
-                    distributor_discount: 0,
-                    tax: 0,
-                    amount: 0
-                };
-                order.push(key);
-            }
-
-            var entry = mergedMap[key];
-            var qty = Number(row.quantity || 0);
-            entry.quantity += qty;
-            entry.priceWeightedSum += Number(row.price || 0) * qty;
-            entry.simple_discount = roundMoney(entry.simple_discount + Number(row.simple_discount || 0));
-            entry.distributor_discount = roundMoney(entry.distributor_discount + Number(row.distributor_discount || 0));
-            entry.tax = roundMoney(entry.tax + Number(row.tax || 0));
-            entry.amount = roundMoney(entry.amount + Number(row.amount || 0));
-            if (!entry.unit && row.unit) entry.unit = row.unit;
-        });
-
-        return order.map(function (key, index) {
-            var entry = mergedMap[key];
-            var qty = entry.quantity;
-            var price = qty > 0 ? roundMoney(entry.priceWeightedSum / qty) : 0;
-            var gross = price * qty;
-            var simplePercent = gross > 0 ? roundMoney((entry.simple_discount / gross) * 100) : 0;
-            var afterSimple = Math.max(0, gross - entry.simple_discount);
-            var distributorPercent = afterSimple > 0
-                ? roundMoney((entry.distributor_discount / afterSimple) * 100)
-                : 0;
-            var taxPercent = entry.tax_percent;
-
-            var afterDistributorTotal = Math.max(0, afterSimple - entry.distributor_discount);
-
+    function buildInvoicePrintRows(sale, taxes) {
+        return (sale.items || []).map(function (line, index) {
+            var qty = Number(line.quantity || 0);
+            var total = Number(line.line_total || 0);
+            var tax = Number(line.tax_amount || 0);
+            var taxable = roundMoney(Math.max(0, total - tax));
+            var listPrice = Number(line.list_price != null && line.list_price !== "" ? line.list_price : line.unit_price || 0);
+            var rate = getLineTaxPercent(line, null, taxes);
+            // Stored prices include GST. Use the saved tax allocation to keep the
+            // printed taxable price and discount consistent with the saved total.
+            var taxableRatio = total > 0 ? taxable / total : 1 / (1 + rate / 100);
+            var gross = listPrice * qty;
+            var discountPercent = gross > 0 ? Math.max(0, (gross - total) / gross * 100) : 0;
             return {
                 serial: index + 1,
-                product_id: entry.product_id,
-                product_name: entry.product_name,
-                product_sku: entry.product_sku,
+                product_name: line.product_name,
+                hsn: line.product_hsn_code || line.hsn_code || "",
                 quantity: qty,
-                unit: entry.unit || "pcs",
-                batch_number: "",
-                expiry_date: null,
-                price: price,
-                total_price: roundMoney(gross),
-                simple_discount: entry.simple_discount,
-                simple_discount_percent: simplePercent,
-                price_after_simple: roundMoney(afterSimple),
-                distributor_discount: entry.distributor_discount,
-                distributor_discount_percent: distributorPercent,
-                price_after_distributor: roundMoney(afterDistributorTotal),
-                price_without_tax: entry.amount,
-                tax: entry.tax,
-                tax_percent: taxPercent,
-                amount: entry.amount
+                unit: line.product_unit || "pcs",
+                list_price: listPrice * taxableRatio,
+                discount_percent: discountPercent,
+                price: qty > 0 ? taxable / qty : 0,
+                amount: taxable,
+                tax: roundMoney(tax),
+                tax_name: getLineTaxName(line, taxes),
+                tax_percent: rate
             };
         });
     }
 
-    function buildInvoicePrintRows(sale, taxes) {
-        var rows = [];
-
-        (sale.items || []).forEach(function (line) {
-            var lineQty = Number(line.quantity || 0);
-            var lineTotal = Number(line.line_total || 0);
-            var lineTax = Number(line.tax_amount || 0);
-            var lineNet = Math.max(0, lineTotal - lineTax);
-            var discounts = getLineDiscountAmounts(line);
-            var unitPrice = Number(
-                line.list_price != null && line.list_price !== ""
-                    ? line.list_price
-                    : (line.unit_price || 0)
-            );
-
-            rows.push({
-                product_id: line.product,
-                product_name: line.product_name,
-                product_sku: line.product_sku,
-                quantity: lineQty,
-                unit: line.product_unit || "pcs",
-                price: unitPrice,
-                total_price: roundMoney(unitPrice * lineQty),
-                simple_discount: roundMoney(discounts.simplePerUnit * lineQty),
-                simple_discount_percent: discounts.simplePercent,
-                price_after_simple: roundMoney(discounts.afterSimple * lineQty),
-                distributor_discount: roundMoney(discounts.distributorPerUnit * lineQty),
-                distributor_discount_percent: discounts.distributorPercent,
-                price_after_distributor: roundMoney(discounts.afterDistributor * lineQty),
-                price_without_tax: roundMoney(lineNet),
-                tax: roundMoney(lineTax),
-                tax_percent: getLineTaxPercent(line, discounts, taxes),
-                amount: roundMoney(lineNet)
-            });
-        });
-
-        return mergePrintRowsByProduct(rows);
-    }
-
     function buildInvoiceLinesColgroup() {
-        return (
-            "<colgroup>" +
-            '<col class="inv-col-sr"/>' +
-            '<col class="inv-col-product"/>' +
-            '<col class="inv-col-price"/>' +
-            '<col class="inv-col-qty"/>' +
-            '<col class="inv-col-unit"/>' +
-            '<col class="inv-col-exp"/>' +
-            '<col class="inv-col-total-price"/>' +
-            '<col class="inv-col-simple-pct"/>' +
-            '<col class="inv-col-simple-amt"/>' +
-            '<col class="inv-col-dist-pct"/>' +
-            '<col class="inv-col-dist-amt"/>' +
-            '<col class="inv-col-after-dist"/>' +
-            '<col class="inv-col-without-tax"/>' +
-            '<col class="inv-col-tax-pct"/>' +
-            '<col class="inv-col-tax-amt"/>' +
-            '<col class="inv-col-amount"/>' +
-            "</colgroup>"
-        );
+        return '<colgroup>' + ['sr', 'product', 'hsn', 'qty', 'unit', 'list-price', 'discount', 'price', 'amount'].map(function (name) {
+            return '<col class="inv-col-' + name + '"/>';
+        }).join('') + '</colgroup>';
     }
 
-    function buildInvoiceItemRowsHtml(sale, taxes) {
-        var printRows = buildInvoicePrintRows(sale, taxes);
-        if (!printRows.length) {
-            return '<tr class="inv-empty-row"><td colspan="16">No products on this invoice</td></tr>';
-        }
+    function buildInvoiceItemRowsHtml(rows) {
+        if (!rows.length) return '<tr class="inv-empty-row"><td colspan="9">No products on this invoice</td></tr>';
+        return rows.map(function (row) {
+            return '<tr>' +
+                '<td class="num">' + row.serial + '.</td>' +
+                '<td class="item-name">' + displayText(row.product_name) + '</td>' +
+                '<td>' + displayText(row.hsn) + '</td>' +
+                '<td class="num">' + invoiceMoney(row.quantity) + '</td>' +
+                '<td>' + displayText(row.unit) + '</td>' +
+                '<td class="num">' + invoiceMoney(row.list_price) + '</td>' +
+                '<td class="num">' + invoiceMoney(row.discount_percent) + ' %</td>' +
+                '<td class="num">' + invoiceMoney(row.price) + '</td>' +
+                '<td class="num">' + invoiceMoney(row.amount) + '</td></tr>';
+        }).join('');
+    }
 
-        return printRows.map(function (row) {
-            var itemHtml = displayText(row.product_name);
-            if (row.product_sku) {
-                itemHtml += '<div class="inv-item-sku">SKU: ' + displayText(row.product_sku) + "</div>";
-            }
+    function invoiceTaxKind(sale, business) {
+        var seller = String(business.state_code || business.gst_number || '').match(/^(\d{2})/);
+        var supply = String(sale.customer_place_of_supply || sale.place_of_supply || '');
+        var buyer = supply.match(/(?:^|\()(\d{2})(?:\)|$)/);
+        // An explicit supply location takes precedence over the customer's GSTIN.
+        if (!buyer && !supply) buyer = String(sale.customer_gst_number || '').match(/^(\d{2})/);
+        if (!seller || !buyer) return 'GST';
+        return seller[1] === buyer[1] ? 'local' : 'IGST';
+    }
 
-            return (
-                "<tr>" +
-                '<td class="center inv-col-sr">' + row.serial + "</td>" +
-                '<td class="item-name inv-col-product">' + itemHtml + "</td>" +
-                '<td class="num inv-col-price">' + formatMoney(row.price) + "</td>" +
-                '<td class="num inv-col-qty">' + displayText(formatQty(row.quantity)) + "</td>" +
-                '<td class="center inv-col-unit">' + displayText(row.unit) + "</td>" +
-                '<td class="center inv-col-exp">' + formatDisplayDate(row.expiry_date) + "</td>" +
-                '<td class="num inv-col-total-price">' + formatMoney(row.total_price) + "</td>" +
-                '<td class="center inv-col-simple-pct">' + displayText(formatPercent(row.simple_discount_percent)) + "</td>" +
-                '<td class="num inv-col-simple-amt">' + formatMoney(row.simple_discount) + "</td>" +
-                '<td class="center inv-col-dist-pct">' + displayText(formatPercent(row.distributor_discount_percent)) + "</td>" +
-                '<td class="num inv-col-dist-amt">' + formatMoney(row.distributor_discount) + "</td>" +
-                '<td class="num inv-col-after-dist">' + formatMoney(row.price_after_distributor) + "</td>" +
-                '<td class="num inv-col-without-tax">' + formatMoney(row.price_without_tax) + "</td>" +
-                '<td class="center inv-col-tax-pct">' + displayText(formatTaxPercent(row.tax_percent)) + "</td>" +
-                '<td class="num inv-col-tax-amt">' + formatMoney(row.tax) + "</td>" +
-                '<td class="num inv-col-amount">' + formatMoney(row.price_after_distributor) + "</td>" +
-                "</tr>"
-            );
-        }).join("");
+    function buildInvoiceTaxSummary(rows, sale, business) {
+        var kind = invoiceTaxKind(sale, business);
+        var groups = {};
+        rows.forEach(function (row) {
+            var key = JSON.stringify([row.hsn, row.tax_percent]);
+            if (!groups[key]) groups[key] = { hsn: row.hsn, rate: row.tax_percent, taxable: 0, tax: 0 };
+            groups[key].taxable = roundMoney(groups[key].taxable + row.amount);
+            groups[key].tax = roundMoney(groups[key].tax + row.tax);
+        });
+        var totals = { taxable: 0, tax: 0, first: 0, second: 0 };
+        var additions = {};
+        rows.forEach(function (row) {
+            if (!row.tax) return;
+            var key = JSON.stringify([row.tax_name, row.tax_percent]);
+            if (!additions[key]) additions[key] = { name: row.tax_name, rate: row.tax_percent, amount: 0 };
+            additions[key].amount = roundMoney(additions[key].amount + row.tax);
+        });
+        var body = Object.keys(groups).map(function (key) {
+            var group = groups[key];
+            var first = kind === 'local' ? roundMoney(group.tax / 2) : group.tax;
+            var second = roundMoney(group.tax - first);
+            totals.taxable = roundMoney(totals.taxable + group.taxable);
+            totals.tax = roundMoney(totals.tax + group.tax);
+            totals.first = roundMoney(totals.first + first);
+            totals.second = roundMoney(totals.second + second);
+            return '<tr><td>' + displayText(group.hsn) + '</td><td>' + escapeHtml(String(group.rate)) + '%</td>' +
+                '<td class="num">' + invoiceMoney(group.taxable) + '</td><td class="num">' + invoiceMoney(first) + '</td>' +
+                (kind === 'local' ? '<td class="num">' + invoiceMoney(second) + '</td>' : '') +
+                '<td class="num">' + invoiceMoney(group.tax) + '</td></tr>';
+        }).join('');
+        var table = '<table class="inv-tax-summary"><thead><tr><th>HSN/SAC</th><th>Tax Rate</th><th class="num">Taxable Amt.</th>' +
+            (kind === 'local' ? '<th class="num">CGST Amt.</th><th class="num">SGST Amt.</th>' : '<th class="num">' + kind + ' Amt.</th>') +
+            '<th class="num">Total Tax</th></tr></thead><tbody>' + body + '</tbody><tfoot><tr><th colspan="2">Total</th>' +
+            '<td class="num">' + invoiceMoney(totals.taxable) + '</td><td class="num">' + invoiceMoney(totals.first) + '</td>' +
+            (kind === 'local' ? '<td class="num">' + invoiceMoney(totals.second) + '</td>' : '') +
+            '<td class="num">' + invoiceMoney(totals.tax) + '</td></tr></tfoot></table>';
+        return { html: table, additions: Object.keys(additions).map(function (key) { return additions[key]; }), totals: totals };
+    }
+
+    function buildInvoiceTotalsRows(rows, summary, roundTotals) {
+        var html = '<tr class="inv-subtotal"><td colspan="8">Taxable Amount</td><td class="num">' + invoiceMoney(summary.totals.taxable) + '</td></tr>';
+        summary.additions.forEach(function (tax) {
+            html += '<tr><td colspan="8" class="inv-tax-addition">Add : ' + escapeHtml(tax.name) + ' @ ' + invoiceMoney(tax.rate) + ' %</td><td class="num">' + invoiceMoney(tax.amount) + '</td></tr>';
+        });
+        if (roundTotals.roundOff) html += '<tr><td colspan="8">Round Off</td><td class="num">' + invoiceMoney(roundTotals.roundOff) + '</td></tr>';
+        var quantities = {};
+        rows.forEach(function (row) { quantities[row.unit] = (quantities[row.unit] || 0) + row.quantity; });
+        var quantityText = Object.keys(quantities).map(function (unit) { return invoiceMoney(quantities[unit]) + ' ' + escapeHtml(unit); }).join(' / ');
+        return html + '<tr class="inv-grand-total"><td colspan="8">Grand Total <span class="inv-total-quantity">' + quantityText + '</span></td><td class="num">' + invoiceMoney(roundTotals.grandTotal) + '</td></tr>';
     }
 
     function saleInvoiceStyles() {
@@ -780,22 +894,30 @@ var InventoryDocumentExport = (function () {
             "body{padding:16px 0;}" +
             ".sale-invoice-page{width:210mm;min-height:277mm;max-width:210mm;margin:0 auto 16px;padding:10mm 12mm 12mm;background:#fff;border:1px solid #cfcfcf;page-break-after:always;position:relative;font-family:'Segoe UI',Calibri,'Helvetica Neue',Helvetica,sans-serif;font-size:11px;line-height:1.5;color:#111;letter-spacing:.01em;}" +
             ".sale-invoice-page:last-child{page-break-after:auto;margin-bottom:0;}" +
-            ".inv-header-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%;max-width:100%;min-height:34mm;box-sizing:border-box;border:1px solid #333;margin:0 0 10px 0;}" +
-            ".inv-header-panel{padding:5px 8px;border-right:1px solid #333;min-width:0;overflow:hidden;font-size:10px;line-height:1.2;display:flex;flex-direction:column;gap:2px;}" +
+            ".sale-invoice-page[data-paginated]{height:297mm;min-height:297mm;border:0;outline:1px solid #cfcfcf;padding:10mm 12mm 12mm;}" +
+            ".inv-page-content{height:275mm;display:flow-root;}" +
+            ".inv-page-number{position:absolute;bottom:4mm;left:12mm;right:12mm;text-align:right;font-size:9px;color:#555;}" +
+            ".inv-invoice-header{border:1px solid #333;margin:0;width:100%;box-sizing:border-box;}" +
+            ".inv-business-heading{text-align:center;padding:8px 10px 12px;}" +
+            ".inv-business-topline{display:flex;justify-content:space-between;gap:12px;text-align:left;font-size:11px;margin-bottom:4px;}" +
+            ".inv-business-topline em{white-space:nowrap;font-weight:400;}" +
+            ".inv-business-address{font-size:12px;line-height:1.35;}" +
+            ".inv-business-contact{display:flex;justify-content:center;margin-top:4px;}" +
+            ".inv-header-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;box-sizing:border-box;border-top:1px solid #333;margin:0;}" +
+            ".inv-header-panel{padding:8px 9px;border-right:1px solid #333;min-width:0;font-size:11px;line-height:1.35;display:flex;flex-direction:column;gap:3px;}" +
             ".inv-header-panel:last-child{border-right:none;}" +
-            ".inv-header-panel .inv-detail-field--table{display:grid;grid-template-columns:var(--inv-header-label-width,92px) 8px minmax(0,1fr);column-gap:2px;align-items:start;line-height:1.2;margin:0;}" +
-            ".inv-header-panel--company{--inv-header-label-width:98px;}" +
-            ".inv-header-panel--business{--inv-header-label-width:72px;}" +
-            ".inv-header-panel--invoice{--inv-header-label-width:98px;}" +
-            ".inv-header-panel .inv-detail-label{text-align:left;font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#333;word-break:break-word;}" +
-            ".inv-header-panel .inv-detail-colon{text-align:center;font-weight:800;color:#333;}" +
-            ".inv-header-panel .inv-detail-value{font-weight:700;color:#000;min-width:0;overflow-wrap:anywhere;word-break:break-all;}" +
-            ".inv-header-panel-title{margin:0 0 2px;font-size:11px;font-weight:800;text-align:center;text-transform:uppercase;letter-spacing:.06em;color:#000;}" +
+            ".inv-header-panel .inv-detail-field--table{display:grid;grid-template-columns:100px 8px minmax(0,1fr);column-gap:3px;align-items:start;line-height:1.3;margin:0;}" +
+            ".inv-header-panel .inv-detail-label{text-align:left;font-size:10px;font-weight:500;color:#111;overflow-wrap:anywhere;}" +
+            ".inv-header-panel .inv-detail-colon{text-align:center;color:#111;}" +
+            ".inv-header-panel .inv-detail-value{font-weight:500;color:#000;min-width:0;overflow-wrap:anywhere;}" +
+            ".inv-header-panel-title{margin:0 0 3px;font-size:14px;font-weight:800;text-align:center;text-decoration:underline;color:#000;}" +
+            ".inv-box-title{margin:0 0 4px;font-size:11px;font-weight:700;}" +
+            ".inv-party-title{margin:0 0 3px;font-size:12px;font-weight:700;font-style:italic;}" +
             ".inv-header-name-row{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;margin-bottom:2px;}" +
             ".inv-header-panel-heading{margin:0;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#333;flex-shrink:0;}" +
-            ".inv-header-customer-name{margin:0 0 2px;font-size:12px;font-weight:800;text-transform:uppercase;line-height:1.15;color:#000;letter-spacing:.05em;}" +
-            ".inv-header-address-lines{margin:0 0 2px;font-size:10px;font-weight:600;line-height:1.2;color:#000;}" +
-            ".inv-header-business-name{margin:0 0 2px;font-size:10px;font-weight:800;text-transform:uppercase;line-height:1.15;color:#000;}" +
+            ".inv-header-customer-name{margin:0 0 2px;font-size:12px;font-weight:600;text-transform:uppercase;line-height:1.3;color:#000;}" +
+            ".inv-header-address-lines{margin:0 0 2px;font-size:11px;font-weight:400;line-height:1.35;color:#000;}" +
+            ".inv-header-business-name{margin:0 0 2px;font-size:22px;font-weight:800;text-transform:uppercase;line-height:1.2;color:#000;}" +
             ".inv-detail-field--inline{line-height:1.5;font-size:10px;}" +
             ".inv-detail-field--inline .inv-detail-label{font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#333;}" +
             ".inv-detail-field--inline .inv-detail-value{font-weight:700;color:#000;min-width:0;overflow-wrap:anywhere;word-break:break-all;}" +
@@ -807,64 +929,53 @@ var InventoryDocumentExport = (function () {
             ".inv-meta-line{display:flex;justify-content:flex-end;align-items:baseline;gap:8px;max-width:100%;}" +
             ".inv-meta-label{font-weight:700;color:#333;white-space:nowrap;}" +
             ".inv-meta-value{font-weight:800;color:#000;text-align:right;}" +
-            ".inv-lines-wrap{width:100%;max-width:100%;overflow-x:visible;margin-bottom:10px;}" +
-            ".inv-lines{width:100%;max-width:100%;border-collapse:collapse;font-size:8px;table-layout:fixed;}" +
-            ".inv-lines col.inv-col-sr{width:3%;}" +
-            ".inv-lines col.inv-col-product{width:15.5%;}" +
-            ".inv-lines col.inv-col-price{width:5%;}" +
-            ".inv-lines col.inv-col-qty{width:3.5%;}" +
-            ".inv-lines col.inv-col-unit{width:3.5%;}" +
-            ".inv-lines col.inv-col-exp{width:4.5%;}" +
-            ".inv-lines col.inv-col-total-price{width:5.5%;}" +
-            ".inv-lines col.inv-col-simple-pct{width:4%;}" +
-            ".inv-lines col.inv-col-simple-amt{width:5.5%;}" +
-            ".inv-lines col.inv-col-dist-pct{width:4%;}" +
-            ".inv-lines col.inv-col-dist-amt{width:5%;}" +
-            ".inv-lines col.inv-col-after-dist{width:7.5%;}" +
-            ".inv-lines col.inv-col-without-tax{width:5.5%;}" +
-            ".inv-lines col.inv-col-tax-pct{width:4%;}" +
-            ".inv-lines col.inv-col-tax-amt{width:5%;}" +
-            ".inv-lines col.inv-col-amount{width:9%;}" +
-            ".inv-lines th.inv-col-sr,.inv-lines td.inv-col-sr{text-align:center;}" +
-            ".inv-lines th.inv-col-product,.inv-lines td.inv-col-product{word-wrap:break-word;overflow-wrap:anywhere;}" +
-            ".inv-lines-page-header-cell{padding:0 0 8px 0;border:none;vertical-align:top;background:#fff;width:100%;}" +
-            ".inv-lines thead tr.inv-lines-page-header td{border:none;padding:0;}" +
-            ".inv-lines th,.inv-lines td{border:1px solid #333;padding:6px 5px;vertical-align:top;word-wrap:break-word;overflow-wrap:anywhere;}" +
-            ".inv-lines thead tr:not(.inv-lines-page-header){height:21mm;}" +
-            ".inv-lines thead th{padding:3px 4px;background:#f5f5f5;font-weight:800;font-size:8px;line-height:1.2;text-align:center;color:#000;}" +
-            ".inv-lines tbody tr{height:13mm;}" +
-            ".inv-lines tbody td{padding-top:3px;padding-bottom:3px;}" +
-            ".inv-lines td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:700;}" +
-            ".inv-lines td.center{text-align:center;font-weight:700;}" +
-            ".inv-lines td.item-name{padding-bottom:4px;font-weight:800;color:#000;font-size:9px;line-height:1.25;}" +
-            ".inv-item-sku{font-size:8px;line-height:1.2;color:#444;font-weight:600;margin-top:1px;}" +
-            ".inv-amount-words{margin:10px 0 12px;padding:0;font-size:12px;line-height:1.6;font-weight:600;}" +
-            ".inv-amount-words strong{font-weight:800;color:#000;}" +
-            ".inv-footer-grid{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;margin-bottom:16px;}" +
-            ".inv-signature-block{flex:1;min-width:0;display:flex;align-items:flex-end;}" +
-            ".inv-signature-inner{text-align:center;min-width:220px;max-width:300px;}" +
-            ".inv-signature-company{margin:0 0 48px;font-size:14px;font-weight:800;color:#111;text-transform:uppercase;letter-spacing:.04em;}" +
-            ".inv-signature-line{border-top:1px solid #333;height:0;margin:0 auto 8px;min-width:200px;}" +
-            ".inv-signature-label{margin:0;font-size:11px;font-weight:700;color:#333;letter-spacing:.02em;}" +
-            ".inv-payment-row{margin-bottom:16px;}" +
-            ".inv-payment-info{flex:1;min-width:0;max-width:52%;}" +
-            ".inv-payment-info h3,.inv-terms h3,.inv-invoice-bottom-qr h3{margin:0 0 8px;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#000;}" +
-            ".inv-info-list{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:600;}" +
+            ".inv-lines-wrap{width:100%;margin-bottom:0;}" +
+            ".inv-lines{width:100%;border-collapse:collapse;font-size:10px;table-layout:fixed;}" +
+            ".inv-lines col.inv-col-sr{width:4%;}.inv-lines col.inv-col-product{width:29%;}.inv-lines col.inv-col-hsn{width:8%;}" +
+            ".inv-lines col.inv-col-qty{width:7%;}.inv-lines col.inv-col-unit{width:6%;}.inv-lines col.inv-col-list-price{width:11%;}" +
+            ".inv-lines col.inv-col-discount{width:10%;}.inv-lines col.inv-col-price{width:11%;}.inv-lines col.inv-col-amount{width:14%;}" +
+            ".inv-lines th,.inv-lines td{border-left:1px solid #555;border-right:1px solid #555;padding:4px;vertical-align:top;overflow-wrap:anywhere;}" +
+            ".inv-lines thead th{border-top:1px solid #555;border-bottom:1px solid #555;padding:8px 4px;text-align:left;font-size:10px;line-height:1.3;font-weight:700;}" +
+            ".inv-lines .inv-lines-page-header td{border:0;padding:0;}" +
+            ".inv-lines tbody td{padding-top:3px;padding-bottom:3px;font-weight:400;}" +
+            ".inv-lines tbody tr:first-child td{padding-top:10px;}" +
+            ".inv-lines tbody tr:last-child td{padding-bottom:18px;}" +
+            ".inv-lines .num,.inv-tax-summary .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;}" +
+            ".inv-lines td.item-name{text-align:left;line-height:1.35;}" +
+            ".inv-invoice-totals td:first-child{text-align:right;padding-right:18px;}" +
+            ".inv-invoice-totals tr:first-child td{border-top:1px solid #555;padding-top:8px;font-weight:700;}" +
+            ".inv-invoice-totals .inv-tax-addition{font-style:italic;}" +
+            ".inv-invoice-totals .inv-grand-total td{border-top:1px solid #555;border-bottom:1px solid #555;padding-top:9px;padding-bottom:9px;font-size:12px;font-weight:700;}" +
+            ".inv-total-quantity{display:inline-block;margin-left:18px;}" +
+            ".inv-tax-summary{border-collapse:collapse;font-size:10px;width:auto;max-width:100%;margin:0 0 8px;}" +
+            ".inv-tax-summary th,.inv-tax-summary td{padding:2px 7px;text-align:left;}" +
+            ".inv-tax-summary thead{display:table-header-group;}" +
+            ".inv-tax-summary thead th{border-bottom:1px solid #555;}" +
+            ".inv-tax-summary tr{break-inside:avoid;page-break-inside:avoid;}" +
+            ".inv-tax-summary tfoot th,.inv-tax-summary tfoot td{border-top:1px solid #555;border-bottom:1px solid #555;font-weight:700;}" +
+            ".inv-tax-section,.inv-invoice-totals{break-inside:avoid;page-break-inside:avoid;}" +
+            ".inv-tax-section{border-left:1px solid #555;border-right:1px solid #555;padding:10px 6px 8px;}" +
+            ".inv-amount-words{margin:0;padding:10px 0 14px;font-size:13px;line-height:1.4;font-weight:700;}" +
+            ".inv-invoice-bottom{margin:0;border:1px solid #555;break-inside:avoid;page-break-inside:avoid;}" +
+            ".inv-payment-info{display:flex;align-items:flex-start;gap:10px;padding:8px 6px;min-width:0;border-bottom:1px solid #555;}" +
+            ".inv-payment-info h3{flex:0 0 95px;margin:0;font-size:12px;line-height:1.4;font-weight:700;}" +
+            ".inv-payment-info h3 span{float:right;}" +
+            ".inv-info-list{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;font-size:12px;line-height:1.4;font-weight:400;}" +
             ".inv-info-list .inv-meta-line{justify-content:flex-start;}" +
-            ".inv-totals-wrap{min-width:250px;flex-shrink:0;margin-left:auto;}" +
-            ".inv-totals{width:100%;border-collapse:collapse;font-size:12px;}" +
-            ".inv-totals td{border:1px solid #999;padding:7px 10px;}" +
-            ".inv-totals td:first-child{background:#f5f5f5;font-weight:800;width:55%;}" +
-            ".inv-totals td:last-child{text-align:right;font-weight:800;font-variant-numeric:tabular-nums;}" +
-            ".inv-totals tr.inv-total-final td{background:#efefef;font-size:13px;font-weight:800;}" +
-            ".inv-invoice-bottom{margin-top:18px;padding-top:14px;border-top:1px solid #bbb;}" +
-            ".inv-invoice-bottom-row{display:flex;align-items:flex-start;gap:24px;}" +
-            ".inv-invoice-bottom-terms{flex:0 0 65%;min-width:0;}" +
-            ".inv-invoice-bottom-qr{flex:0 0 35%;min-width:0;text-align:center;}" +
-            ".inv-invoice-bottom-row--single .inv-invoice-bottom-terms," +
-            ".inv-invoice-bottom-row--single .inv-invoice-bottom-qr{flex:1 1 100%;max-width:100%;}" +
-            ".inv-invoice-bottom-row--single .inv-invoice-bottom-qr{text-align:center;}" +
-            ".inv-terms{margin:0;padding:0;font-size:11px;line-height:1.6;color:#333;font-weight:600;}" +
+            ".inv-info-list .inv-meta-value{text-align:left;overflow-wrap:anywhere;font-weight:400;}" +
+            ".inv-bank-details{overflow-wrap:anywhere;}" +
+            ".inv-invoice-bottom-row{display:grid;grid-template-columns:minmax(0,31.5fr) minmax(0,22.5fr) minmax(0,46fr);min-height:165px;}" +
+            ".inv-invoice-bottom-terms{padding:7px 6px;border-right:1px solid #555;min-width:0;}" +
+            ".inv-invoice-bottom-qr{padding:7px 6px;border-right:1px solid #555;min-width:0;text-align:center;}" +
+            ".inv-terms h3,.inv-invoice-bottom-qr h3{margin:0 0 7px;font-size:10px;line-height:1.3;font-weight:700;color:#000;}" +
+            ".inv-terms h3{text-decoration:underline;text-underline-offset:3px;}" +
+            ".inv-terms{font-size:10px;line-height:1.5;color:#111;font-weight:400;overflow-wrap:anywhere;}" +
+            ".inv-signature-block{min-width:0;display:flex;flex-direction:column;}" +
+            ".inv-receiver-signature{min-height:44px;padding:7px 5px;border-bottom:1px solid #555;font-size:10px;font-weight:700;}" +
+            ".inv-receiver-signature span{margin-left:12px;}" +
+            ".inv-signature-inner{flex:1;min-height:120px;padding:12px 6px 6px;display:flex;flex-direction:column;justify-content:flex-end;text-align:right;gap:30px;}" +
+            ".inv-signature-company{margin:0;font-size:12px;font-weight:700;line-height:1.3;overflow-wrap:anywhere;}" +
+            ".inv-signature-label{margin:0;font-size:12px;font-weight:700;}" +
             ".inv-terms-body{margin:0;}" +
             ".inv-terms-body ol{margin:0;padding:0;list-style:none;counter-reset:invoice-terms;}" +
             ".inv-terms-body ul{margin:0;padding-left:1.35em;}" +
@@ -875,13 +986,16 @@ var InventoryDocumentExport = (function () {
             ".inv-terms-body b,.inv-terms-body strong{font-weight:800;color:#000;}" +
             ".inv-terms p{margin:0;white-space:pre-wrap;}" +
             ".inv-qr-wrap{margin:0 auto;text-align:center;}" +
-            ".inv-qr{width:120px;height:120px;object-fit:contain;display:inline-block;}" +
+            ".inv-qr{width:128px;height:auto;max-width:100%;aspect-ratio:1;object-fit:contain;display:block;margin:0 auto;}" +
             ".inv-bottom-note{margin-top:16px;padding:0;text-align:center;font-size:13px;font-weight:800;color:#000;}" +
             ".inv-empty-row td{text-align:center;color:#666;font-style:italic;padding:14px;}" +
             "@media print{" +
             "@page{size:A4 portrait;margin:0;}" +
-            "html,body{background:#fff;padding:0;}" +
+            "html,body{background:#fff;padding:0!important;margin:0!important;overflow:visible!important;}" +
             ".sale-invoice-page{border:none;margin:0;box-shadow:none;width:auto;min-height:auto;max-width:none;padding:10mm 12mm 12mm;}" +
+            ".sale-invoice-page[data-paginated]{width:210mm;height:297mm;min-height:297mm;max-width:210mm;outline:0;zoom:1!important;break-after:page;break-inside:avoid;}" +
+            ".sale-invoice-page[data-paginated]:last-child{break-after:auto;}" +
+            ".sale-invoice-preview-scale{display:block!important;}" +
             ".inv-lines thead{display:table-header-group;}" +
             ".inv-lines tfoot{display:table-footer-group;}" +
             ".inv-lines tbody tr{page-break-inside:avoid;break-inside:avoid;}" +
@@ -925,7 +1039,9 @@ var InventoryDocumentExport = (function () {
             totalAmount += Math.max(0, Number(line.line_total || 0) - Number(line.tax_amount || 0));
         });
 
-        var itemRows = buildInvoiceItemRowsHtml(sale, taxes);
+        var printRows = buildInvoicePrintRows(sale, taxes);
+        var itemRows = buildInvoiceItemRowsHtml(printRows);
+        var taxSummary = buildInvoiceTaxSummary(printRows, sale, business);
 
         subtotal = roundMoney(subtotal);
         totalTax = roundMoney(totalTax);
@@ -936,7 +1052,7 @@ var InventoryDocumentExport = (function () {
 
         var invoiceNo = sale.reference_no || ("SALE-" + sale.id);
         var invoiceDate = formatDisplayDate(sale.purchase_date);
-        var paymentFooterHtml = buildTermsAndPaymentFooterSection(sale);
+        var paymentFooterHtml = buildTermsAndPaymentFooterSection(sale, businessName, paymentInfo);
 
         var headerRowHtml = buildInvoiceHeaderRow(sale, business, businessName, invoiceNo, invoiceDate);
 
@@ -945,44 +1061,18 @@ var InventoryDocumentExport = (function () {
             '<div class="inv-lines-wrap"><table class="inv-lines">' +
             buildInvoiceLinesColgroup() +
             "<thead>" +
-            '<tr class="inv-lines-page-header"><td colspan="16" class="inv-lines-page-header-cell">' +
+            '<tr class="inv-lines-page-header"><td colspan="9" class="inv-lines-page-header-cell">' +
             headerRowHtml +
             "</td></tr>" +
             "<tr>" +
-            '<th class="center inv-col-sr">Sr.</th>' +
-            '<th class="center inv-col-product">Product</th>' +
-            '<th class="center inv-col-price">Price (₹)</th>' +
-            '<th class="center inv-col-qty">Qty</th>' +
-            '<th class="center inv-col-unit">Unit</th>' +
-            '<th class="center inv-col-exp">Exp.</th>' +
-            '<th class="center inv-col-total-price">Total<br/>Price (₹)</th>' +
-            '<th class="center inv-col-simple-pct">Salon<br/>Discount (%)</th>' +
-            '<th class="center inv-col-simple-amt">Salon<br/>Discount (₹)</th>' +
-            '<th class="center inv-col-dist-pct">Distributor<br/>Discount (%)</th>' +
-            '<th class="center inv-col-dist-amt">Distributor<br/>Discount (₹)</th>' +
-            '<th class="center inv-col-after-dist">Price after<br/>Discount (₹)</th>' +
-            '<th class="center inv-col-without-tax">Price without<br/>Tax (₹)</th>' +
-            '<th class="center inv-col-tax-pct">Tax added<br/>(%)</th>' +
-            '<th class="center inv-col-tax-amt">Tax added<br/>(₹)</th>' +
-            '<th class="center inv-col-amount">Amount (₹)</th>' +
-            "</tr></thead><tbody>" + itemRows + "</tbody></table></div>" +
-            '<div class="inv-amount-words"><strong>Amount in words:</strong> ' +
-            escapeHtml(amountInWordsInr(roundTotals.grandTotal)) + "</div>" +
-            '<div class="inv-footer-grid">' +
-            buildAuthorizedSignatureSection(sale) +
-            '<div class="inv-totals-wrap">' +
-            '<table class="inv-totals">' +
-            "<tr><td>Amount (₹)</td><td>" + formatMoney(totalAmount || roundTotals.preRoundTotal) + "</td></tr>" +
-            "<tr><td>Tax (₹)</td><td>" + formatMoney(totalTax) + "</td></tr>" +
-            "<tr><td>Total (₹)</td><td>" + formatMoney(roundTotals.preRoundTotal) + "</td></tr>" +
-            "<tr><td>Round Off (₹)</td><td>" + formatRoundOff(roundTotals.roundOff) + "</td></tr>" +
-            "<tr class=\"inv-total-final\"><td>Grand Total (₹)</td><td>" + formatMoney(roundTotals.grandTotal) + "</td></tr>" +
-            "</table></div></div>" +
-            (hasPaymentInfo(paymentInfo)
-                ? '<div class="inv-payment-row">' + buildPaymentInfoSection(paymentInfo) + "</div>"
-                : "") +
+            '<th class="num">S.N.</th><th>Description of Goods</th><th>HSN/SAC<br/>Code</th>' +
+            '<th class="num">Qty.</th><th>Unit</th><th class="num">List Price</th><th class="num">Discount</th>' +
+            '<th class="num">Price</th><th class="num">Amount (&#8377;)</th>' +
+            '</tr></thead><tbody>' + itemRows + '</tbody>' +
+            '<tbody class="inv-invoice-totals">' + buildInvoiceTotalsRows(printRows, taxSummary, roundTotals) + '</tbody></table></div>' +
+            '<section class="inv-tax-section">' + taxSummary.html +
+            '<div class="inv-amount-words">' + escapeHtml(amountInWordsInr(roundTotals.grandTotal)) + '</div></section>' +
             paymentFooterHtml +
-            '<div class="inv-bottom-note">Thank you</div>' +
             "</section>"
         );
     }
@@ -1082,7 +1172,9 @@ var InventoryDocumentExport = (function () {
         frameDoc.open();
         frameDoc.write(html);
         frameDoc.close();
-        window.setTimeout(triggerPrint, 100);
+        prepareSalesDocument(frameDoc).then(triggerPrint).catch(function (err) {
+            if (window.InventoryToast) InventoryToast.error(err.message || "Unable to prepare print view.");
+        });
     }
 
     function downloadTablePdf(title, headers, rows, filename) {
@@ -1120,75 +1212,18 @@ var InventoryDocumentExport = (function () {
 
     function downloadSalesPdf(sales, filename) {
         if (!sales || !sales.length) return;
-
         if (window.InventoryLoader) InventoryLoader.show();
-
-        loadJsPdf()
-            .then(function (jsPDF) {
-                var doc = new jsPDF();
-                var businessName = getBusinessName();
-
-                function renderSale(index) {
-                    if (index >= sales.length) {
-                        doc.save(filename || "sales.pdf");
-                        return Promise.resolve();
-                    }
-
-                    var sale = sales[index];
-                    if (index > 0) doc.addPage();
-
-                    var y = 16;
-                    doc.setFontSize(16);
-                    doc.text("Sale Invoice", 14, y);
-                    y += 8;
-                    doc.setFontSize(10);
-                    doc.text("Business: " + businessName, 14, y);
-                    y += 6;
-                    doc.text("Date: " + formatDisplayDate(sale.purchase_date), 14, y);
-                    y += 6;
-                    doc.text("Customer: " + (sale.customer_name || "—"), 14, y);
-                    y += 6;
-                    if (sale.reference_no) {
-                        doc.text("Reference: " + sale.reference_no, 14, y);
-                        y += 6;
-                    }
-
-                    var body = (sale.items || []).map(function (line) {
-                        return [
-                            String(line.product_name || ""),
-                            String(line.quantity || ""),
-                            String(line.unit_price || ""),
-                            String(line.line_total || "")
-                        ];
-                    });
-
-                    return loadAutoTable(doc).then(function (docWithTable) {
-                        docWithTable.autoTable({
-                            head: [["Product", "Qty", "Unit Price", "Total"]],
-                            body: body,
-                            startY: y + 4,
-                            styles: { fontSize: 9, cellPadding: 3 },
-                            headStyles: { fillColor: [27, 33, 45] }
-                        });
-
-                        var finalY = docWithTable.lastAutoTable.finalY + 8;
-                        docWithTable.text("Sale Amount: " + (sale.total_amount || "0"), 14, finalY);
-                        docWithTable.text("Total Cost: " + (sale.total_cost || "0"), 14, finalY + 6);
-                        docWithTable.text("Profit: " + (sale.total_profit || "0"), 14, finalY + 12);
-                        return renderSale(index + 1);
-                    });
-                }
-
-                return renderSale(0);
-            })
-            .catch(function (err) {
-                if (window.InventoryToast) {
-                    InventoryToast.error(err && err.message ? err.message : "Unable to generate PDF.");
-                }
-            })
-            .finally(function () {
-                if (window.InventoryLoader) InventoryLoader.hide();
-            });
+        var chain = Promise.resolve(null);
+        sales.forEach(function (sale) {
+            chain = chain.then(function (pdf) { return appendSaleInvoicePdf(sale, [], pdf); });
+        });
+        return chain.then(function (pdf) {
+            pdf.save(filename || "sales.pdf");
+        }).catch(function (err) {
+            if (window.InventoryToast) InventoryToast.error(err && err.message ? err.message : "Unable to generate PDF.");
+        }).finally(function () {
+            if (window.InventoryLoader) InventoryLoader.hide();
+        });
     }
 
     return {
@@ -1196,6 +1231,7 @@ var InventoryDocumentExport = (function () {
         printHtml: printHtml,
         downloadTablePdf: downloadTablePdf,
         buildSalesDocumentHtml: buildSalesDocumentHtml,
+        prepareSalesDocument: prepareSalesDocument,
         downloadSalesPdf: downloadSalesPdf,
         generateSaleInvoicePdfBlob: generateSaleInvoicePdfBlob
     };

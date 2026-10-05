@@ -414,6 +414,10 @@
                     <textarea id="business-address" class="inv-mgmt-textarea" rows="3" placeholder="Business address"></textarea>
                 </div>
                 <div class="inv-mgmt-field inv-mgmt-field--full">
+                    <label for="business-bank-details">Bank Details <span class="inv-field-optional">(optional)</span></label>
+                    <textarea id="business-bank-details" class="inv-mgmt-textarea" rows="4" placeholder="Bank name, account holder, account number, IFSC and branch"></textarea>
+                </div>
+                <div class="inv-mgmt-field inv-mgmt-field--full">
                     <label for="business-logo">Logo</label>
                     <input id="business-logo" class="inv-mgmt-input" type="file" accept="image/*"/>
                 </div>
@@ -442,7 +446,7 @@
 <script src="{% static 'js/layout/nav-access.js' %}?v=20260317-staff-access"></script>
 <script src="{% static 'js/components/bulk-select.js' %}"></script>
 <script src="{% static 'js/components/terms-html.js' %}"></script>
-<script src="{% static 'js/components/document-export.js' %}?v=20260401-multipage-invoice-pdf"></script>
+<script src="{% static 'js/components/document-export.js' %}?v=20261005-invoice-amount-spacing"></script>
 <script src="{% static 'js/components/column-customize.js' %}?v=20260317-syntax-fix"></script>
 <script src="{% static 'js/components/searchable-select.js' %}?v=20260330-select-arrows"></script>
 <script src="{% static 'js/components/table-cards.js' %}?v=20260329-settings-card-rows"></script>

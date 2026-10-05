@@ -92,6 +92,7 @@ var InventoryBusinessProfile = (function () {
         document.getElementById("business-profile-state-code").value = business.state_code || "";
         document.getElementById("business-profile-pin-code").value = business.pin_code || "";
         document.getElementById("business-profile-address").value = business.address || "";
+        document.getElementById("business-profile-bank-details").value = business.bank_details || "";
         document.getElementById("business-profile-owner").textContent = business.owner_name || "—";
         setMetaDate("business-profile-created", business.created_at);
         setMetaDate("business-profile-updated", business.updated_at);
@@ -195,6 +196,7 @@ var InventoryBusinessProfile = (function () {
             formData.append("state_code", stateCode);
             formData.append("pin_code", pinCode);
             formData.append("address", document.getElementById("business-profile-address").value.trim());
+            formData.append("bank_details", document.getElementById("business-profile-bank-details").value.trim());
             if (logoFile) formData.append("logo", logoFile);
             if (clearLogo) formData.append("clear_logo", "true");
             return formData;
@@ -207,7 +209,8 @@ var InventoryBusinessProfile = (function () {
             email: document.getElementById("business-profile-email").value.trim(),
             state_code: stateCode,
             pin_code: pinCode,
-            address: document.getElementById("business-profile-address").value.trim()
+            address: document.getElementById("business-profile-address").value.trim(),
+            bank_details: document.getElementById("business-profile-bank-details").value.trim()
         };
     }
 
