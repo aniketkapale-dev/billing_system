@@ -1,0 +1,37 @@
+{% extends "user_layout.html" %}
+{% load static %}
+{% block title %}Activity Log - Billing System{% endblock %}
+{% block content %}
+<div class="inv-mgmt-page">
+<div id="activity-list-panel" class="inv-mgmt-page-panel">
+    <div class="inv-mgmt-header"><h2 class="inv-dashboard-greeting">Activity Log</h2></div>
+    <div class="inv-mgmt-card">
+        <div class="inv-mgmt-toolbar" style="flex-wrap:wrap;gap:12px;">
+            <input id="activity-search" type="search" class="inv-mgmt-search" placeholder="Search invoice, product, category or person..." aria-label="Search activities"/>
+            <select id="activity-area" class="inv-mgmt-select" style="width:auto" aria-label="Activity type">
+                <option value="">All activities</option>
+                <option value="sales">Sales</option><option value="purchases">Purchases</option>
+                <option value="payments">Payments</option><option value="expenses">Expenses</option><option value="tax">Tax and categories</option>
+                <option value="products">Products</option><option value="stock">Stock</option>
+                <option value="customers">Customers</option><option value="team">Team access</option>
+                <option value="settings">Settings</option><option value="business">Business profile</option>
+            </select>
+            <label>From <input id="activity-from" type="date" class="inv-mgmt-input"/></label>
+            <label>To <input id="activity-to" type="date" class="inv-mgmt-input"/></label>
+            <button id="activity-clear" type="button" class="inv-mgmt-btn">Clear filters</button>
+        </div>
+        <div class="inv-mgmt-table-wrap">
+            <table class="inv-mgmt-table">
+                <thead><tr><th>Date and time</th><th>Changed by</th><th>Activity type</th><th>What happened</th></tr></thead>
+                <tbody id="activity-table-body" aria-live="polite"><tr><td colspan="4" class="inv-mgmt-empty">Loading activity...</td></tr></tbody>
+            </table>
+        </div>
+        <div id="activity-pagination" class="inv-pagination"></div>
+    </div>
+</div>
+</div>
+{% endblock %}
+{% block page_scripts %}
+<script src="{% static 'js/inventory/activity-log.js' %}?v=20261001-compact-activity"></script>
+<script>InventoryActivityLog.init();</script>
+{% endblock %}
