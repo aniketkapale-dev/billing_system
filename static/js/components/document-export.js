@@ -809,6 +809,20 @@ var InventoryDocumentExport = (function () {
         }).join('') + '</colgroup>';
     }
 
+    /** Widen Qty when formatted values need more space; Unit/Discount stay single-line. */
+    function getInvoiceLinesQtyWidthClass(rows) {
+        var maxLen = 0;
+        (rows || []).forEach(function (row) {
+            var len = invoiceMoney(row.quantity).length;
+            if (len > maxLen) maxLen = len;
+        });
+        // Default fits up to ~8 chars (e.g. 9,999.00). Longer values mainly borrow from Description;
+        // Unit/Discount shrink only to a single-line floor (never wrap or spill).
+        if (maxLen >= 12) return " inv-lines--wide-qty-lg";
+        if (maxLen >= 9) return " inv-lines--wide-qty";
+        return "";
+    }
+
     function buildInvoiceItemRowsHtml(rows) {
         if (!rows.length) return '<tr class="inv-empty-row"><td colspan="9">No products on this invoice</td></tr>';
         return rows.map(function (row) {
@@ -934,6 +948,12 @@ var InventoryDocumentExport = (function () {
             ".inv-lines col.inv-col-sr{width:4%;}.inv-lines col.inv-col-product{width:29%;}.inv-lines col.inv-col-hsn{width:8%;}" +
             ".inv-lines col.inv-col-qty{width:7%;}.inv-lines col.inv-col-unit{width:6%;}.inv-lines col.inv-col-list-price{width:11%;}" +
             ".inv-lines col.inv-col-discount{width:10%;}.inv-lines col.inv-col-price{width:11%;}.inv-lines col.inv-col-amount{width:14%;}" +
+            /* wide qty: Unit/Discount floor keeps header+value on one line; extra space from Description */
+            ".inv-lines.inv-lines--wide-qty col.inv-col-product{width:25%;}.inv-lines.inv-lines--wide-qty col.inv-col-qty{width:13%;}" +
+            ".inv-lines.inv-lines--wide-qty col.inv-col-unit{width:5%;}.inv-lines.inv-lines--wide-qty col.inv-col-discount{width:9%;}" +
+            ".inv-lines.inv-lines--wide-qty-lg col.inv-col-product{width:21%;}.inv-lines.inv-lines--wide-qty-lg col.inv-col-qty{width:16%;}" +
+            ".inv-lines.inv-lines--wide-qty-lg col.inv-col-unit{width:5%;}.inv-lines.inv-lines--wide-qty-lg col.inv-col-discount{width:8%;}" +
+            ".inv-lines.inv-lines--wide-qty-lg col.inv-col-amount{width:16%;}" +
             ".inv-lines th,.inv-lines td{border-left:1px solid #555;border-right:1px solid #555;padding:4px;vertical-align:top;overflow-wrap:anywhere;}" +
             ".inv-lines thead th{border-top:1px solid #555;border-bottom:1px solid #555;padding:8px 4px;text-align:left;font-size:10px;line-height:1.3;font-weight:700;}" +
             ".inv-lines .inv-lines-page-header td{border:0;padding:0;}" +
@@ -941,6 +961,8 @@ var InventoryDocumentExport = (function () {
             ".inv-lines tbody tr:first-child td{padding-top:10px;}" +
             ".inv-lines tbody tr:last-child td{padding-bottom:18px;}" +
             ".inv-lines .num,.inv-tax-summary .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;}" +
+            /* Unit (5) + Discount (7): never wrap or spill into adjacent columns */
+            ".inv-lines th:nth-child(5),.inv-lines td:nth-child(5),.inv-lines th:nth-child(7),.inv-lines td:nth-child(7){white-space:nowrap;overflow:hidden;text-overflow:clip;overflow-wrap:normal;word-break:normal;}" +
             ".inv-lines td.item-name{text-align:left;line-height:1.35;}" +
             ".inv-invoice-totals td:first-child{text-align:right;padding-right:18px;}" +
             ".inv-invoice-totals tr:first-child td{border-top:1px solid #555;padding-top:8px;font-weight:700;}" +
@@ -1042,6 +1064,7 @@ var InventoryDocumentExport = (function () {
         var printRows = buildInvoicePrintRows(sale, taxes);
         var itemRows = buildInvoiceItemRowsHtml(printRows);
         var taxSummary = buildInvoiceTaxSummary(printRows, sale, business);
+        var qtyWidthClass = getInvoiceLinesQtyWidthClass(printRows);
 
         subtotal = roundMoney(subtotal);
         totalTax = roundMoney(totalTax);
@@ -1058,7 +1081,7 @@ var InventoryDocumentExport = (function () {
 
         return (
             '<section class="sale-invoice-page">' +
-            '<div class="inv-lines-wrap"><table class="inv-lines">' +
+            '<div class="inv-lines-wrap"><table class="inv-lines' + qtyWidthClass + '">' +
             buildInvoiceLinesColgroup() +
             "<thead>" +
             '<tr class="inv-lines-page-header"><td colspan="9" class="inv-lines-page-header-cell">' +

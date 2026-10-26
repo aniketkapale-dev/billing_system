@@ -30,6 +30,10 @@ var InventorySidebar = (function () {
     }
     function isCollapsedRail() {
         var body = document.body;
+        if (isMobileDrawer()) {
+            // Mobile uses an off-canvas drawer; treat closed drawer as collapsed rail.
+            return !body.classList.contains("inv-sidebar-drawer-open");
+        }
         return body.classList.contains("inv-sidebar-collapsed") &&
             !body.classList.contains("inv-sidebar-pinned") &&
             !body.classList.contains("inv-sidebar-open");
@@ -182,6 +186,22 @@ var InventorySidebar = (function () {
         });
     }
 
+    function isMobileDrawer() {
+        return window.matchMedia && window.matchMedia("(max-width: 768px)").matches;
+    }
+
+    function ensureSidebarBackdrop() {
+        var backdrop = document.getElementById("inv-sidebar-backdrop");
+        if (backdrop) return backdrop;
+        backdrop = document.createElement("button");
+        backdrop.type = "button";
+        backdrop.id = "inv-sidebar-backdrop";
+        backdrop.className = "inv-sidebar-backdrop";
+        backdrop.setAttribute("aria-label", "Close navigation");
+        document.body.appendChild(backdrop);
+        return backdrop;
+    }
+
     function initSidebarToggle() {
         var toggle = document.getElementById("inv-sidebar-toggle");
         var sidebar = document.querySelector(".inv-sidebar");
@@ -193,26 +213,46 @@ var InventorySidebar = (function () {
 
         var hoverTimer = null;
         var hoverOpen = false;
+        var backdrop = ensureSidebarBackdrop();
 
         function syncOpenState() {
             var pinned = body.classList.contains("inv-sidebar-pinned");
-            body.classList.toggle("inv-sidebar-open", hoverOpen || pinned);
-            toggle.setAttribute("aria-expanded", pinned || hoverOpen ? "true" : "false");
+            var drawerOpen = body.classList.contains("inv-sidebar-drawer-open");
+            if (isMobileDrawer()) {
+                body.classList.toggle("inv-sidebar-open", drawerOpen);
+                toggle.setAttribute("aria-expanded", drawerOpen ? "true" : "false");
+            } else {
+                body.classList.remove("inv-sidebar-drawer-open");
+                body.classList.toggle("inv-sidebar-open", hoverOpen || pinned);
+                toggle.setAttribute("aria-expanded", pinned || hoverOpen ? "true" : "false");
+            }
             syncGroupsForSidebarMode();
         }
 
         function openSidebar() {
+            if (isMobileDrawer()) return;
             clearTimeout(hoverTimer);
             hoverOpen = true;
             syncOpenState();
         }
 
         function scheduleCloseSidebar() {
+            if (isMobileDrawer()) return;
             clearTimeout(hoverTimer);
             hoverTimer = setTimeout(function () {
                 hoverOpen = false;
                 syncOpenState();
             }, 200);
+        }
+
+        function closeMobileDrawer() {
+            body.classList.remove("inv-sidebar-drawer-open");
+            syncOpenState();
+        }
+
+        function openMobileDrawer() {
+            body.classList.add("inv-sidebar-drawer-open");
+            syncOpenState();
         }
 
         toggle.addEventListener("mouseenter", openSidebar);
@@ -221,9 +261,41 @@ var InventorySidebar = (function () {
         sidebar.addEventListener("mouseleave", scheduleCloseSidebar);
 
         toggle.addEventListener("click", function () {
+            if (isMobileDrawer()) {
+                if (body.classList.contains("inv-sidebar-drawer-open")) {
+                    closeMobileDrawer();
+                } else {
+                    openMobileDrawer();
+                }
+                return;
+            }
             body.classList.toggle("inv-sidebar-pinned");
             syncOpenState();
             syncGroupsForSidebarMode();
+        });
+
+        backdrop.addEventListener("click", closeMobileDrawer);
+
+        sidebar.addEventListener("click", function (e) {
+            if (!isMobileDrawer()) return;
+            var link = e.target.closest("a[href]");
+            if (!link) return;
+            var href = link.getAttribute("href");
+            if (!href || href === "#" || href.indexOf("javascript:") === 0) return;
+            closeMobileDrawer();
+        });
+
+        window.addEventListener("resize", function () {
+            if (!isMobileDrawer()) {
+                body.classList.remove("inv-sidebar-drawer-open");
+            }
+            syncOpenState();
+        });
+
+        document.addEventListener("keydown", function (e) {
+            if (e.key === "Escape" && body.classList.contains("inv-sidebar-drawer-open")) {
+                closeMobileDrawer();
+            }
         });
 
         syncGroupsForSidebarMode();

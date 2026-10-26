@@ -1315,7 +1315,10 @@ colgroup .inv-col-check-col {
 .inv-mgmt-table--settings-tax th,
 .inv-mgmt-table--settings-tax td,
 .inv-mgmt-table--settings-invoice th,
-.inv-mgmt-table--settings-invoice td,
+.inv-mgmt-table--settings-invoice td {
+    text-align: left;
+}
+
 .inv-barcode-tabs {
     display: flex;
     gap: 8px;
@@ -1448,10 +1451,10 @@ colgroup .inv-col-check-col {
 }
 
 .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-price-with-tax {
-    flex: 0 0 92px;
-    flex-basis: 92px;
-    min-width: 88px;
-    max-width: 96px;
+    flex: 0 0 118px;
+    flex-basis: 118px;
+    min-width: 108px;
+    max-width: 140px;
     white-space: normal;
 }
 
@@ -1462,16 +1465,17 @@ colgroup .inv-col-check-col {
 
 .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-price-with-tax::before {
     white-space: pre-line;
-    max-width: 88px;
+    max-width: none;
     line-height: 1.3;
     word-break: normal;
+    overflow-wrap: break-word;
 }
 
 .inv-mgmt-table-wrap > .inv-mgmt-table--products > thead > tr > th.inv-col-price-with-tax,
 .inv-mgmt-table-wrap > .inv-mgmt-table--products > thead > tr > th.inv-col-price-with-tax-hd {
-    flex-basis: 96px;
-    min-width: 88px;
-    max-width: 96px;
+    flex-basis: 118px;
+    min-width: 108px;
+    max-width: 140px;
     white-space: normal;
     line-height: 1.3;
 }
@@ -1526,14 +1530,17 @@ body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-si
 
 body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td {
     flex: 1 1 0;
-    min-width: 64px;
+    min-width: 88px;
     max-width: none;
 }
 
 body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td:first-child:not(.inv-col-action):not(.inv-mgmt-cell--action),
 body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-name {
-    flex: 1.35 1 120px;
+    flex: 1.45 1 140px;
+    min-width: 140px;
     max-width: none;
+    white-space: normal;
+    overflow-wrap: break-word;
 }
 
 body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-opening {
@@ -1574,7 +1581,7 @@ body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sideb
 
 body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sidebar-open:not(.inv-sidebar-pinned)) .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td {
     flex: 1 1 0;
-    min-width: 64px;
+    min-width: 88px;
     max-width: none;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1582,8 +1589,11 @@ body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sideb
 
 body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sidebar-open:not(.inv-sidebar-pinned)) .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td:first-child:not(.inv-col-action):not(.inv-mgmt-cell--action),
 body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sidebar-open:not(.inv-sidebar-pinned)) .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-name {
-    flex: 1.35 1 120px;
+    flex: 1.45 1 140px;
+    min-width: 140px;
     max-width: none;
+    white-space: normal;
+    overflow-wrap: break-word;
 }
 
 body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sidebar-open:not(.inv-sidebar-pinned)) .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-opening {
