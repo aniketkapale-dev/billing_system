@@ -30,4 +30,9 @@ urlpatterns = [
         PurchaseViewSet.as_view({"post": "mark_cancelled"}),
         name="purchase-mark-cancelled",
     ),
+    path(
+        "<int:pk>/invoice-pdf/",
+        PurchaseViewSet.as_view({"post": "save_invoice_pdf"}),
+        name="purchase-invoice-pdf",
+    ),
 ]

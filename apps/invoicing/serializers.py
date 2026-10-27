@@ -37,6 +37,7 @@ class PurchaseInvoiceItemSerializer(BaseModelSerializer):
             "purchase_price",
             "discount",
             "tax",
+            "gst_rate",
             "batch_number",
             "vendor",
             "vendor_name",

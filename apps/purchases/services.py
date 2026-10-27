@@ -1,5 +1,5 @@
 from datetime import timedelta
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 
 from django.db import transaction
 from django.db.models import Sum
@@ -121,7 +121,13 @@ class PurchaseService(BaseService):
                 continue
         return ids
 
-    def _prepare_sale_items(self, items_data, business_id, *, skip_stock_check=False):
+    @staticmethod
+    def _gst_rate_for_ids(tax_ids):
+        from apps.settings.tax_snapshot import gst_rate_for_tax_ids
+
+        return gst_rate_for_tax_ids(tax_ids)
+
+    def _prepare_sale_items(self, items_data, business_id, *, skip_stock_check=False, existing_items=None):
         if not items_data:
             raise ValidationException("At least one purchase item is required.")
 
@@ -140,7 +146,7 @@ class PurchaseService(BaseService):
                 raise ValidationException("Item unit price cannot be negative.")
 
             try:
-                product = Product.objects.get(
+                product = Product.objects.select_related("category").get(
                     pk=product_id,
                     business_id=business_id,
                     is_deleted=False,
@@ -151,6 +157,26 @@ class PurchaseService(BaseService):
             requested_by_product[product_id] = (
                 requested_by_product.get(product_id, Decimal("0")) + quantity
             )
+
+            existing = (existing_items or {}).get(item.get("id"))
+            if item.get("id") and existing is None:
+                raise ValidationException("Sale line does not belong to this sale.")
+            if existing is not None and existing.product_id == product.id:
+                tax_ids = list(existing.sale_tax_ids or [])
+                gst_rate = existing.gst_rate
+            else:
+                tax_ids = list(getattr(product.category, "sale_tax_ids", None) or [])[:1]
+                gst_rate = self._gst_rate_for_ids(tax_ids)
+
+            tax_amount = Decimal(str(item.get("tax_amount") or 0))
+            if gst_rate is not None:
+                unit_tax = (unit_price - unit_price / (1 + gst_rate / 100)).quantize(
+                    Decimal("0.01"), rounding=ROUND_HALF_UP,
+                )
+                tax_amount = (unit_tax * quantity).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+            if (existing is not None and existing.product_id == product.id
+                    and existing.quantity == quantity and existing.unit_price == unit_price):
+                tax_amount = existing.tax_amount
 
             line_total = quantity * unit_price
             total_amount += line_total
@@ -168,8 +194,9 @@ class PurchaseService(BaseService):
                 "discount_value": Decimal(str(item.get("discount_value") or 0)),
                 "distributor_discount_type": str(item.get("distributor_discount_type") or "percent"),
                 "distributor_discount_value": Decimal(str(item.get("distributor_discount_value") or 0)),
-                "sale_tax_ids": self._normalize_sale_tax_ids(item.get("sale_tax_ids")),
-                "tax_amount": Decimal(str(item.get("tax_amount") or 0)),
+                "sale_tax_ids": tax_ids,
+                "tax_amount": tax_amount,
+                "gst_rate": gst_rate,
             })
 
         if not skip_stock_check:
@@ -200,6 +227,7 @@ class PurchaseService(BaseService):
                 distributor_discount_value=item["distributor_discount_value"],
                 sale_tax_ids=item["sale_tax_ids"],
                 tax_amount=item["tax_amount"],
+                gst_rate=item["gst_rate"],
                 cost_amount=Decimal("0"),
                 profit_amount=Decimal("0"),
             )
@@ -209,12 +237,10 @@ class PurchaseService(BaseService):
         purchase.save(update_fields=["total_cost", "total_profit", "updated_at"])
 
     def _clear_draft_items(self, purchase):
-        existing_items = PurchaseItem.objects.filter(
+        PurchaseItem.objects.filter(
             purchase=purchase,
             is_deleted=False,
-        )
-        for item in existing_items:
-            item.soft_delete()
+        ).soft_delete()
 
     def _release_draft_invoice_number(self, purchase):
         from apps.settings.models import InvoiceSetting
@@ -287,6 +313,7 @@ class PurchaseService(BaseService):
                 distributor_discount_value=item["distributor_discount_value"],
                 sale_tax_ids=item["sale_tax_ids"],
                 tax_amount=item["tax_amount"],
+                gst_rate=item["gst_rate"],
             )
             slices = self.batch_service.consume_fifo(
                 business_id,
@@ -335,7 +362,7 @@ class PurchaseService(BaseService):
         for item in existing_items:
             self.batch_service.restore_purchase_item_consumptions(item)
             self.inventory_service.add_stock(business_id, item.product_id, item.quantity)
-            item.soft_delete()
+        existing_items.soft_delete()
 
     def _build_header_updates(self, purchase, data):
         updates = {}
@@ -629,12 +656,14 @@ class PurchaseService(BaseService):
                 return purchase
             return self.repository.update(purchase, **updates)
 
+        existing_items = {item.pk: item for item in purchase.items.filter(is_deleted=False)}
         self._clear_draft_items(purchase)
 
         prepared_items, total_amount = self._prepare_sale_items(
             items_data,
             business_id,
             skip_stock_check=True,
+            existing_items=existing_items,
         )
 
         updates = self._build_header_updates(purchase, data)
@@ -732,9 +761,12 @@ class PurchaseService(BaseService):
         if items_data is None:
             return self.update_header(pk, data)
 
+        existing_items = {item.pk: item for item in purchase.items.filter(is_deleted=False)}
         self._restore_existing_sale_items(purchase)
 
-        prepared_items, total_amount = self._prepare_sale_items(items_data, business_id)
+        prepared_items, total_amount = self._prepare_sale_items(
+            items_data, business_id, existing_items=existing_items,
+        )
 
         updates = self._build_header_updates(purchase, data)
         updates["total_amount"] = total_amount
@@ -745,7 +777,7 @@ class PurchaseService(BaseService):
         return purchase
 
     def update_header(self, pk, data):
-        purchase = self.repository.get_by_id(pk)
+        purchase = self.repository.get_for_header_update(pk)
         if purchase.is_cancelled:
             raise ValidationException("Cancelled invoices cannot be edited.")
         if purchase.is_draft:

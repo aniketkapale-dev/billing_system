@@ -52,6 +52,13 @@ class BaseEntity(models.Model):
         else:
             self.updated_by = user_id
             self.updated_ip = ip
+            update_fields = kwargs.get("update_fields")
+            if update_fields is not None:
+                fields = list(update_fields)
+                for audit_field in ("updated_by", "updated_ip", "updated_at"):
+                    if audit_field not in fields:
+                        fields.append(audit_field)
+                kwargs["update_fields"] = fields
         super().save(*args, **kwargs)
 
     def soft_delete(self):

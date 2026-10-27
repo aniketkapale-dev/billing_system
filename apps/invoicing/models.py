@@ -64,6 +64,7 @@ class PurchaseInvoiceItem(BaseEntity):
     selling_price = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0"))
     discount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0"))
     tax = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0"))
+    gst_rate = models.DecimalField(max_digits=6, decimal_places=2, null=True, default=Decimal("0"))
     batch_number = models.CharField(max_length=50, blank=True, default="")
     vendor = models.ForeignKey(
         "catalog.Vendor",

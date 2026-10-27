@@ -22,7 +22,9 @@ class OptionalDateField(serializers.DateField):
 class PurchaseItemSerializer(BaseModelSerializer):
     product_name = serializers.CharField(source="product.name", read_only=True)
     product_sku = serializers.CharField(source="product.sku", read_only=True)
+    product_hsn_code = serializers.CharField(source="product.hsn_code", read_only=True, default="")
     product_unit = serializers.CharField(source="product.unit.short_name", read_only=True)
+    sale_tax_name = serializers.SerializerMethodField()
     batch_lines = serializers.SerializerMethodField()
 
     class Meta:
@@ -32,6 +34,7 @@ class PurchaseItemSerializer(BaseModelSerializer):
             "product",
             "product_name",
             "product_sku",
+            "product_hsn_code",
             "product_unit",
             "quantity",
             "list_price",
@@ -43,11 +46,34 @@ class PurchaseItemSerializer(BaseModelSerializer):
             "distributor_discount_type",
             "distributor_discount_value",
             "sale_tax_ids",
+            "sale_tax_name",
             "tax_amount",
+            "gst_rate",
             "cost_amount",
             "profit_amount",
             "batch_lines",
         )
+
+    def get_sale_tax_name(self, obj):
+        from apps.settings.models import Tax
+
+        tax_id = None
+        for value in obj.sale_tax_ids or []:
+            try:
+                tax_id = int(value)
+                break
+            except (TypeError, ValueError):
+                continue
+        if tax_id is None:
+            return ""
+
+        business_id = obj.purchase.business_id
+        cache = self.context.setdefault("invoice_tax_names", {})
+        if business_id not in cache:
+            cache[business_id] = dict(
+                Tax.all_objects.filter(business_id=business_id).values_list("id", "key")
+            )
+        return cache[business_id].get(tax_id, "")
 
     def get_batch_lines(self, obj):
         consumptions = [
@@ -90,6 +116,81 @@ class PurchasePaymentSerializer(BaseModelSerializer):
         )
 
 
+class PurchaseListItemSerializer(serializers.Serializer):
+    product_name = serializers.CharField(source="product.name", read_only=True)
+    quantity = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
+
+
+class PurchaseListSerializer(BaseModelSerializer):
+    items = PurchaseListItemSerializer(many=True, read_only=True)
+    company_name = serializers.SerializerMethodField()
+    customer_mobile = serializers.SerializerMethodField()
+    total_paid = serializers.SerializerMethodField()
+    pending_bill = serializers.SerializerMethodField()
+    payment_status = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Purchase
+        fields = (
+            "id",
+            "customer_name",
+            "company_name",
+            "customer_mobile",
+            "reference_no",
+            "purchase_date",
+            "total_amount",
+            "total_paid",
+            "pending_bill",
+            "payment_status",
+            "is_paid",
+            "is_draft",
+            "is_cancelled",
+            "items",
+        )
+
+    def get_company_name(self, obj):
+        customer = getattr(obj, "customer", None)
+        return customer.company_name if customer else ""
+
+    def get_customer_mobile(self, obj):
+        customer = getattr(obj, "customer", None)
+        return customer.mobile if customer else ""
+
+    def _paid_amount(self, obj):
+        annotated = getattr(obj, "total_paid_amount", None)
+        if annotated is not None:
+            return Decimal(annotated or 0)
+        return Decimal("0")
+
+    def get_total_paid(self, obj):
+        if obj.is_draft or obj.is_cancelled:
+            return "0.00"
+        return _decimal_str(self._paid_amount(obj))
+
+    def get_pending_bill(self, obj):
+        if obj.is_draft or obj.is_cancelled:
+            return "0.00"
+        pending = Decimal(obj.total_amount or 0) - self._paid_amount(obj)
+        if pending < 0:
+            return "0.00"
+        return _decimal_str(pending)
+
+    def get_payment_status(self, obj):
+        if obj.is_draft:
+            return "draft"
+        if obj.is_cancelled:
+            return "cancelled"
+        if obj.is_paid:
+            return "paid"
+        total_paid = self._paid_amount(obj)
+        total_amount = Decimal(obj.total_amount or 0)
+        if total_paid <= 0:
+            return "unpaid"
+        if total_paid + Decimal("0.0001") < total_amount:
+            return "partial"
+        return "paid"
+
+
 class PurchaseSerializer(BaseModelSerializer):
     items = PurchaseItemSerializer(many=True, read_only=True)
     payments = PurchasePaymentSerializer(many=True, read_only=True)
@@ -108,9 +209,13 @@ class PurchaseSerializer(BaseModelSerializer):
     company_name = serializers.CharField(source="customer.company_name", read_only=True, default="")
     company_mobile = serializers.CharField(source="customer.company_mobile", read_only=True, default="")
     company_address = serializers.CharField(source="customer.business_address", read_only=True, default="")
+    customer_place_of_supply = serializers.CharField(source="customer.place_of_supply", read_only=True, default="")
     total_paid = serializers.SerializerMethodField()
     pending_bill = serializers.SerializerMethodField()
     payment_status = serializers.SerializerMethodField()
+    total_cost_without_tax = serializers.SerializerMethodField()
+    total_cost_tax = serializers.SerializerMethodField()
+    total_cost_with_tax = serializers.SerializerMethodField()
     invoice_setting_id = serializers.IntegerField(read_only=True)
     next_invoice_no = serializers.SerializerMethodField()
 
@@ -130,6 +235,7 @@ class PurchaseSerializer(BaseModelSerializer):
             "company_name",
             "company_mobile",
             "company_address",
+            "customer_place_of_supply",
             "supplier_name",
             "reference_no",
             "invoice_setting_id",
@@ -144,6 +250,9 @@ class PurchaseSerializer(BaseModelSerializer):
             "payment_type_name",
             "total_amount",
             "total_cost",
+            "total_cost_without_tax",
+            "total_cost_tax",
+            "total_cost_with_tax",
             "total_profit",
             "total_paid",
             "pending_bill",
@@ -214,6 +323,75 @@ class PurchaseSerializer(BaseModelSerializer):
             return "partial"
         return "paid"
 
+    def _cost_breakdown(self, obj):
+        cached = getattr(obj, "_cached_cost_breakdown", None)
+        if cached is not None:
+            return cached
+
+        total_with_tax = Decimal(obj.total_cost or 0)
+        total_tax = Decimal("0")
+        has_consumption_tax = False
+
+        items = getattr(obj, "_prefetched_objects_cache", {}).get("items")
+        if items is None:
+            items = obj.items.filter(is_deleted=False)
+
+        for item in items:
+            if getattr(item, "is_deleted", False):
+                continue
+            consumptions = getattr(item, "_prefetched_objects_cache", {}).get("batch_consumptions")
+            if consumptions is None:
+                consumptions = item.batch_consumptions.filter(is_deleted=False)
+
+            for consumption in consumptions:
+                if getattr(consumption, "is_deleted", False):
+                    continue
+                qty = Decimal(consumption.quantity_sold or 0)
+                if qty <= 0:
+                    continue
+
+                invoice_item = None
+                batch = getattr(consumption, "inventory_batch", None)
+                if batch is not None:
+                    invoice_item = getattr(batch, "purchase_invoice_item", None)
+
+                if (
+                    invoice_item
+                    and invoice_item.quantity
+                    and Decimal(invoice_item.quantity) > 0
+                ):
+                    tax_per_unit = Decimal(invoice_item.tax or 0) / Decimal(invoice_item.quantity)
+                    total_tax += tax_per_unit * qty
+                    has_consumption_tax = True
+
+        total_tax = total_tax.quantize(Decimal("0.01"))
+        if not has_consumption_tax:
+            total_tax = Decimal("0")
+
+        total_with_tax = total_with_tax.quantize(Decimal("0.01"))
+        total_without_tax = (total_with_tax - total_tax).quantize(Decimal("0.01"))
+        if total_without_tax < 0:
+            total_without_tax = Decimal("0.00")
+
+        breakdown = (total_without_tax, total_tax, total_with_tax)
+        obj._cached_cost_breakdown = breakdown
+        return breakdown
+
+    def get_total_cost_without_tax(self, obj):
+        if obj.is_draft:
+            return None
+        return _decimal_str(self._cost_breakdown(obj)[0])
+
+    def get_total_cost_tax(self, obj):
+        if obj.is_draft:
+            return None
+        return _decimal_str(self._cost_breakdown(obj)[1])
+
+    def get_total_cost_with_tax(self, obj):
+        if obj.is_draft:
+            return None
+        return _decimal_str(self._cost_breakdown(obj)[2])
+
     def get_next_invoice_no(self, obj):
         reference_no = (obj.reference_no or "").strip()
         if reference_no:
@@ -230,6 +408,7 @@ class PurchaseSerializer(BaseModelSerializer):
 
 
 class PurchaseItemWriteSerializer(serializers.Serializer):
+    id = serializers.IntegerField(required=False, allow_null=True)
     product_id = serializers.IntegerField()
     quantity = serializers.DecimalField(max_digits=12, decimal_places=2)
     unit_price = serializers.DecimalField(max_digits=12, decimal_places=2)

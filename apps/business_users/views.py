@@ -1,3 +1,5 @@
+from django.core.paginator import EmptyPage, Paginator
+from django.db.models import Q
 from rest_framework import status
 
 from apps.business_users.role_serializers import BusinessRoleSerializer, BusinessRoleWriteSerializer
@@ -30,9 +32,68 @@ class BusinessUserViewSet(GenericViewSet):
 
     def list(self, request):
         business_id = self._business_id()
-        items = self.get_service().list_for_business(business_id)
-        payload = self.serializer_class(items, many=True, context={"request": request}).data
-        return ApiResponse.success(data={"items": payload}, message="Business users fetched")
+        queryset = self.get_service().list_for_business(business_id)
+
+        search = (request.query_params.get("search") or "").strip()
+        if search:
+            queryset = queryset.filter(
+                Q(user__full_name__icontains=search)
+                | Q(user__email__icontains=search)
+                | Q(user__mobile_number__icontains=search)
+                | Q(role__role_name__icontains=search)
+            )
+
+        ordering = (request.query_params.get("ordering") or "user__full_name").strip()
+        ordering_map = {
+            "full_name": "user__full_name",
+            "email": "user__email",
+            "role": "role__role_name",
+        }
+        desc = ordering.startswith("-")
+        order_name = ordering[1:] if desc else ordering
+        mapped = ordering_map.get(order_name, "user__full_name")
+        queryset = queryset.order_by(("-" if desc else "") + mapped, "id")
+
+        try:
+            page = int(request.query_params.get("page") or 1)
+        except (TypeError, ValueError):
+            page = 1
+        try:
+            page_size = int(request.query_params.get("page_size") or 10)
+        except (TypeError, ValueError):
+            page_size = 10
+        if page < 1:
+            page = 1
+        if page_size < 1:
+            page_size = 10
+        if page_size > 50:
+            page_size = 50
+
+        paginator = Paginator(queryset, page_size)
+        try:
+            page_obj = paginator.page(page)
+        except EmptyPage:
+            page_obj = paginator.page(paginator.num_pages or 1)
+
+        payload = self.serializer_class(
+            page_obj.object_list,
+            many=True,
+            context={"request": request},
+        ).data
+        return ApiResponse.success(
+            data={
+                "items": payload,
+                "pagination": {
+                    "count": paginator.count,
+                    "page": page_obj.number,
+                    "page_size": page_size,
+                    "total_pages": paginator.num_pages,
+                    "has_next": page_obj.has_next(),
+                    "has_previous": page_obj.has_previous(),
+                },
+            },
+            message="Business users fetched",
+        )
 
     def create(self, request):
         serializer = BusinessUserWriteSerializer(data=request.data, context={"request": request})

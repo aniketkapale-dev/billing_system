@@ -15,6 +15,10 @@
         </div>
 
         <div class="inv-mgmt-card">
+            <div class="inv-mgmt-toolbar inv-mgmt-toolbar--filters">
+                <input type="search" id="settings-tax-search" class="inv-mgmt-search" placeholder="Search tax key or value..." aria-label="Search taxes"/>
+                <button type="button" id="settings-tax-clear-filters" class="inv-mgmt-btn">Clear</button>
+            </div>
             <div class="inv-mgmt-table-wrap">
                 <table class="inv-mgmt-table inv-mgmt-table--settings-tax">
                     <colgroup>
@@ -99,12 +103,24 @@
         </div>
 
         <div class="inv-mgmt-card">
+            <div class="inv-mgmt-toolbar inv-mgmt-toolbar--filters">
+                <input type="search" id="settings-category-tax-search" class="inv-mgmt-search" placeholder="Search categories..." aria-label="Search categories"/>
+                <select id="settings-category-tax-assignment-filter" class="inv-mgmt-select inv-mgmt-filter-select" aria-label="Tax assignment">
+                    <option value="">All categories</option>
+                    <option value="with">With tax assigned</option>
+                    <option value="without">Without tax</option>
+                </select>
+                <select id="settings-category-tax-tax-filter" class="inv-mgmt-select inv-mgmt-filter-select" aria-label="Tax">
+                    <option value="">All taxes</option>
+                </select>
+                <button type="button" id="settings-category-tax-clear-filters" class="inv-mgmt-btn">Clear</button>
+            </div>
             <div class="inv-mgmt-table-wrap">
                 <table class="inv-mgmt-table inv-mgmt-table--settings-category-tax">
                     <thead>
                         <tr>
                             <th>Category</th>
-                            <th>Taxes Assigned</th>
+                            <th>Tax Assigned</th>
                             <th class="inv-mgmt-cell--action">Action</th>
                         </tr>
                     </thead>
@@ -117,88 +133,7 @@
         </div>
     </div>
 
-    <div id="category-tax-apply-modal" class="inv-modal inv-hidden" aria-hidden="true">
-        <div class="inv-modal-backdrop" data-modal-close></div>
-        <div class="inv-modal-dialog inv-modal-dialog--category-tax" role="dialog" aria-modal="true" aria-labelledby="category-tax-apply-modal-title">
-            <div class="inv-modal-header">
-                <h3 id="category-tax-apply-modal-title">Apply Tax to Categories</h3>
-                <button type="button" class="inv-modal-close" data-modal-close aria-label="Close">
-                    <span class="material-symbols-outlined">close</span>
-                </button>
-            </div>
-            <div class="inv-modal-body inv-category-tax-modal-body">
-                <p class="inv-category-tax-modal-intro">Select one or more categories and taxes, then click Apply Taxes.</p>
-                <div class="inv-category-tax-modal-grid">
-                    <section class="inv-category-tax-panel">
-                        <header class="inv-category-tax-panel-header">
-                            <div class="inv-category-tax-panel-title">
-                                <span class="material-symbols-outlined" aria-hidden="true">category</span>
-                                <h4>Categories</h4>
-                                <span id="category-tax-category-count" class="inv-category-tax-count"></span>
-                            </div>
-                            <button id="category-tax-add-category-btn" type="button" class="inv-category-tax-add-btn">
-                                <span class="material-symbols-outlined" aria-hidden="true">add</span>
-                                Add
-                            </button>
-                        </header>
-                        <div id="category-tax-new-panel" class="inv-category-tax-inline-form inv-hidden">
-                            <input id="category-tax-new-name" class="inv-mgmt-input" type="text" placeholder="Category name"/>
-                            <input id="category-tax-new-desc" class="inv-mgmt-input" type="text" placeholder="Description (optional)"/>
-                            <div class="inv-category-tax-inline-form-actions">
-                                <button id="category-tax-save-category-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary inv-mgmt-btn--sm">Save</button>
-                                <button id="category-tax-cancel-category-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--sm">Cancel</button>
-                            </div>
-                        </div>
-                        <div class="inv-category-tax-toolbar">
-                            <input id="category-tax-modal-search" class="inv-mgmt-input" type="search" placeholder="Search categories..."/>
-                            <label class="inv-category-tax-select-all">
-                                <input type="checkbox" id="category-tax-modal-select-all-categories"/>
-                                Select all
-                            </label>
-                        </div>
-                        <div id="category-tax-modal-categories" class="inv-category-tax-check-list">
-                            <p class="inv-mgmt-empty">Loading categories...</p>
-                        </div>
-                    </section>
-                    <section class="inv-category-tax-panel">
-                        <header class="inv-category-tax-panel-header">
-                            <div class="inv-category-tax-panel-title">
-                                <span class="material-symbols-outlined" aria-hidden="true">percent</span>
-                                <h4>Taxes</h4>
-                                <span id="category-tax-tax-count" class="inv-category-tax-count"></span>
-                            </div>
-                            <button id="category-tax-add-tax-btn" type="button" class="inv-category-tax-add-btn">
-                                <span class="material-symbols-outlined" aria-hidden="true">add</span>
-                                Add
-                            </button>
-                        </header>
-                        <div id="category-tax-new-tax-panel" class="inv-category-tax-inline-form inv-category-tax-inline-form--tax inv-hidden">
-                            <input id="category-tax-new-key" class="inv-mgmt-input" type="text" placeholder="Tax key (e.g. gst12%)"/>
-                            <input id="category-tax-new-value" class="inv-mgmt-input" type="number" min="0" max="100" step="0.01" placeholder="Value %"/>
-                            <div class="inv-category-tax-inline-form-actions">
-                                <button id="category-tax-save-tax-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary inv-mgmt-btn--sm">Save</button>
-                                <button id="category-tax-cancel-tax-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--sm">Cancel</button>
-                            </div>
-                        </div>
-                        <div class="inv-category-tax-toolbar">
-                            <input id="category-tax-modal-tax-search" class="inv-mgmt-input" type="search" placeholder="Search taxes..."/>
-                            <label class="inv-category-tax-select-all">
-                                <input type="checkbox" id="category-tax-modal-select-all-taxes"/>
-                                Select all
-                            </label>
-                        </div>
-                        <div id="category-tax-modal-taxes" class="inv-category-tax-check-list">
-                            <p class="inv-mgmt-empty">Loading taxes...</p>
-                        </div>
-                    </section>
-                </div>
-            </div>
-            <div class="inv-modal-footer">
-                <button type="button" class="inv-mgmt-btn" data-modal-close>Cancel</button>
-                <button id="category-tax-modal-apply-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Apply Taxes</button>
-            </div>
-        </div>
-    </div>
+    {% include "partials/category_tax_apply_modal.html" %}
 
     {% elif settings_section == 'invoice' %}
     <div id="settings-invoice-list-panel" class="inv-mgmt-page-panel">
@@ -507,32 +442,32 @@
 
 {% block page_scripts %}
 {% if settings_section == 'tax' %}
-<script src="{% static 'js/inventory/settings-tax.js' %}?v=20260329-settings-card-rows"></script>
+<script src="{% static 'js/inventory/settings-tax.js' %}?v=20261001-cross-tab-refresh"></script>
 <script>
 InventoryPagePanel.init();
 InventorySettingsTax.init();
 </script>
 {% elif settings_section == 'category-tax' %}
 <script src="{% static 'js/components/modal.js' %}"></script>
-<script src="{% static 'js/inventory/settings-category-tax.js' %}?v=20260328-category-tax-cards"></script>
+<script src="{% static 'js/inventory/settings-category-tax.js' %}?v=20261001-cross-tab-refresh"></script>
 <script>
 InventorySettingsCategoryTax.init();
 </script>
 {% elif settings_section == 'invoice' %}
-<script src="{% static 'js/inventory/settings-invoice.js' %}?v=20260329-settings-card-rows"></script>
+<script src="{% static 'js/inventory/settings-invoice.js' %}?v=20261001-cross-tab-refresh"></script>
 <script>
 InventoryPagePanel.init();
 InventorySettingsInvoice.init();
 </script>
 {% elif settings_section == 'barcode' %}
 <script src="{% static 'js/components/barcode-pdf.js' %}?v=20260310-barcode-size"></script>
-<script src="{% static 'js/inventory/settings-barcode.js' %}?v=20260329-settings-card-rows"></script>
+<script src="{% static 'js/inventory/settings-barcode.js' %}?v=20261001-cross-tab-refresh"></script>
 <script>
 InventoryPagePanel.init();
 InventorySettingsBarcode.init();
 </script>
 {% elif settings_section == 'whatsapp' %}
-<script src="{% static 'js/inventory/settings-whatsapp.js' %}?v=20260318-whatsapp-per-invoice"></script>
+<script src="{% static 'js/inventory/settings-whatsapp.js' %}?v=20261001-cross-tab-refresh"></script>
 <script>
 InventoryPagePanel.init();
 InventorySettingsWhatsApp.init();

@@ -51,7 +51,7 @@ class CategorySerializer(BaseModelSerializer):
         read_only_fields = ("business",)
 
     def get_sale_tax_labels(self, obj):
-        tax_ids = obj.sale_tax_ids or []
+        tax_ids = (obj.sale_tax_ids or [])[:1]
         if not tax_ids:
             return []
         from apps.settings.models import Tax
@@ -70,11 +70,17 @@ class CategoryWriteSerializer(serializers.ModelSerializer):
         child=serializers.IntegerField(),
         required=False,
         allow_empty=True,
+        max_length=1,
     )
 
     class Meta:
         model = Category
         fields = ("name", "description", "sale_tax_ids", "is_active")
+
+    def validate_sale_tax_ids(self, value):
+        if value and len(value) > 1:
+            raise serializers.ValidationError("Only one tax can be assigned per category.")
+        return value
 
 
 class BrandSerializer(BaseModelSerializer):

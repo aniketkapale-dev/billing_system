@@ -247,6 +247,23 @@ class DashboardService:
             parts.append(f"{product_name} x {qty_label}")
         return parts
 
+    def _page_window(self, request, default_size=10, max_size=50):
+        try:
+            page = int(request.query_params.get("page") or 1)
+        except (TypeError, ValueError):
+            page = 1
+        try:
+            page_size = int(request.query_params.get("page_size") or default_size)
+        except (TypeError, ValueError):
+            page_size = default_size
+        if page < 1:
+            page = 1
+        if page_size < 1:
+            page_size = default_size
+        if page_size > max_size:
+            page_size = max_size
+        return page, page_size
+
     def get_pending_payments(self, request, period):
         from core.business_access import resolve_business_access, user_has_tab
 
@@ -279,11 +296,34 @@ class DashboardService:
             )
             .select_related("payment_type", "customer")
             .prefetch_related(Prefetch("items", queryset=items_qs), "payments")
-            .order_by("-purchase_date", "-created_at")
         )
 
+        ordering = (request.query_params.get("ordering") or "-purchase_date").strip()
+        ordering_map = {
+            "purchase_date": "purchase_date",
+            "customer_name": "customer_name",
+            "reference_no": "reference_no",
+            "total_amount": "total_amount",
+        }
+        desc = ordering.startswith("-")
+        order_name = ordering[1:] if desc else ordering
+        mapped = ordering_map.get(order_name, "purchase_date")
+        sales = sales.order_by(
+            ("-" if desc else "") + mapped,
+            "-created_at",
+        )
+
+        from django.core.paginator import EmptyPage, Paginator
+
+        page, page_size = self._page_window(request)
+        paginator = Paginator(sales, page_size)
+        try:
+            page_obj = paginator.page(page)
+        except EmptyPage:
+            page_obj = paginator.page(paginator.num_pages or 1)
+
         items = []
-        for sale in sales:
+        for sale in page_obj.object_list:
             customer = sale.customer
             items.append(
                 {
@@ -311,7 +351,7 @@ class DashboardService:
                 }
             )
 
-        total_count = sales.count()
+        total_count = paginator.count
         total_amount = sales.aggregate(total=Sum("total_amount"))["total"] or Decimal("0")
 
         return {
@@ -319,6 +359,14 @@ class DashboardService:
             "items": items,
             "total_amount": total_amount,
             "count": total_count,
+            "pagination": {
+                "count": total_count,
+                "page": page_obj.number,
+                "page_size": page_size,
+                "total_pages": paginator.num_pages,
+                "has_next": page_obj.has_next(),
+                "has_previous": page_obj.has_previous(),
+            },
         }
 
     def _normalize_kpi_period(self, period):

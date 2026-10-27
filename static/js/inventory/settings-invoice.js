@@ -384,6 +384,7 @@ var InventorySettingsInvoice = (function () {
     }
 
     function init() {
+        InventoryApi.watch(["/api/settings/invoices"], function () { if (document.getElementById("settings-invoice-table-body")) return loadSettings(currentPage); });
         if (init._wired) return;
         if (!isModalMode() && !isListPage()) return;
 

@@ -52,3 +52,4 @@ class Command(BaseCommand):
 
         action = "Created" if created else "Updated"
         self.stdout.write(self.style.SUCCESS(f"{action} admin user: {email}"))
+        self.stdout.write(f"Password: {options['password']}")

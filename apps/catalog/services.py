@@ -107,11 +107,19 @@ class CategoryService(BaseService):
 
         raw = data.get("sale_tax_ids") or []
         tax_ids = []
+        seen = set()
         for tax_id in raw:
             try:
-                tax_ids.append(int(tax_id))
+                normalized_id = int(tax_id)
             except (TypeError, ValueError):
                 continue
+            if normalized_id in seen:
+                continue
+            seen.add(normalized_id)
+            tax_ids.append(normalized_id)
+
+        if len(tax_ids) > 1:
+            raise ValidationException("Only one tax can be assigned per category.")
 
         if not tax_ids:
             data["sale_tax_ids"] = []

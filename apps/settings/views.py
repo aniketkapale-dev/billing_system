@@ -1,3 +1,6 @@
+from decimal import Decimal, InvalidOperation
+
+from django.db.models import Q
 from rest_framework import status
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.views import APIView
@@ -34,7 +37,7 @@ class TaxViewSet(BusinessScopedViewSetMixin, BaseViewSet):
     service_class = TaxService
     serializer_class = TaxSerializer
     write_serializer_class = TaxWriteSerializer
-    search_fields = ("key",)
+    search_fields = ()
     ordering_default = ("key",)
     ordering_fields = {"key": "key", "value": "value"}
     required_roles = ["Business Owner", "Business Staff"]
@@ -43,6 +46,18 @@ class TaxViewSet(BusinessScopedViewSetMixin, BaseViewSet):
 
     def get_permissions(self):
         return [IsAuthenticatedUser(), HasRole()]
+
+    def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
+        search = (self.request.query_params.get("search") or "").strip()
+        if not search:
+            return queryset
+        query = Q(key__icontains=search)
+        try:
+            query |= Q(value=Decimal(search))
+        except InvalidOperation:
+            pass
+        return queryset.filter(query)
 
     def get_active_business(self):
         if hasattr(self, "_active_business"):
