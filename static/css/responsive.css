@@ -491,32 +491,53 @@ body.inv-dashboard-body.inv-sidebar-drawer-open .inv-sidebar-backdrop {
 }
 
 /* ========================================================================== */
-/* Products page — scoped responsive (preserve striped card + green accent)   */
+/* App-wide list pages — toolbars, headers, cards (preserve stripe + accent)  */
+/* Covers: Products, Stock, Sales, Purchases, Customers, Catalog, Settings…   */
 /* ========================================================================== */
 
-/* Desktop / laptop: keep row layout readable; never crush below usable mins */
+/* Wide desktop: keep row cards readable without crush */
 @media (min-width: 1101px) {
-    #products-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-price-with-tax,
-    #products-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-opening {
+    .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-price-with-tax,
+    .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-opening {
         white-space: normal;
         overflow: visible;
         text-overflow: clip;
     }
 
-    #products-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-price-with-tax::before {
+    .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-price-with-tax::before {
         max-width: none;
         white-space: pre-line;
     }
 
-    #products-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-hsn,
-    #products-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-sku {
+    .inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-hsn,
+    .inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-sku,
+    .inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-invoice {
         overflow-wrap: anywhere;
     }
 }
 
-/* ≤1100px: wrap fields inside each product card (no squeezed 7+ columns) */
+/* ≤1100px: shared headers, filters, and card field wrapping */
 @media (max-width: 1100px) {
-    #products-list-panel .inv-mgmt-header {
+    /* Fixed page titles — use available width with sidebar */
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-page-panel:not(.inv-hidden) > .inv-mgmt-header {
+        padding-left: 16px;
+        padding-right: 16px;
+        height: auto;
+        min-height: var(--inv-mgmt-page-title-height);
+        align-content: center;
+    }
+
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-page-panel:not(.inv-hidden) > .inv-mgmt-tabs {
+        padding-left: 16px;
+        padding-right: 16px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        flex-wrap: nowrap;
+        gap: 6px;
+    }
+
+    .inv-mgmt-header,
+    .inv-mgmt-panel-header {
         display: flex;
         flex-wrap: wrap;
         align-items: center;
@@ -524,58 +545,119 @@ body.inv-dashboard-body.inv-sidebar-drawer-open .inv-sidebar-backdrop {
         gap: 12px;
     }
 
-    #products-list-panel .inv-mgmt-toolbar--filters {
+    .inv-mgmt-header-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        max-width: 100%;
+    }
+
+    /* Toolbars — Stock / Sale / Products / etc. */
+    .inv-mgmt-toolbar,
+    .inv-mgmt-toolbar--filters {
         display: flex;
         flex-wrap: wrap;
         align-items: stretch;
         gap: 10px;
+        max-width: 100%;
+        box-sizing: border-box;
     }
 
-    #products-list-panel .inv-mgmt-toolbar--filters .inv-mgmt-search {
+    .inv-mgmt-toolbar .inv-mgmt-search,
+    .inv-mgmt-toolbar--filters .inv-mgmt-search {
         flex: 1 1 100%;
         width: 100%;
         max-width: none;
         min-width: 0;
     }
 
-    #products-list-panel .inv-mgmt-toolbar--filters .inv-mgmt-filter-select,
-    #products-list-panel .inv-mgmt-toolbar--filters .inv-search-select {
+    .inv-mgmt-toolbar--filters .inv-mgmt-filter-select,
+    .inv-mgmt-toolbar--filters .inv-search-select,
+    .inv-mgmt-toolbar .inv-mgmt-filter-select,
+    .inv-mgmt-toolbar .inv-search-select,
+    .inv-mgmt-toolbar--filters .inv-list-sort-select {
         flex: 1 1 calc(50% - 6px);
         width: auto;
         min-width: 0;
         max-width: none;
     }
 
-    #products-list-panel .inv-mgmt-toolbar--filters .inv-mgmt-btn,
-    #products-list-panel .inv-mgmt-toolbar--filters .inv-columns-btn-wrap,
-    #products-list-panel .inv-mgmt-toolbar--filters .inv-toolbar-list-actions {
+    .inv-mgmt-toolbar--filters .inv-mgmt-filter-dates {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        flex: 1 1 100%;
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .inv-mgmt-toolbar--filters .inv-mgmt-filter-date,
+    .inv-mgmt-toolbar--filters .inv-date-field {
+        flex: 1 1 calc(50% - 20px);
+        width: auto;
+        min-width: 0;
+        max-width: none;
+    }
+
+    .inv-mgmt-toolbar--filters .inv-mgmt-btn,
+    .inv-mgmt-toolbar--filters .inv-columns-btn-wrap,
+    .inv-mgmt-toolbar--filters .inv-toolbar-list-actions,
+    .inv-mgmt-toolbar .inv-columns-btn-wrap,
+    .inv-mgmt-toolbar .inv-toolbar-list-actions {
         flex: 0 0 auto;
     }
 
-    #products-list-panel .inv-mgmt-toolbar--filters .inv-columns-btn-wrap {
+    .inv-mgmt-toolbar--filters .inv-columns-btn-wrap,
+    .inv-mgmt-toolbar .inv-columns-btn-wrap {
         margin-left: auto;
     }
 
-    /* Override stretch/nowrap crush — wrap fields, keep card chrome */
-    #products-list-panel .inv-mgmt-table-wrap:has(> .inv-mgmt-table--products),
-    body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) #products-list-panel .inv-mgmt-table-wrap:has(> .inv-mgmt-table--products),
-    body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sidebar-open:not(.inv-sidebar-pinned)) #products-list-panel .inv-mgmt-table-wrap:has(> .inv-mgmt-table--products),
-    body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) #products-list-panel .inv-mgmt-page-panel:not(.inv-hidden) > .inv-mgmt-card:not(.inv-mgmt-panel-card) .inv-mgmt-table-wrap:has(> .inv-mgmt-table--products),
-    body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sidebar-open:not(.inv-sidebar-pinned)) #products-list-panel .inv-mgmt-page-panel:not(.inv-hidden) > .inv-mgmt-card:not(.inv-mgmt-panel-card) .inv-mgmt-table-wrap:has(> .inv-mgmt-table--products) {
+    .inv-list-sort-wrap {
+        flex: 1 1 auto;
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .inv-list-sort-select {
+        min-width: 0;
+        max-width: 100%;
+        width: 100%;
+    }
+
+    /* List cards — wrap fields; keep green accent / borders / radius */
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-page-panel:not(.inv-hidden) > .inv-mgmt-card:not(.inv-mgmt-panel-card):has(.inv-mgmt-table-wrap) > .inv-mgmt-table-wrap {
         overflow-x: visible;
     }
 
-    #products-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--products,
-    body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) #products-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--products,
-    body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sidebar-open:not(.inv-sidebar-pinned)) #products-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--products {
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table--products,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table--inventory,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table--batches,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table--stockin,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table--purchases,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table--customers,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table--products,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table--inventory,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table--batches,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table--stockin,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table--purchases {
         width: 100%;
         min-width: 0 !important;
         max-width: 100%;
     }
 
-    #products-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)),
-    body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) #products-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)),
-    body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sidebar-open:not(.inv-sidebar-pinned)) #products-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) {
+    body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table--products,
+    body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sidebar-open:not(.inv-sidebar-pinned)) .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table--products {
+        width: 100%;
+        min-width: 0 !important;
+    }
+
+    /* Layout only — borders/accent/status colors stay in inventory-mgmt.css.
+       Exclude dashboard widgets (pending/expiring) which use custom grids. */
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table:not(.inv-dashboard-pending-table):not(.inv-dashboard-expiring-table) > tbody > tr:not(:has(.inv-mgmt-empty)),
+    body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)),
+    body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sidebar-open:not(.inv-sidebar-pinned)) .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) {
         display: flex;
         flex-wrap: wrap;
         align-items: flex-start;
@@ -584,17 +666,19 @@ body.inv-dashboard-body.inv-sidebar-drawer-open .inv-sidebar-backdrop {
         min-width: 0;
         max-width: 100%;
         box-sizing: border-box;
-        /* Preserve striped card look from inventory-mgmt.css */
-        background: var(--inv-white);
-        border: var(--inv-border-width) solid var(--inv-outline-variant);
-        border-left: 4px solid var(--inv-accent);
-        border-radius: var(--inv-radius-lg);
-        padding: 14px 14px 14px 10px;
     }
 
-    #products-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td,
-    body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) #products-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td,
-    body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sidebar-open:not(.inv-sidebar-pinned)) #products-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td {
+    /* Re-assert sale status accents after layout overrides */
+    .inv-mgmt-table-wrap > .inv-mgmt-table--purchases > tbody > tr.inv-sale-row--paid:not(:has(.inv-mgmt-empty)) { border-left-color: #1B5E20; }
+    .inv-mgmt-table-wrap > .inv-mgmt-table--purchases > tbody > tr.inv-sale-row--pending:not(:has(.inv-mgmt-empty)) { border-left-color: #E65100; }
+    .inv-mgmt-table-wrap > .inv-mgmt-table--purchases > tbody > tr.inv-sale-row--partial:not(:has(.inv-mgmt-empty)) { border-left-color: #0D47A1; }
+    .inv-mgmt-table-wrap > .inv-mgmt-table--purchases > tbody > tr.inv-sale-row--draft:not(:has(.inv-mgmt-empty)) { border-left-color: #6A1B9A; }
+    .inv-mgmt-table-wrap > .inv-mgmt-table--purchases > tbody > tr.inv-sale-row--cancelled:not(:has(.inv-mgmt-empty)) { border-left-color: #B71C1C; }
+    .inv-mgmt-table-wrap > .inv-mgmt-table--purchases > tbody > tr[class*="inv-sale-row--"]:not(:has(.inv-mgmt-empty)) { border-left-width: 5px; }
+
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table:not(.inv-dashboard-pending-table):not(.inv-dashboard-expiring-table) > tbody > tr:not(:has(.inv-mgmt-empty)) > td,
+    body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td,
+    body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sidebar-open:not(.inv-sidebar-pinned)) .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td {
         display: flex;
         flex-direction: column;
         align-items: flex-start;
@@ -611,103 +695,503 @@ body.inv-dashboard-body.inv-sidebar-drawer-open .inv-sidebar-backdrop {
         box-sizing: border-box;
     }
 
-    #products-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-name,
-    #products-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td:first-child:not(.inv-col-action):not(.inv-mgmt-cell--action):not(.inv-col-check),
-    body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) #products-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-name,
-    body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sidebar-open:not(.inv-sidebar-pinned)) #products-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-name {
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-name,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-customer,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td:first-child:not(.inv-col-action):not(.inv-mgmt-cell--action):not(.inv-col-check):not(.inv-col-date) {
         flex: 1 1 100%;
         min-width: 100%;
         max-width: 100%;
-        font-size: 15px;
         font-weight: 700;
     }
 
-    #products-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-price-with-tax,
-    #products-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-opening {
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table--purchases > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-date {
         flex: 1 1 calc(50% - 4px);
-        min-width: min(100%, 160px);
+        min-width: min(100%, 140px);
     }
 
-    #products-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-price-with-tax::before {
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-price-with-tax::before,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-opening::before {
         max-width: none;
         white-space: normal;
         line-height: 1.3;
     }
 
-    #products-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-action,
-    #products-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-mgmt-cell--action,
-    body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) #products-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-action,
-    body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) #products-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-mgmt-cell--action,
-    body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sidebar-open:not(.inv-sidebar-pinned)) #products-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-action,
-    body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sidebar-open:not(.inv-sidebar-pinned)) #products-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-mgmt-cell--action {
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-action,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-mgmt-cell--action,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table--purchases > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-action,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table--purchases > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-mgmt-cell--action,
+    body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-action,
+    body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-mgmt-cell--action,
+    body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sidebar-open:not(.inv-sidebar-pinned)) .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-action,
+    body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sidebar-open:not(.inv-sidebar-pinned)) .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-mgmt-cell--action {
         flex: 1 1 100%;
         min-width: 100%;
         max-width: 100%;
+        width: auto;
         margin-left: 0;
         align-self: stretch;
         padding: 8px 10px 4px;
         overflow: visible;
     }
 
-    #products-list-panel .inv-pagination {
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-action .inv-row-actions,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-mgmt-cell--action .inv-row-actions {
+        justify-content: flex-start;
+        flex-wrap: wrap;
+        max-width: 100%;
+    }
+
+    .inv-pagination {
         flex-wrap: wrap;
         gap: 10px;
     }
+
+    /* Forms inside panels */
+    .inv-mgmt-form-grid,
+    .inv-mgmt-form-grid--product,
+    .inv-mgmt-form-grid--sale-top,
+    .inv-mgmt-form-grid--invoice-setting {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .inv-mgmt-form-grid--sale-addresses {
+        grid-template-columns: 1fr;
+    }
+
+    .inv-settings-shell {
+        grid-template-columns: 1fr;
+    }
 }
 
-/* ≤767px: tighter products toolbar + single-column-friendly fields */
+/* ≤767px: stack headers/actions; full-width filters */
 @media (max-width: 767px) {
-    #products-list-panel .inv-mgmt-header {
+    /* Slightly shorter search / filter controls on mobile */
+    .inv-mgmt-toolbar .inv-mgmt-search,
+    .inv-mgmt-toolbar--filters .inv-mgmt-search,
+    .inv-mgmt-toolbar--filters .inv-mgmt-filter-select,
+    .inv-mgmt-toolbar--filters .inv-search-select .inv-search-select-trigger,
+    .inv-mgmt-toolbar--filters .inv-list-sort-select {
+        min-height: 34px;
+        height: 34px;
+        padding-top: 6px;
+        padding-bottom: 6px;
+        font-size: 13px;
+        box-sizing: border-box;
+    }
+
+    .inv-mgmt-toolbar--filters .inv-mgmt-btn {
+        min-height: 34px;
+        padding-top: 6px;
+        padding-bottom: 6px;
+    }
+
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-page-panel:not(.inv-hidden) > .inv-mgmt-header {
+        padding-left: 12px;
+        padding-right: 12px;
+        position: relative;
+        top: auto;
+        left: auto;
+        right: auto;
+        height: auto;
+        min-height: 0;
+        margin-bottom: 10px;
+    }
+
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-page-panel:not(.inv-hidden):has(> .inv-mgmt-header) {
+        padding-top: 0;
+    }
+
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-page-panel:not(.inv-hidden) > .inv-mgmt-tabs {
+        position: relative;
+        top: auto;
+        left: auto;
+        right: auto;
+        padding: 0 0 10px;
+        margin-bottom: 4px;
+    }
+
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-page-panel:not(.inv-hidden):has(> .inv-mgmt-tabs) {
+        --inv-mgmt-page-tabs-height: 0px;
+        padding-top: 0;
+    }
+
+    .inv-mgmt-header {
         flex-direction: column;
         align-items: stretch;
     }
 
-    #products-list-panel .inv-mgmt-header .inv-mgmt-btn {
+    .inv-mgmt-header > .inv-mgmt-btn,
+    .inv-mgmt-header-actions {
         width: 100%;
-        justify-content: center;
     }
 
-    #products-list-panel .inv-mgmt-toolbar--filters .inv-mgmt-filter-select,
-    #products-list-panel .inv-mgmt-toolbar--filters .inv-search-select {
+    .inv-mgmt-header-actions > .inv-mgmt-btn {
+        flex: 1 1 auto;
+        justify-content: center;
+        min-height: var(--inv-touch-target);
+    }
+
+    .inv-mgmt-header > a.inv-mgmt-btn {
+        width: 100%;
+        justify-content: center;
+        box-sizing: border-box;
+    }
+
+    .inv-mgmt-toolbar--filters .inv-mgmt-filter-select,
+    .inv-mgmt-toolbar--filters .inv-search-select,
+    .inv-mgmt-toolbar .inv-mgmt-filter-select,
+    .inv-mgmt-toolbar .inv-search-select {
         flex: 1 1 100%;
     }
 
-    #products-list-panel .inv-mgmt-toolbar--filters .inv-columns-btn-wrap {
+    .inv-mgmt-toolbar--filters .inv-mgmt-filter-date,
+    .inv-mgmt-toolbar--filters .inv-date-field {
+        flex: 1 1 calc(50% - 16px);
+    }
+
+    .inv-mgmt-toolbar--filters .inv-columns-btn-wrap,
+    .inv-mgmt-toolbar .inv-columns-btn-wrap {
         margin-left: 0;
     }
 
-    #products-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) {
-        padding: 12px 12px 12px 8px;
-        gap: 0;
+    .inv-mgmt-toolbar--filters .inv-list-sort-wrap,
+    .inv-mgmt-toolbar .inv-list-sort-wrap,
+    .inv-mgmt-toolbar--filters .inv-toolbar-list-actions {
+        flex: 1 1 100%;
+        margin-left: 0;
+        justify-content: flex-start;
     }
 
-    #products-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td {
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) {
+        padding: 12px 12px 12px 8px;
+    }
+
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td {
         flex: 1 1 calc(50% - 4px);
         min-width: min(100%, 132px);
         padding: 7px 8px;
     }
 
-    #products-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-sku,
-    #products-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-hsn,
-    #products-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-barcode {
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-sku,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-hsn,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-barcode,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-invoice {
         overflow-wrap: anywhere;
+    }
+
+    .inv-mgmt-form-grid,
+    .inv-mgmt-form-grid--product,
+    .inv-mgmt-form-grid--sale-top,
+    .inv-mgmt-form-grid--invoice-setting,
+    .inv-mgmt-form-grid--sale-invoice-print {
+        grid-template-columns: 1fr;
+    }
+
+    /* Add Purchase / form panels — keep inline + buttons visible */
+    .inv-mgmt-panel-card .inv-mgmt-panel-body {
+        padding: 16px 14px 28px;
+        box-sizing: border-box;
+    }
+
+    .inv-mgmt-panel-card .inv-mgmt-panel-footer {
+        padding: 12px 14px;
+    }
+
+    .inv-field-inline {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        gap: 6px;
+    }
+
+    .inv-field-inline .inv-mgmt-select,
+    .inv-field-inline .inv-search-select {
+        flex: 1 1 0% !important;
+        min-width: 0 !important;
+        width: auto !important;
+        max-width: 100%;
+    }
+
+    .inv-inline-add-btn,
+    .inv-inline-edit-btn {
+        flex: 0 0 36px;
+        width: 36px;
+        height: 36px;
+        min-width: 36px;
+    }
+
+    .inv-inline-add-btn .material-symbols-outlined,
+    .inv-inline-edit-btn .material-symbols-outlined {
+        font-size: 18px;
+    }
+
+    .inv-mgmt-item-row.inv-mgmt-item-row--stockin,
+    .inv-mgmt-item-row.inv-mgmt-item-row--sale {
+        min-width: 0 !important;
+        max-width: 100%;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .inv-mgmt-item-row .inv-mgmt-field {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    /* Slightly shorter form controls on mobile */
+    .inv-mgmt-panel-body .inv-mgmt-input,
+    .inv-mgmt-panel-body .inv-mgmt-select,
+    .inv-mgmt-panel-body .inv-search-select-trigger,
+    .inv-mgmt-panel-body .inv-multi-select-trigger {
+        min-height: 36px;
+        height: 36px;
+        padding-top: 6px;
+        padding-bottom: 6px;
+        box-sizing: border-box;
+        line-height: 1.25;
+    }
+
+    .inv-mgmt-panel-body .inv-mgmt-textarea {
+        min-height: 72px;
+        height: auto;
+    }
+
+    .inv-mgmt-panel-body .inv-mgmt-field label {
+        margin-bottom: 4px;
+    }
+
+    .inv-mgmt-panel-footer,
+    .inv-modal-footer {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .inv-mgmt-panel-footer .inv-mgmt-btn,
+    .inv-modal-footer .inv-mgmt-btn {
+        flex: 1 1 calc(50% - 8px);
+        min-height: var(--inv-touch-target);
+        margin-left: 0 !important;
+        justify-content: center;
+        box-sizing: border-box;
+    }
+
+    .inv-modal-dialog {
+        width: min(100vw - 16px, 640px);
+        max-height: calc(100vh - 16px);
+        top: 50%;
+    }
+
+    .inv-modal-body {
+        padding: 16px;
+    }
+
+    .inv-modal-header {
+        padding: 16px 16px 0;
+    }
+
+    .inv-confirm-modal {
+        width: min(100vw - 24px, 420px);
+    }
+
+    .inv-dashboard-stat-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .inv-bulk-toolbar {
+        flex-wrap: wrap;
+        gap: 8px;
     }
 }
 
-/* ≤430px: stack most product fields for readability */
+/* ≤430px: stack most card fields; keep compact pairs where useful */
 @media (max-width: 430px) {
-    #products-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td {
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td {
         flex: 1 1 100%;
         min-width: 100%;
     }
 
-    #products-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-qty,
-    #products-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-unit {
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-qty,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-unit,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table--inventory > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-unit,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table--purchases > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-date {
         flex: 1 1 calc(50% - 4px);
         min-width: min(100%, 120px);
     }
 
-    #products-list-panel .inv-pagination-size {
+    .inv-mgmt-toolbar--filters .inv-mgmt-filter-date,
+    .inv-mgmt-toolbar--filters .inv-date-field {
+        flex: 1 1 100%;
+    }
+
+    .inv-mgmt-filter-sep {
+        display: none;
+    }
+
+    .inv-pagination-size {
         width: 100%;
+    }
+
+    .inv-mgmt-header-actions > .inv-mgmt-btn {
+        flex: 1 1 100%;
+    }
+
+    .inv-mgmt-panel-footer,
+    .inv-modal-footer {
+        flex-direction: column-reverse;
+        align-items: stretch;
+    }
+
+    .inv-mgmt-panel-footer .inv-mgmt-btn,
+    .inv-modal-footer .inv-mgmt-btn {
+        flex: 1 1 100%;
+        width: 100%;
+    }
+
+    .inv-mgmt-panel-card .inv-mgmt-panel-body {
+        padding-left: 12px;
+        padding-right: 12px;
+        padding-bottom: 32px;
+    }
+}
+
+/* ========================================================================== */
+/* Tax Settings + Barcode List — force readable cards on narrow screens       */
+/* ========================================================================== */
+
+#settings-tax-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--settings-tax > colgroup,
+#settings-barcode-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--settings-barcode > colgroup {
+    display: none;
+}
+
+#settings-tax-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--settings-tax > tbody > tr:not(:has(.inv-mgmt-empty)) > td[data-label]::before,
+#settings-barcode-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--settings-barcode > tbody > tr:not(:has(.inv-mgmt-empty)) > td[data-label]::before {
+    white-space: normal !important;
+    overflow: visible !important;
+    max-width: none !important;
+    text-overflow: clip !important;
+}
+
+@media (max-width: 1100px) {
+    #settings-tax-list-panel .inv-mgmt-toolbar--filters,
+    #settings-barcode-list-panel .inv-mgmt-toolbar--filters {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: stretch;
+        gap: 8px 10px;
+    }
+
+    #settings-tax-list-panel .inv-mgmt-toolbar--filters .inv-mgmt-search,
+    #settings-barcode-list-panel .inv-mgmt-toolbar--filters .inv-mgmt-search {
+        flex: 1 1 calc(100% - 100px);
+        width: auto;
+        min-width: 0;
+        max-width: none;
+    }
+
+    #settings-tax-list-panel .inv-mgmt-toolbar--filters .inv-mgmt-btn,
+    #settings-barcode-list-panel .inv-mgmt-toolbar--filters .inv-mgmt-btn {
+        flex: 0 0 auto;
+        align-self: stretch;
+        min-height: 42px;
+    }
+
+    #settings-tax-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--settings-tax > tbody > tr:not(:has(.inv-mgmt-empty)),
+    #settings-barcode-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--settings-barcode > tbody > tr:not(:has(.inv-mgmt-empty)) {
+        flex-wrap: wrap !important;
+        align-items: flex-start !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+    }
+
+    #settings-tax-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--settings-tax > tbody > tr:not(:has(.inv-mgmt-empty)) > td,
+    #settings-barcode-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--settings-barcode > tbody > tr:not(:has(.inv-mgmt-empty)) > td {
+        flex: 1 1 calc(50% - 4px) !important;
+        min-width: min(100%, 140px) !important;
+        max-width: 100% !important;
+        white-space: normal !important;
+        overflow: visible !important;
+        text-overflow: clip !important;
+        overflow-wrap: break-word !important;
+        word-break: normal !important;
+    }
+
+    /* Tax: Key + Value (%) side by side; Action full row */
+    #settings-tax-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--settings-tax > tbody > tr:not(:has(.inv-mgmt-empty)) > td:first-child {
+        flex: 1 1 calc(55% - 4px) !important;
+        min-width: min(100%, 150px) !important;
+        font-weight: 700;
+    }
+
+    #settings-tax-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--settings-tax > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-mgmt-cell--num {
+        flex: 1 1 calc(45% - 4px) !important;
+        min-width: min(100%, 130px) !important;
+    }
+
+    /* Barcode: Product full width; SKU + Code Value share row */
+    #settings-barcode-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--settings-barcode > tbody > tr:not(:has(.inv-mgmt-empty)) > td:first-child {
+        flex: 1 1 100% !important;
+        min-width: 100% !important;
+        font-weight: 700;
+    }
+
+    #settings-barcode-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--settings-barcode > tbody > tr:not(:has(.inv-mgmt-empty)) > td:nth-child(3) {
+        flex: 1 1 calc(55% - 4px) !important;
+        min-width: min(100%, 160px) !important;
+        overflow-wrap: anywhere !important;
+        word-break: normal !important;
+    }
+
+    #settings-tax-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--settings-tax > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-action,
+    #settings-tax-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--settings-tax > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-mgmt-cell--action,
+    #settings-barcode-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--settings-barcode > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-action,
+    #settings-barcode-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--settings-barcode > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-mgmt-cell--action {
+        flex: 1 1 100% !important;
+        min-width: 100% !important;
+        max-width: 100% !important;
+        width: auto !important;
+        margin-left: 0 !important;
+        align-self: stretch !important;
+        padding: 8px 10px 4px !important;
+        overflow: visible !important;
+    }
+
+    #settings-tax-list-panel .inv-row-actions,
+    #settings-barcode-list-panel .inv-row-actions {
+        justify-content: flex-start;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+}
+
+@media (max-width: 575px) {
+    #settings-tax-list-panel .inv-mgmt-header,
+    #settings-barcode-list-panel .inv-mgmt-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+
+    #settings-tax-list-panel .inv-mgmt-header .inv-mgmt-btn,
+    #settings-barcode-list-panel .inv-mgmt-header .inv-mgmt-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    #settings-tax-list-panel .inv-mgmt-toolbar--filters .inv-mgmt-search,
+    #settings-barcode-list-panel .inv-mgmt-toolbar--filters .inv-mgmt-search,
+    #settings-tax-list-panel .inv-mgmt-toolbar--filters .inv-mgmt-btn,
+    #settings-barcode-list-panel .inv-mgmt-toolbar--filters .inv-mgmt-btn {
+        flex: 1 1 100%;
+        width: 100%;
+        justify-content: center;
+    }
+
+    #settings-tax-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--settings-tax > tbody > tr:not(:has(.inv-mgmt-empty)) > td,
+    #settings-tax-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--settings-tax > tbody > tr:not(:has(.inv-mgmt-empty)) > td:first-child,
+    #settings-tax-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--settings-tax > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-mgmt-cell--num,
+    #settings-barcode-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--settings-barcode > tbody > tr:not(:has(.inv-mgmt-empty)) > td {
+        flex: 1 1 100% !important;
+        min-width: 100% !important;
     }
 }

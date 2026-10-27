@@ -596,10 +596,12 @@
 
 .inv-mgmt-filter-dates {
     display: flex;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     align-items: center;
     gap: 8px;
-    flex: 0 0 auto;
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 100%;
 }
 
 .inv-mgmt-toolbar--filters .inv-mgmt-filter-date {
@@ -2062,11 +2064,18 @@ body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sideb
     display: flex;
     align-items: center;
     gap: 8px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
 }
 
-.inv-field-inline .inv-mgmt-select {
-    flex: 1;
+.inv-field-inline .inv-mgmt-select,
+.inv-field-inline .inv-search-select {
+    flex: 1 1 0%;
     min-width: 0;
+    width: auto;
+    max-width: 100%;
 }
 
 .inv-inline-add-btn {
@@ -3119,7 +3128,13 @@ body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sideb
     width: 100%;
 }
 
-.inv-field-inline .inv-search-select,
+.inv-field-inline .inv-search-select {
+    flex: 1 1 0%;
+    min-width: 0;
+    width: auto;
+    max-width: 100%;
+}
+
 .inv-product-form-row .inv-mgmt-field > .inv-search-select {
     flex: 1;
     min-width: 0;
@@ -4105,6 +4120,18 @@ body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sideb
     .inv-mgmt-item-row.inv-mgmt-item-row--stockin {
         grid-template-columns: 1fr;
         min-width: 0;
+        max-width: 100%;
+    }
+
+    .inv-mgmt-item-row.inv-mgmt-item-row--stockin .inv-mgmt-field {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .inv-mgmt-item-row.inv-mgmt-item-row--stockin .inv-mgmt-item-row-remove {
+        margin-left: 0;
+        justify-self: end;
+        width: 40px;
     }
 
     .inv-business-profile-grid {
@@ -4842,20 +4869,33 @@ body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sideb
     text-decoration: underline;
 }
 
-/* Settings list tables — card rows (same as Products / Stock In) */
+/* Settings list tables — wrap fields so Key/Value/Code labels never clip */
 .inv-mgmt-table-wrap > .inv-mgmt-table--settings-tax > tbody > tr:not(:has(.inv-mgmt-empty)),
 .inv-mgmt-table-wrap > .inv-mgmt-table--settings-barcode > tbody > tr:not(:has(.inv-mgmt-empty)) {
-    flex-wrap: nowrap;
-    align-items: center;
+    flex-wrap: wrap;
+    align-items: flex-start;
 }
 
 .inv-mgmt-table-wrap > .inv-mgmt-table--settings-tax > tbody > tr:not(:has(.inv-mgmt-empty)) > td:not(.inv-col-action):not(.inv-mgmt-cell--action),
 .inv-mgmt-table-wrap > .inv-mgmt-table--settings-barcode > tbody > tr:not(:has(.inv-mgmt-empty)) > td:not(.inv-col-action):not(.inv-mgmt-cell--action) {
-    flex: 1 1 0;
-    min-width: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    flex: 1 1 140px;
+    min-width: 120px;
+    max-width: 100%;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: break-word;
+    word-break: normal;
+}
+
+.inv-mgmt-table-wrap > .inv-mgmt-table--settings-tax > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-action,
+.inv-mgmt-table-wrap > .inv-mgmt-table--settings-tax > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-mgmt-cell--action,
+.inv-mgmt-table-wrap > .inv-mgmt-table--settings-barcode > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-action,
+.inv-mgmt-table-wrap > .inv-mgmt-table--settings-barcode > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-mgmt-cell--action {
+    flex: 0 0 auto;
+    min-width: 96px;
+    margin-left: auto;
+    align-self: center;
 }
 
 .inv-mgmt-table-wrap > .inv-mgmt-table--settings-invoice > tbody > tr:not(:has(.inv-mgmt-empty)) {
@@ -4895,8 +4935,11 @@ body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sideb
 }
 
 .inv-mgmt-table-wrap > .inv-mgmt-table--settings-barcode > tbody > tr:not(:has(.inv-mgmt-empty)) > td:nth-child(3):not(.inv-col-action):not(.inv-mgmt-cell--action) {
+    flex: 1 1 160px;
+    min-width: 140px;
     white-space: normal;
-    word-break: break-all;
+    overflow-wrap: anywhere;
+    word-break: normal;
 }
 
 .inv-mgmt-table-wrap > .inv-mgmt-table--settings-category-tax > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-action,
