@@ -50,6 +50,34 @@ var InventoryCatalog = (function () {
                 return null;
             }
         },
+        services: {
+            title: "Service",
+            plural: "Services",
+            columns: [
+                { key: "name", label: "Name" },
+                { key: "base_price", label: "Base Price", format: "money" }
+            ],
+            fields: [
+                { id: "name", label: "Service Name", type: "text", required: true, placeholder: "Service name" },
+                {
+                    id: "base_price",
+                    label: "Base Price (optional)",
+                    type: "number",
+                    required: false,
+                    placeholder: "0.00",
+                    step: "0.01",
+                    min: "0"
+                }
+            ],
+            validate: function (payload) {
+                if (!payload.name) return "Service name is required.";
+                if (payload.base_price !== "" && payload.base_price != null) {
+                    var price = Number(payload.base_price);
+                    if (isNaN(price) || price < 0) return "Enter a valid base price.";
+                }
+                return null;
+            }
+        },
         vendors: {
             title: "Vendor",
             plural: "Vendors",
@@ -270,6 +298,15 @@ var InventoryCatalog = (function () {
                 placeholder + '"' + (field.required ? " required" : "") + "/>"
             );
         }
+        if (field.type === "number") {
+            return (
+                '<input' + idAttr + ' class="inv-mgmt-input ' + className + '" type="number" placeholder="' +
+                placeholder + '"' +
+                (field.min != null ? ' min="' + InventoryApi.escapeHtml(String(field.min)) + '"' : "") +
+                (field.step != null ? ' step="' + InventoryApi.escapeHtml(String(field.step)) + '"' : ' step="0.01"') +
+                (field.required ? " required" : "") + "/>"
+            );
+        }
         return (
             '<input' + idAttr + ' class="inv-mgmt-input ' + className + '" type="text" placeholder="' +
             placeholder + '"' + (field.required ? " required" : "") + "/>"
@@ -324,7 +361,12 @@ var InventoryCatalog = (function () {
         var payload = {};
         config.fields.forEach(function (field) {
             var el = rowField(row, ".inv-catalog-field-" + field.id);
-            payload[field.id] = el ? String(el.value || "").trim() : "";
+            var raw = el ? String(el.value || "").trim() : "";
+            if (field.type === "number") {
+                payload[field.id] = raw === "" ? 0 : Number(raw);
+            } else {
+                payload[field.id] = raw;
+            }
         });
         return payload;
     }
@@ -485,6 +527,10 @@ var InventoryCatalog = (function () {
     function cellValue(item, key) {
         var value = item[key];
         if (value === null || value === undefined || String(value).trim() === "") return "—";
+        var col = (config.columns || []).find(function (c) { return c.key === key; });
+        if (col && col.format === "money" && window.InventoryApi && typeof InventoryApi.formatMoney === "function") {
+            return InventoryApi.escapeHtml(InventoryApi.formatMoney(value));
+        }
         return InventoryApi.escapeHtml(String(value));
     }
 

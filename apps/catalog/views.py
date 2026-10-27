@@ -7,6 +7,8 @@ from apps.catalog.serializers import (
     ManufacturerWriteSerializer,
     PaymentTypeSerializer,
     PaymentTypeWriteSerializer,
+    ServiceSerializer,
+    ServiceWriteSerializer,
     UnitSerializer,
     UnitWriteSerializer,
     VendorSerializer,
@@ -17,6 +19,7 @@ from apps.catalog.services import (
     CategoryService,
     ManufacturerService,
     PaymentTypeService,
+    ServiceService,
     UnitService,
     VendorService,
 )
@@ -136,6 +139,32 @@ class BrandViewSet(BusinessScopedViewSetMixin, BaseViewSet):
         return ApiResponse.success(
             data=payload,
             message="Brand created",
+            status_code=status.HTTP_201_CREATED,
+        )
+
+
+class ServiceViewSet(BusinessScopedViewSetMixin, BaseViewSet):
+    service_class = ServiceService
+    serializer_class = ServiceSerializer
+    write_serializer_class = ServiceWriteSerializer
+    search_fields = ("name",)
+    ordering_default = ("name",)
+    ordering_fields = {"name": "name"}
+    required_roles = ["Business Owner", "Business Staff"]
+    required_tab = "services"
+
+    def get_permissions(self):
+        return [IsAuthenticatedUser(), HasRole()]
+
+    def create(self, request):
+        serializer = self.get_write_serializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        data = self.inject_business_scope(dict(serializer.validated_data))
+        instance = self.get_service().create(data)
+        payload = self.serializer_class(instance, context={"request": request}).data
+        return ApiResponse.success(
+            data=payload,
+            message="Service created",
             status_code=status.HTTP_201_CREATED,
         )
 

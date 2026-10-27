@@ -3,7 +3,14 @@ from decimal import Decimal
 from django.db.models import DecimalField, OuterRef, Prefetch, Subquery, Sum, Value
 from django.db.models.functions import Coalesce
 
-from apps.purchases.models import Purchase, PurchaseItem, PurchasePayment
+from apps.purchases.models import (
+    Purchase,
+    PurchaseItem,
+    PurchasePayment,
+    ServiceSale,
+    ServiceSaleItem,
+    ServiceSalePayment,
+)
 from core.base_repository import BaseRepository
 
 
@@ -73,6 +80,58 @@ class PurchaseRepository(BaseRepository):
             raise NotFoundException(
                 f"{self.model.__name__} with id {pk} not found"
             ) from exc
+
+
+class ServiceSaleRepository(BaseRepository):
+    model = ServiceSale
+
+    def get_list_queryset(self):
+        item_qs = (
+            ServiceSaleItem.objects.filter(is_deleted=False)
+            .select_related("service")
+            .only("id", "service_sale_id", "service_id", "service__id", "service__name")
+        )
+        paid_total = (
+            ServiceSalePayment.objects.filter(service_sale_id=OuterRef("pk"), is_deleted=False)
+            .values("service_sale_id")
+            .annotate(total=Sum("amount"))
+            .values("total")
+        )
+        return (
+            self.model.objects.select_related("customer")
+            .prefetch_related(Prefetch("items", queryset=item_qs))
+            .annotate(
+                total_paid_amount=Coalesce(
+                    Subquery(paid_total[:1]),
+                    Value(Decimal("0")),
+                    output_field=DecimalField(max_digits=14, decimal_places=2),
+                )
+            )
+        )
+
+    def get_queryset(self):
+        return (
+            super()
+            .get_queryset()
+            .select_related("owner", "payment_type", "customer", "invoice_setting")
+            .prefetch_related(
+                "items__service",
+                Prefetch(
+                    "payments",
+                    queryset=ServiceSalePayment.objects.filter(is_deleted=False).select_related(
+                        "payment_type"
+                    ),
+                ),
+            )
+        )
+
+
+class ServiceSaleItemRepository(BaseRepository):
+    model = ServiceSaleItem
+
+
+class ServiceSalePaymentRepository(BaseRepository):
+    model = ServiceSalePayment
 
 
 class PurchaseItemRepository(BaseRepository):

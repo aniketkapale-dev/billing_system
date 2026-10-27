@@ -8,8 +8,16 @@ from django.utils import timezone
 from apps.inventory.batch_service import BatchInventoryService
 from apps.inventory.services import InventoryStockService
 from apps.products.models import Product
-from apps.purchases.models import Purchase, PurchaseItem, PurchasePayment, SaleDueSetting
-from apps.purchases.repositories import PurchaseRepository
+from apps.purchases.models import (
+    Purchase,
+    PurchaseItem,
+    PurchasePayment,
+    SaleDueSetting,
+    ServiceSale,
+    ServiceSaleItem,
+    ServiceSalePayment,
+)
+from apps.purchases.repositories import PurchaseRepository, ServiceSaleRepository
 from core.base_service import BaseService
 from core.exceptions import NotFoundException, ValidationException
 from core.middleware import get_current_user
@@ -266,7 +274,7 @@ class PurchaseService(BaseService):
         if reference_no != expected_last:
             return
 
-        in_use = (
+        in_use_purchase = (
             Purchase.objects.filter(
                 business_id=purchase.business_id,
                 invoice_setting_id=setting.id,
@@ -276,7 +284,13 @@ class PurchaseService(BaseService):
             .exclude(pk=purchase.pk)
             .exists()
         )
-        if in_use:
+        in_use_service = ServiceSale.objects.filter(
+            business_id=purchase.business_id,
+            invoice_setting_id=setting.id,
+            reference_no=reference_no,
+            is_deleted=False,
+        ).exists()
+        if in_use_purchase or in_use_service:
             return
 
         setting.current_counter -= 1
@@ -955,3 +969,672 @@ class SaleDueSettingService:
             return None
         setting = self.get_or_create_for_business(business_id)
         return sale_date + timedelta(days=setting.default_due_days_after_sale)
+
+
+class ServiceSaleService(BaseService):
+    def __init__(self):
+        super().__init__(repository=ServiceSaleRepository())
+
+    def _resolve_payment_type_id(self, business_id, payment_type_id):
+        if not payment_type_id:
+            return None
+        from apps.catalog.models import PaymentType
+
+        try:
+            PaymentType.objects.get(
+                pk=payment_type_id,
+                business_id=business_id,
+                is_deleted=False,
+            )
+        except PaymentType.DoesNotExist:
+            raise NotFoundException("Payment type not found.")
+        return payment_type_id
+
+    def _resolve_customer(self, business_id, customer_id):
+        from apps.customers.models import Customer
+
+        try:
+            return Customer.objects.get(
+                pk=customer_id,
+                business_id=business_id,
+                is_deleted=False,
+            )
+        except Customer.DoesNotExist:
+            raise NotFoundException("Customer not found.")
+
+    def _apply_customer(self, data, business_id):
+        customer_id = data.pop("customer_id", None)
+        if customer_id is None:
+            raise ValidationException("Customer is required.")
+        customer = self._resolve_customer(business_id, customer_id)
+        data["customer_id"] = customer.id
+        data["customer_name"] = customer.name
+        return data
+
+    def _apply_invoice_setting(self, data, business_id, *, allocate_number=True):
+        from apps.settings.models import InvoiceSetting
+        from apps.settings.services import InvoiceSettingService
+
+        setting_id = data.pop("invoice_setting_id", None)
+        if not setting_id:
+            raise ValidationException("Invoice setting is required.")
+
+        try:
+            setting = InvoiceSetting.objects.select_for_update().get(
+                pk=setting_id,
+                business_id=business_id,
+                is_deleted=False,
+            )
+        except InvoiceSetting.DoesNotExist:
+            raise NotFoundException("Invoice setting not found.")
+
+        setting = InvoiceSettingService().resolve_for_sale(setting)
+        data["invoice_setting_id"] = setting.id
+        if allocate_number:
+            data["reference_no"] = setting.format_invoice_number()
+            setting.current_counter += 1
+            setting.save(update_fields=["current_counter", "updated_at"])
+        else:
+            data["reference_no"] = ""
+        return data
+
+    @staticmethod
+    def _parse_optional_date(value):
+        if value in (None, ""):
+            return None
+        if hasattr(value, "year"):
+            return value
+        from datetime import datetime
+
+        try:
+            return datetime.strptime(str(value), "%Y-%m-%d").date()
+        except ValueError as exc:
+            raise ValidationException("Invalid due date.") from exc
+
+    @staticmethod
+    def _gst_rate_for_ids(tax_ids):
+        from apps.settings.tax_snapshot import gst_rate_for_tax_ids
+
+        return gst_rate_for_tax_ids(tax_ids)
+
+    def _prepare_service_items(self, items_data, business_id):
+        from apps.catalog.models import Service
+
+        if not items_data:
+            raise ValidationException("At least one service item is required.")
+
+        total_amount = Decimal("0")
+        prepared_items = []
+
+        for item in items_data:
+            service_id = item.get("service_id")
+            base_price = Decimal(str(item.get("base_price", 0)))
+            if base_price < 0:
+                raise ValidationException("Service base price cannot be negative.")
+
+            try:
+                service = Service.objects.get(
+                    pk=service_id,
+                    business_id=business_id,
+                    is_deleted=False,
+                )
+            except Service.DoesNotExist:
+                raise NotFoundException(f"Service with id {service_id} not found.")
+
+            raw_tax_ids = item.get("sale_tax_ids") or []
+            tax_ids = []
+            for tax_id in raw_tax_ids:
+                try:
+                    tax_ids.append(int(tax_id))
+                except (TypeError, ValueError):
+                    continue
+            tax_ids = tax_ids[:1]
+
+            gst_rate = item.get("gst_rate")
+            if gst_rate in (None, ""):
+                gst_rate = self._gst_rate_for_ids(tax_ids)
+            else:
+                gst_rate = Decimal(str(gst_rate))
+
+            tax_amount = Decimal(str(item.get("tax_amount") or 0))
+            if gst_rate is not None and Decimal(str(gst_rate)) > 0:
+                tax_amount = (
+                    base_price * (Decimal(str(gst_rate)) / Decimal("100"))
+                ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+            line_total = item.get("line_total")
+            if line_total in (None, ""):
+                line_total = base_price + tax_amount
+            else:
+                line_total = Decimal(str(line_total))
+
+            total_amount += line_total
+            prepared_items.append(
+                {
+                    "service": service,
+                    "base_price": base_price,
+                    "sale_tax_ids": tax_ids,
+                    "tax_amount": tax_amount,
+                    "gst_rate": gst_rate if gst_rate is not None else Decimal("0"),
+                    "line_total": line_total,
+                }
+            )
+
+        return prepared_items, total_amount
+
+    def _attach_items(self, service_sale, prepared_items):
+        for item in prepared_items:
+            ServiceSaleItem.objects.create(
+                service_sale=service_sale,
+                service=item["service"],
+                base_price=item["base_price"],
+                sale_tax_ids=item["sale_tax_ids"],
+                tax_amount=item["tax_amount"],
+                gst_rate=item["gst_rate"],
+                line_total=item["line_total"],
+            )
+
+    def _sum_payments(self, service_sale):
+        total = (
+            ServiceSalePayment.objects.filter(service_sale=service_sale, is_deleted=False)
+            .aggregate(total=Sum("amount"))
+            .get("total")
+        )
+        return total or Decimal("0")
+
+    def _pending_bill(self, service_sale):
+        pending = (service_sale.total_amount or Decimal("0")) - self._sum_payments(service_sale)
+        if pending < 0:
+            return Decimal("0")
+        return pending
+
+    def _sync_payment_state(self, service_sale, *, next_due_date=None):
+        total_paid = self._sum_payments(service_sale)
+        total_amount = service_sale.total_amount or Decimal("0")
+        pending = total_amount - total_paid
+
+        if pending <= Decimal("0"):
+            service_sale.is_paid = True
+            service_sale.paid_at = timezone.now()
+            service_sale.due_date = None
+            service_sale.save(update_fields=["is_paid", "paid_at", "due_date", "updated_at"])
+            return service_sale
+
+        parsed_due_date = self._parse_optional_date(next_due_date)
+        if not parsed_due_date:
+            parsed_due_date = service_sale.due_date
+        if not parsed_due_date:
+            raise ValidationException("Next due date is required when the bill is not fully paid.")
+
+        service_sale.is_paid = False
+        service_sale.paid_at = None
+        service_sale.due_date = parsed_due_date
+        service_sale.save(update_fields=["is_paid", "paid_at", "due_date", "updated_at"])
+        return service_sale
+
+    def _create_payment(
+        self,
+        service_sale,
+        *,
+        amount,
+        payment_date=None,
+        payment_type_id=None,
+        next_due_date=None,
+        notes="",
+    ):
+        if service_sale.is_draft:
+            raise ValidationException("Draft service sales must be finalized before recording payments.")
+        if service_sale.is_cancelled:
+            raise ValidationException("Cancelled invoices cannot receive payments.")
+
+        amount = Decimal(str(amount))
+        if amount <= 0:
+            raise ValidationException("Payment amount must be greater than zero.")
+
+        pending = self._pending_bill(service_sale)
+        if amount > pending + Decimal("0.0001"):
+            raise ValidationException("Payment amount cannot exceed the pending bill.")
+
+        payment_date = self._parse_optional_date(payment_date) or timezone.localdate()
+        resolved_payment_type_id = None
+        if payment_type_id:
+            resolved_payment_type_id = self._resolve_payment_type_id(
+                service_sale.business_id,
+                payment_type_id,
+            )
+
+        will_clear = amount + Decimal("0.0001") >= pending
+        parsed_next_due = self._parse_optional_date(next_due_date)
+        if not will_clear and not parsed_next_due:
+            raise ValidationException(
+                "Next due date is required when payment does not clear the full bill."
+            )
+
+        ServiceSalePayment.objects.create(
+            service_sale=service_sale,
+            amount=amount,
+            payment_date=payment_date,
+            next_due_date=None if will_clear else parsed_next_due,
+            payment_type_id=resolved_payment_type_id,
+            notes=(notes or "").strip(),
+        )
+        return self._sync_payment_state(
+            service_sale,
+            next_due_date=None if will_clear else parsed_next_due,
+        )
+
+    def _apply_payment_on_finalize(self, service_sale, data):
+        is_paid = bool(data.get("is_paid", False))
+        due_date = data.get("due_date")
+        payment_amount = data.get("payment_amount")
+        payment_type_id = service_sale.payment_type_id
+
+        if is_paid:
+            self._create_payment(
+                service_sale,
+                amount=service_sale.total_amount or Decimal("0"),
+                payment_date=service_sale.sale_date,
+                payment_type_id=payment_type_id,
+            )
+            return service_sale
+
+        if payment_amount is not None and Decimal(str(payment_amount)) > 0:
+            payment_amount = Decimal(str(payment_amount))
+            total_amount = service_sale.total_amount or Decimal("0")
+            if payment_amount > total_amount + Decimal("0.0001"):
+                raise ValidationException("Payment amount cannot exceed the bill amount.")
+            self._create_payment(
+                service_sale,
+                amount=payment_amount,
+                payment_date=service_sale.sale_date,
+                payment_type_id=payment_type_id,
+                next_due_date=due_date,
+            )
+            return service_sale
+
+        parsed_due_date = self._parse_optional_date(due_date)
+        if not parsed_due_date:
+            raise ValidationException("Due date is required for unpaid sales.")
+        service_sale.is_paid = False
+        service_sale.paid_at = None
+        service_sale.due_date = parsed_due_date
+        service_sale.save(update_fields=["is_paid", "paid_at", "due_date", "updated_at"])
+        return service_sale
+
+    @transaction.atomic
+    def create_with_items(self, data):
+        user = get_current_user()
+        if not user:
+            raise ValidationException("Authentication required.")
+
+        business_id = data.get("business_id")
+        if not business_id:
+            raise ValidationException("Business is required.")
+
+        items_data = data.pop("items", [])
+        is_draft = bool(data.pop("is_draft", False))
+        data.pop("billing_address", None)
+        data.pop("shipping_address", None)
+        data.pop("purchase_date", None)
+
+        self._apply_customer(data, business_id)
+        if is_draft:
+            data.pop("invoice_setting_id", None)
+            data["reference_no"] = ""
+        else:
+            self._apply_invoice_setting(data, business_id, allocate_number=True)
+
+        if "payment_type_id" in data:
+            data["payment_type_id"] = self._resolve_payment_type_id(
+                business_id,
+                data.get("payment_type_id"),
+            )
+
+        is_paid = bool(data.pop("is_paid", False))
+        due_date = data.pop("due_date", None)
+        payment_amount = data.pop("payment_amount", None)
+        if is_draft:
+            is_paid = False
+            payment_amount = None
+            data["is_paid"] = False
+            data["paid_at"] = None
+            data["due_date"] = self._parse_optional_date(due_date)
+        elif is_paid or (payment_amount and Decimal(str(payment_amount)) > 0):
+            data["is_paid"] = False
+            data["paid_at"] = None
+            data["due_date"] = None
+        else:
+            data["is_paid"] = False
+            parsed_due_date = self._parse_optional_date(due_date)
+            if not parsed_due_date:
+                sale_date = data.get("sale_date") or timezone.localdate()
+                parsed_due_date = SaleDueSettingService().default_due_date_for_sale(
+                    business_id,
+                    sale_date,
+                )
+            data["due_date"] = parsed_due_date
+
+        data["is_draft"] = is_draft
+        payment_payload = {
+            "is_paid": is_paid,
+            "due_date": due_date,
+            "payment_amount": payment_amount,
+        }
+
+        prepared_items, total_amount = self._prepare_service_items(items_data, business_id)
+        data["owner_id"] = user.id
+        data["total_amount"] = total_amount
+        if not data.get("sale_date"):
+            data["sale_date"] = timezone.localdate()
+
+        service_sale = self.repository.create(**data)
+        self._attach_items(service_sale, prepared_items)
+        if not is_draft:
+            self._apply_payment_on_finalize(service_sale, payment_payload)
+
+        return service_sale
+
+    def _clear_items(self, service_sale):
+        ServiceSaleItem.objects.filter(
+            service_sale=service_sale,
+            is_deleted=False,
+        ).soft_delete()
+
+    def _release_draft_invoice_number(self, service_sale):
+        from apps.settings.models import InvoiceSetting
+
+        setting_id = service_sale.invoice_setting_id
+        reference_no = (service_sale.reference_no or "").strip()
+        if not setting_id or not reference_no:
+            return
+
+        setting = (
+            InvoiceSetting.objects.select_for_update()
+            .filter(
+                pk=setting_id,
+                business_id=service_sale.business_id,
+                is_deleted=False,
+            )
+            .first()
+        )
+        if not setting or setting.current_counter <= setting.counter:
+            return
+
+        expected_last = setting.format_invoice_number(setting.current_counter - 1)
+        if reference_no != expected_last:
+            return
+
+        in_use_purchase = (
+            Purchase.objects.filter(
+                business_id=service_sale.business_id,
+                invoice_setting_id=setting.id,
+                reference_no=reference_no,
+                is_deleted=False,
+            ).exists()
+        )
+        in_use_service = (
+            ServiceSale.objects.filter(
+                business_id=service_sale.business_id,
+                invoice_setting_id=setting.id,
+                reference_no=reference_no,
+                is_deleted=False,
+            )
+            .exclude(pk=service_sale.pk)
+            .exists()
+        )
+        if in_use_purchase or in_use_service:
+            return
+
+        setting.current_counter -= 1
+        setting.save(update_fields=["current_counter", "updated_at"])
+
+    def _strip_draft_invoice_number(self, service_sale):
+        if not service_sale.is_draft:
+            return service_sale
+        if not (service_sale.reference_no or "").strip():
+            return service_sale
+        self._release_draft_invoice_number(service_sale)
+        service_sale.reference_no = ""
+        service_sale.save(update_fields=["reference_no", "updated_at"])
+        return service_sale
+
+    def _assign_invoice_on_finalize(self, service_sale, invoice_setting_id):
+        reference_no = (service_sale.reference_no or "").strip()
+        if reference_no:
+            return service_sale
+
+        if not invoice_setting_id:
+            raise ValidationException("Please select an invoice before finalizing the sale.")
+
+        invoice_data = {"invoice_setting_id": invoice_setting_id}
+        self._apply_invoice_setting(invoice_data, service_sale.business_id, allocate_number=True)
+        service_sale.invoice_setting_id = invoice_data["invoice_setting_id"]
+        service_sale.reference_no = invoice_data["reference_no"]
+        service_sale.save(update_fields=["reference_no", "invoice_setting_id", "updated_at"])
+        return service_sale
+
+    def _build_header_updates(self, service_sale, data):
+        updates = {}
+
+        if "customer_id" in data and data.get("customer_id") is not None:
+            customer = self._resolve_customer(service_sale.business_id, data["customer_id"])
+            updates["customer_id"] = customer.id
+            updates["customer_name"] = customer.name
+
+        if "sale_date" in data and data.get("sale_date") is not None:
+            updates["sale_date"] = data["sale_date"]
+        elif "purchase_date" in data and data.get("purchase_date") is not None:
+            updates["sale_date"] = data["purchase_date"]
+
+        if "reference_no" in data:
+            updates["reference_no"] = (data.get("reference_no") or "").strip()
+
+        if "notes" in data:
+            updates["notes"] = data.get("notes") or ""
+
+        if "terms" in data:
+            updates["terms"] = data.get("terms") or ""
+
+        if "payment_type_id" in data:
+            updates["payment_type_id"] = self._resolve_payment_type_id(
+                service_sale.business_id,
+                data.get("payment_type_id"),
+            )
+
+        if "due_date" in data:
+            updates["due_date"] = self._parse_optional_date(data.get("due_date"))
+
+        return updates
+
+    def _get_last_payment_date(self, service_sale):
+        return (
+            ServiceSalePayment.objects.filter(service_sale=service_sale, is_deleted=False)
+            .order_by("-payment_date", "-created_at")
+            .values_list("payment_date", flat=True)
+            .first()
+        )
+
+    @transaction.atomic
+    def _delete_draft(self, service_sale):
+        if not service_sale.is_draft:
+            raise ValidationException("Only draft sales can be deleted this way.")
+        if service_sale.is_cancelled:
+            return service_sale
+
+        self._clear_items(service_sale)
+        self._release_draft_invoice_number(service_sale)
+        service_sale.soft_delete()
+        return service_sale
+
+    @transaction.atomic
+    def update_draft_with_items(self, pk, data):
+        service_sale = self.repository.get_by_id(pk)
+        if not service_sale.is_draft:
+            raise ValidationException("Only draft service sales can be updated with line items.")
+        if service_sale.is_cancelled:
+            raise ValidationException("Cancelled invoices cannot be edited.")
+
+        self._strip_draft_invoice_number(service_sale)
+
+        business_id = service_sale.business_id
+        items_data = data.pop("items", None)
+        data.pop("billing_address", None)
+        data.pop("shipping_address", None)
+        data.pop("is_paid", None)
+        data.pop("payment_amount", None)
+
+        if items_data is None:
+            updates = self._build_header_updates(service_sale, data)
+            if not updates:
+                return service_sale
+            return self.repository.update(service_sale, **updates)
+
+        self._clear_items(service_sale)
+        prepared_items, total_amount = self._prepare_service_items(items_data, business_id)
+        updates = self._build_header_updates(service_sale, data)
+        updates["total_amount"] = total_amount
+        if updates:
+            service_sale = self.repository.update(service_sale, **updates)
+        self._attach_items(service_sale, prepared_items)
+        return service_sale
+
+    @transaction.atomic
+    def finalize_draft(self, pk, data=None):
+        data = data or {}
+        service_sale = self.repository.get_by_id(pk)
+        if not service_sale.is_draft:
+            raise ValidationException("This service sale is already finalized.")
+        if service_sale.is_cancelled:
+            raise ValidationException("Cancelled drafts cannot be finalized.")
+
+        items = list(
+            ServiceSaleItem.objects.filter(
+                service_sale=service_sale,
+                is_deleted=False,
+            )
+        )
+        if not items:
+            raise ValidationException("Add at least one service before finalizing the sale.")
+
+        invoice_setting_id = data.pop("invoice_setting_id", None)
+        self._assign_invoice_on_finalize(service_sale, invoice_setting_id)
+
+        service_sale.is_draft = False
+        service_sale.save(update_fields=["is_draft", "updated_at"])
+        self._apply_payment_on_finalize(service_sale, data)
+        return self.repository.get_by_id(pk)
+
+    def update_header(self, pk, data):
+        service_sale = self.repository.get_by_id(pk)
+        if service_sale.is_cancelled:
+            raise ValidationException("Cancelled invoices cannot be edited.")
+        if service_sale.is_draft:
+            raise ValidationException("Use draft update to change draft sale details.")
+        if service_sale.is_paid and "due_date" in data:
+            data = dict(data)
+            data.pop("due_date", None)
+        elif "due_date" in data and not service_sale.is_paid:
+            parsed_due_date = self._parse_optional_date(data.get("due_date"))
+            if not parsed_due_date:
+                raise ValidationException("Due date is required for unpaid sales.")
+            data = dict(data)
+            data["due_date"] = parsed_due_date
+
+        data.pop("billing_address", None)
+        data.pop("shipping_address", None)
+        data.pop("items", None)
+        updates = self._build_header_updates(service_sale, data)
+        if not updates:
+            return service_sale
+        return self.repository.update(service_sale, **updates)
+
+    @transaction.atomic
+    def mark_as_paid(self, pk):
+        service_sale = self.repository.get_by_id(pk)
+        if service_sale.is_paid:
+            return service_sale
+
+        pending = self._pending_bill(service_sale)
+        if pending <= 0:
+            return service_sale
+
+        self._create_payment(
+            service_sale,
+            amount=pending,
+            payment_date=timezone.localdate(),
+            payment_type_id=service_sale.payment_type_id,
+        )
+        return self.repository.get_by_id(pk)
+
+    @transaction.atomic
+    def record_payment(self, pk, data):
+        service_sale = self.repository.get_by_id(pk)
+        payment_date = self._parse_optional_date(data.get("payment_date")) or timezone.localdate()
+        last_payment_date = self._get_last_payment_date(service_sale)
+        if last_payment_date and payment_date < last_payment_date:
+            raise ValidationException(
+                "Payment date cannot be before the last recorded payment date."
+            )
+        self._create_payment(
+            service_sale,
+            amount=data.get("amount"),
+            payment_date=payment_date,
+            payment_type_id=data.get("payment_type_id"),
+            next_due_date=data.get("next_due_date"),
+            notes=data.get("notes", ""),
+        )
+        return self.repository.get_by_id(pk)
+
+    def list_payments(self, pk):
+        service_sale = self.repository.get_by_id(pk)
+        return (
+            ServiceSalePayment.objects.filter(service_sale=service_sale, is_deleted=False)
+            .select_related("payment_type")
+            .order_by("payment_date", "created_at")
+        )
+
+    @transaction.atomic
+    def mark_as_cancelled(self, pk, reason="", cancellation_date=None):
+        service_sale = self.repository.get_by_id(pk)
+        if service_sale.is_cancelled:
+            return service_sale
+
+        if service_sale.is_draft:
+            return self._delete_draft(service_sale)
+
+        reason = (reason or "").strip()
+        if not reason:
+            raise ValidationException("Cancellation reason is required.")
+
+        if cancellation_date is None:
+            cancellation_date = timezone.localdate()
+        elif isinstance(cancellation_date, str):
+            from datetime import datetime
+
+            try:
+                cancellation_date = datetime.strptime(cancellation_date, "%Y-%m-%d").date()
+            except ValueError as exc:
+                raise ValidationException("Invalid cancellation date.") from exc
+
+        invoice_date = service_sale.sale_date
+        if not invoice_date and service_sale.created_at:
+            invoice_date = timezone.localtime(service_sale.created_at).date()
+        if invoice_date and cancellation_date < invoice_date:
+            raise ValidationException(
+                "Cancellation date cannot be before the invoice date."
+            )
+
+        service_sale.is_cancelled = True
+        service_sale.cancelled_at = timezone.now()
+        service_sale.cancellation_date = cancellation_date
+        service_sale.cancellation_reason = reason
+        service_sale.save(
+            update_fields=[
+                "is_cancelled",
+                "cancelled_at",
+                "cancellation_date",
+                "cancellation_reason",
+                "updated_at",
+            ]
+        )
+        return service_sale

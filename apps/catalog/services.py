@@ -3,6 +3,7 @@ from apps.catalog.repositories import (
     CategoryRepository,
     ManufacturerRepository,
     PaymentTypeRepository,
+    ServiceRepository,
     UnitRepository,
     VendorRepository,
 )
@@ -192,6 +193,51 @@ class BrandService(BaseService):
                 qs = qs.exclude(pk=exclude_pk)
             if qs.exists():
                 raise ValidationException("A brand with this name already exists.")
+
+
+class ServiceService(BaseService):
+    def __init__(self):
+        super().__init__(repository=ServiceRepository())
+
+    def before_create(self, data):
+        user = get_current_user()
+        if not user:
+            raise ValidationException("Authentication required.")
+        data.pop("owner_id", None)
+        business_id = data.get("business_id")
+        if not business_id:
+            raise ValidationException("Business is required.")
+        self._validate(data)
+
+    def before_update(self, instance, data):
+        data.pop("owner_id", None)
+        data.pop("business_id", None)
+        self._validate(data, exclude_pk=instance.pk, business_id=instance.business_id)
+
+    def _validate(self, data, exclude_pk=None, business_id=None):
+        if "name" in data:
+            validate_required(data["name"], "Service name")
+
+        if "base_price" in data and data["base_price"] is not None and data["base_price"] != "":
+            try:
+                from decimal import Decimal
+
+                if Decimal(str(data["base_price"])) < 0:
+                    raise ValidationException("Service base price cannot be negative.")
+            except (TypeError, ValueError, ArithmeticError):
+                raise ValidationException("Enter a valid service base price.")
+
+        name = data.get("name")
+        if name:
+            qs = self.repository.model.objects.filter(
+                business_id=business_id or data.get("business_id"),
+                name=name,
+                is_deleted=False,
+            )
+            if exclude_pk:
+                qs = qs.exclude(pk=exclude_pk)
+            if qs.exists():
+                raise ValidationException("A service with this name already exists.")
 
 
 class ManufacturerService(BaseService):

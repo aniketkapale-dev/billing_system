@@ -22,6 +22,11 @@
         <div class="inv-mgmt-card">
             <div class="inv-mgmt-toolbar inv-mgmt-toolbar--filters">
                 <input type="search" id="purchases-search" class="inv-mgmt-search" placeholder="Search customer, invoice no...."/>
+                <select id="purchases-sale-type-filter" class="inv-mgmt-select inv-mgmt-filter-select" aria-label="Sale type">
+                    <option value="">All types</option>
+                    <option value="product">Product</option>
+                    <option value="service">Service</option>
+                </select>
                 <select id="purchases-invoice-status-filter" class="inv-mgmt-select inv-mgmt-filter-select" aria-label="Invoice status">
                     <option value="">All statuses</option>
                     <option value="finalized">Finalized</option>
@@ -61,6 +66,18 @@
         </div>
         <div class="inv-mgmt-card inv-mgmt-panel-card">
             <div class="inv-mgmt-panel-body">
+                <div id="purchase-sale-kind-bar" class="inv-sale-kind-bar">
+                    <span class="inv-sale-kind-label">Sale type</span>
+                    <div class="inv-sale-kind-segment" role="group" aria-label="Sale type">
+                        <button type="button" id="purchase-sale-kind-product-btn" class="inv-sale-kind-btn" data-sale-kind="product">
+                            For Product
+                        </button>
+                        <button type="button" id="purchase-sale-kind-service-btn" class="inv-sale-kind-btn is-active" data-sale-kind="service">
+                            For Service
+                        </button>
+                    </div>
+                </div>
+
                 <div class="inv-mgmt-form-grid inv-mgmt-form-grid--sale-top" style="padding:0;">
                     <div id="purchase-invoice-setting-field" class="inv-mgmt-field">
                         <label for="purchase-invoice-setting">Invoice</label>
@@ -106,7 +123,13 @@
                             </div>
                         </div>
                     </div>
+                    <div class="inv-mgmt-field inv-mgmt-field--full">
+                        <label for="purchase-invoice-terms">Terms <span class="inv-field-optional">(optional)</span></label>
+                        <textarea id="purchase-invoice-terms" class="inv-mgmt-textarea" rows="3" placeholder="Payment or delivery terms for this invoice"></textarea>
+                    </div>
                 </div>
+
+                <div id="purchase-sale-kind-product" class="inv-hidden">
                 <div class="inv-mgmt-form-grid inv-mgmt-form-grid--sale-addresses" style="padding:0;">
                     <div class="inv-mgmt-field">
                         <label for="purchase-billing-address">Billing Address <span class="inv-field-optional">(optional)</span></label>
@@ -132,10 +155,6 @@
                     <div class="inv-mgmt-field">
                         <label for="purchase-invoice-eway-bill">E-Way Bill No. <span class="inv-field-optional">(optional)</span></label>
                         <input id="purchase-invoice-eway-bill" class="inv-mgmt-input" type="text" placeholder="E-way bill number"/>
-                    </div>
-                    <div class="inv-mgmt-field inv-mgmt-field--full">
-                        <label for="purchase-invoice-terms">Terms <span class="inv-field-optional">(optional)</span></label>
-                        <textarea id="purchase-invoice-terms" class="inv-mgmt-textarea" rows="3" placeholder="Payment or delivery terms for this invoice"></textarea>
                     </div>
                 </div>
 
@@ -164,6 +183,45 @@
                                 <span>Bill Amount</span>
                             </div>
                             <strong id="purchase-sale-amount" class="inv-stockin-total-value">0.00</strong>
+                        </div>
+                    </div>
+                </div>
+
+                </div>
+
+                <div id="purchase-sale-kind-service" aria-hidden="false">
+                    <div class="inv-mgmt-items-panel inv-mgmt-items-panel--service">
+                        <div class="inv-mgmt-items-header">
+                            <h4 style="margin:0;font-size:16px;font-weight:600;color:var(--inv-primary);">Services to Sell</h4>
+                        </div>
+                        <div id="purchase-service-items-container"></div>
+                        <div class="inv-mgmt-items-footer-actions">
+                            <button type="button" class="inv-mgmt-btn purchase-tax-add-btn" title="Add tax" aria-label="Add tax">
+                                <span class="material-symbols-outlined">add</span>
+                                Add Tax
+                            </button>
+                            <button type="button" id="purchase-add-service-item-btn" class="inv-mgmt-btn inv-mgmt-btn--primary">Add Service</button>
+                        </div>
+                        <div id="purchase-service-totals" class="inv-stockin-totals">
+                            <div class="inv-stockin-total-row">
+                                <div class="inv-stockin-total-label">
+                                    <span>Subtotal</span>
+                                    <small>Base price before GST</small>
+                                </div>
+                                <strong id="purchase-service-subtotal" class="inv-stockin-total-value">0.00</strong>
+                            </div>
+                            <div class="inv-stockin-total-row">
+                                <div class="inv-stockin-total-label">
+                                    <span>Tax Amount</span>
+                                </div>
+                                <strong id="purchase-service-tax-total" class="inv-stockin-total-value">0.00</strong>
+                            </div>
+                            <div class="inv-stockin-total-row inv-stockin-total-row--grand">
+                                <div class="inv-stockin-total-label">
+                                    <span>Bill Amount</span>
+                                </div>
+                                <strong id="purchase-service-sale-amount" class="inv-stockin-total-value">0.00</strong>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -320,6 +378,33 @@
 {% include "partials/tax_modal.html" %}
 {% include "partials/invoice_setting_modal.html" %}
 {% include "partials/sale_invoice_print_preview_modal.html" %}
+{% include "partials/service_sale_invoice.html" %}
+
+<div id="purchase-add-service-modal" class="inv-modal inv-hidden" aria-hidden="true">
+    <div class="inv-modal-backdrop" data-modal-close></div>
+    <div class="inv-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="purchase-add-service-title">
+        <div class="inv-modal-header">
+            <h3 id="purchase-add-service-title">Add Service</h3>
+            <button type="button" class="inv-modal-close" data-modal-close aria-label="Close">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="inv-modal-body">
+            <div class="inv-mgmt-field">
+                <label for="purchase-new-service-name">Service Name</label>
+                <input id="purchase-new-service-name" class="inv-mgmt-input" type="text" placeholder="Service name" maxlength="150" required/>
+            </div>
+            <div class="inv-mgmt-field">
+                <label for="purchase-new-service-base-price">Base Price <span class="inv-field-optional">(optional)</span></label>
+                <input id="purchase-new-service-base-price" class="inv-mgmt-input" type="number" min="0" step="0.01" placeholder="0.00"/>
+            </div>
+        </div>
+        <div class="inv-modal-footer">
+            <button type="button" class="inv-mgmt-btn" data-modal-close>Cancel</button>
+            <button id="purchase-add-service-save-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">Save Service</button>
+        </div>
+    </div>
+</div>
 
 <div id="purchase-due-setting-modal" class="inv-modal inv-hidden" aria-hidden="true">
     <div class="inv-modal-backdrop" data-modal-close></div>
@@ -348,13 +433,14 @@
 {% block page_scripts %}
 <script src="{% static 'js/components/modal.js' %}"></script>
 <script src="{% static 'js/components/page-panel.js' %}"></script>
-<script src="{% static 'js/components/multi-select.js' %}?v=20260330-select-arrows"></script>
-<script src="{% static 'js/components/tax-select.js' %}"></script>
+<script src="{% static 'js/components/multi-select.js' %}?v=20261027-single-gst"></script>
+<script src="{% static 'js/components/tax-select.js' %}?v=20261027-single-gst"></script>
 <script src="{% static 'js/inventory/customers.js' %}?v=20261001-cross-tab-refresh"></script>
 <script src="{% static 'js/inventory/settings-tax.js' %}?v=20261001-cross-tab-refresh"></script>
 <script src="{% static 'js/inventory/settings-invoice.js' %}?v=20261001-cross-tab-refresh"></script>
 <script src="{% static 'js/components/sale-invoice-print-preview.js' %}?v=20260311-no-caption"></script>
-<script src="{% static 'js/inventory/purchases.js' %}?v=20261001-cross-tab-refresh"></script>
+<script src="{% static 'js/components/service-sale-invoice-export.js' %}?v=20261027-service-no-taxable-row"></script>
+<script src="{% static 'js/inventory/purchases.js' %}?v=20261027-service-base-price"></script>
 <script>
 InventoryPagePanel.init();
 InventoryCustomers.init();

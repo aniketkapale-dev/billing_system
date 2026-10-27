@@ -4,6 +4,7 @@ BUSINESS_TAB_DEFINITIONS = [
     {"code": "products-units", "label": "Units", "group": "Manage Products"},
     {"code": "products-categories", "label": "Categories", "group": "Manage Products"},
     {"code": "products-brands", "label": "Brands", "group": "Manage Products"},
+    {"code": "services", "label": "Services", "group": "Manage Services"},
     {"code": "stock-in", "label": "Purchase (Stock In)", "group": "Inventory"},
     {"code": "stock-in-vendors", "label": "Vendors", "group": "Inventory"},
     {"code": "inventory", "label": "Stock", "group": "Inventory"},

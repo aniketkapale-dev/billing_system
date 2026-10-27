@@ -188,11 +188,20 @@ var InventoryMultiSelect = (function () {
         }
     }
 
+    function applySelectionLimit(selectedIds, config) {
+        selectedIds = normalizeIds(selectedIds);
+        var max = config && config.maxSelections != null ? Number(config.maxSelections) : 0;
+        if (max > 0 && selectedIds.length > max) {
+            return selectedIds.slice(0, max);
+        }
+        return selectedIds;
+    }
+
     function updateDisplay(root, selectedIds, silent) {
         var config = getConfig(root);
         if (!config) return;
 
-        selectedIds = normalizeIds(selectedIds);
+        selectedIds = applySelectionLimit(selectedIds, config);
         var hidden = root.querySelector(".inv-multi-select-values");
         var labelEl = root.querySelector(".inv-multi-select-label");
         if (hidden) hidden.value = selectedIds.join(",");
@@ -309,10 +318,17 @@ var InventoryMultiSelect = (function () {
             options: config.options || [],
             placeholder: config.placeholder || "Select...",
             labelFn: config.labelFn || function (item) { return String(item.label || item.id || ""); },
-            onChange: config.onChange || null
+            onChange: config.onChange || null,
+            maxSelections: config.maxSelections != null ? Number(config.maxSelections) : 0
         };
 
         if (root.dataset.multiSelectWired === "1") {
+            root._multiSelectConfig.options = config.options || [];
+            root._multiSelectConfig.placeholder = config.placeholder || root._multiSelectConfig.placeholder;
+            root._multiSelectConfig.labelFn = config.labelFn || root._multiSelectConfig.labelFn;
+            root._multiSelectConfig.onChange = config.onChange || root._multiSelectConfig.onChange;
+            root._multiSelectConfig.maxSelections =
+                config.maxSelections != null ? Number(config.maxSelections) : root._multiSelectConfig.maxSelections;
             setSelected(root, config.selectedIds || [], true);
             return;
         }
@@ -355,16 +371,26 @@ var InventoryMultiSelect = (function () {
             menu.addEventListener("change", function (e) {
                 var checkbox = e.target;
                 if (!checkbox || checkbox.type !== "checkbox") return;
+                var cfg = getConfig(root);
+                var max = cfg && cfg.maxSelections != null ? Number(cfg.maxSelections) : 0;
                 var selected = getSelected(root);
                 var id = String(checkbox.value);
                 if (checkbox.checked) {
-                    if (selected.indexOf(id) === -1) selected.push(id);
+                    if (max === 1) {
+                        selected = [id];
+                    } else if (selected.indexOf(id) === -1) {
+                        selected.push(id);
+                        if (max > 0) selected = selected.slice(0, max);
+                    }
                 } else {
                     selected = selected.filter(function (value) {
                         return value !== id;
                     });
                 }
                 updateDisplay(root, selected, false);
+                if (max === 1 && checkbox.checked) {
+                    close(root);
+                }
             });
         }
 

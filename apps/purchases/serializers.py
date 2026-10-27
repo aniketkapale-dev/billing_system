@@ -3,7 +3,15 @@ from decimal import Decimal
 from django.db.models import Sum
 from rest_framework import serializers
 
-from apps.purchases.models import Purchase, PurchaseItem, PurchasePayment, SaleDueSetting
+from apps.purchases.models import (
+    Purchase,
+    PurchaseItem,
+    PurchasePayment,
+    SaleDueSetting,
+    ServiceSale,
+    ServiceSaleItem,
+    ServiceSalePayment,
+)
 from core.base_serializer import BaseModelSerializer
 
 
@@ -128,11 +136,13 @@ class PurchaseListSerializer(BaseModelSerializer):
     total_paid = serializers.SerializerMethodField()
     pending_bill = serializers.SerializerMethodField()
     payment_status = serializers.SerializerMethodField()
+    sale_type = serializers.SerializerMethodField()
 
     class Meta:
         model = Purchase
         fields = (
             "id",
+            "sale_type",
             "customer_name",
             "company_name",
             "customer_mobile",
@@ -146,7 +156,11 @@ class PurchaseListSerializer(BaseModelSerializer):
             "is_draft",
             "is_cancelled",
             "items",
+            "created_at",
         )
+
+    def get_sale_type(self, obj):
+        return "product"
 
     def get_company_name(self, obj):
         customer = getattr(obj, "customer", None)
@@ -492,6 +506,417 @@ class PurchaseHeaderWriteSerializer(serializers.Serializer):
     shipping_address = serializers.CharField(required=False, allow_blank=True)
     payment_type_id = serializers.IntegerField(required=False, allow_null=True)
     due_date = OptionalDateField(required=False, allow_null=True)
+
+
+class ServiceSaleListItemSerializer(serializers.Serializer):
+    product_name = serializers.CharField(source="service.name", read_only=True)
+    service_name = serializers.CharField(source="service.name", read_only=True)
+    quantity = serializers.SerializerMethodField()
+
+    def get_quantity(self, obj):
+        return "1.00"
+
+
+class ServiceSaleListSerializer(BaseModelSerializer):
+    items = ServiceSaleListItemSerializer(many=True, read_only=True)
+    company_name = serializers.SerializerMethodField()
+    customer_mobile = serializers.SerializerMethodField()
+    total_paid = serializers.SerializerMethodField()
+    pending_bill = serializers.SerializerMethodField()
+    payment_status = serializers.SerializerMethodField()
+    purchase_date = serializers.DateField(source="sale_date", read_only=True)
+    sale_type = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ServiceSale
+        fields = (
+            "id",
+            "sale_type",
+            "customer_name",
+            "company_name",
+            "customer_mobile",
+            "reference_no",
+            "purchase_date",
+            "sale_date",
+            "total_amount",
+            "total_paid",
+            "pending_bill",
+            "payment_status",
+            "is_paid",
+            "is_draft",
+            "is_cancelled",
+            "items",
+            "created_at",
+        )
+
+    def get_sale_type(self, obj):
+        return "service"
+
+    def get_company_name(self, obj):
+        customer = getattr(obj, "customer", None)
+        return customer.company_name if customer else ""
+
+    def get_customer_mobile(self, obj):
+        customer = getattr(obj, "customer", None)
+        return customer.mobile if customer else ""
+
+    def _paid_amount(self, obj):
+        annotated = getattr(obj, "total_paid_amount", None)
+        if annotated is not None:
+            return Decimal(annotated or 0)
+        return Decimal("0")
+
+    def get_total_paid(self, obj):
+        if obj.is_draft or obj.is_cancelled:
+            return "0.00"
+        return _decimal_str(self._paid_amount(obj))
+
+    def get_pending_bill(self, obj):
+        if obj.is_draft or obj.is_cancelled:
+            return "0.00"
+        pending = Decimal(obj.total_amount or 0) - self._paid_amount(obj)
+        if pending < 0:
+            return "0.00"
+        return _decimal_str(pending)
+
+    def get_payment_status(self, obj):
+        if obj.is_draft:
+            return "draft"
+        if obj.is_cancelled:
+            return "cancelled"
+        if obj.is_paid:
+            return "paid"
+        total_paid = self._paid_amount(obj)
+        total_amount = Decimal(obj.total_amount or 0)
+        if total_paid <= 0:
+            return "unpaid"
+        if total_paid + Decimal("0.0001") < total_amount:
+            return "partial"
+        return "paid"
+
+
+class ServiceSaleItemSerializer(BaseModelSerializer):
+    service_name = serializers.CharField(source="service.name", read_only=True)
+    product_name = serializers.CharField(source="service.name", read_only=True)
+    product_sku = serializers.SerializerMethodField()
+    product_hsn_code = serializers.SerializerMethodField()
+    product_unit = serializers.SerializerMethodField()
+    quantity = serializers.SerializerMethodField()
+    list_price = serializers.DecimalField(
+        source="base_price",
+        max_digits=12,
+        decimal_places=2,
+        read_only=True,
+    )
+    unit_price = serializers.DecimalField(
+        source="base_price",
+        max_digits=12,
+        decimal_places=2,
+        read_only=True,
+    )
+
+    class Meta:
+        model = ServiceSaleItem
+        fields = (
+            "id",
+            "service",
+            "service_name",
+            "product_name",
+            "product_sku",
+            "product_hsn_code",
+            "product_unit",
+            "quantity",
+            "base_price",
+            "list_price",
+            "unit_price",
+            "sale_tax_ids",
+            "tax_amount",
+            "gst_rate",
+            "line_total",
+        )
+
+    def get_product_sku(self, obj):
+        return ""
+
+    def get_product_hsn_code(self, obj):
+        return ""
+
+    def get_product_unit(self, obj):
+        return "svc"
+
+    def get_quantity(self, obj):
+        return "1.00"
+
+
+class ServiceSalePaymentSerializer(BaseModelSerializer):
+    payment_type_name = serializers.CharField(
+        source="payment_type.name",
+        read_only=True,
+        default="",
+    )
+
+    class Meta:
+        model = ServiceSalePayment
+        fields = (
+            "id",
+            "amount",
+            "payment_date",
+            "next_due_date",
+            "payment_type",
+            "payment_type_name",
+            "notes",
+            "created_at",
+        )
+
+
+class ServiceSaleSerializer(BaseModelSerializer):
+    items = ServiceSaleItemSerializer(many=True, read_only=True)
+    payments = ServiceSalePaymentSerializer(many=True, read_only=True)
+    payment_type_name = serializers.CharField(
+        source="payment_type.name",
+        read_only=True,
+        default="",
+    )
+    customer_id = serializers.IntegerField(source="customer.id", read_only=True, default=None)
+    customer = serializers.IntegerField(source="customer_id", read_only=True, default=None)
+    business_name = serializers.CharField(source="business.business_name", read_only=True)
+    invoice_terms_conditions = serializers.CharField(
+        source="invoice_setting.terms_conditions",
+        read_only=True,
+        default="",
+    )
+    invoice_qr_image_url = serializers.SerializerMethodField()
+    invoice_setting_id = serializers.IntegerField(read_only=True)
+    company_name = serializers.CharField(source="customer.company_name", read_only=True, default="")
+    customer_mobile = serializers.CharField(source="customer.mobile", read_only=True, default="")
+    customer_email = serializers.CharField(source="customer.email", read_only=True, default="")
+    customer_gst_number = serializers.CharField(source="customer.gst_number", read_only=True, default="")
+    customer_address = serializers.CharField(source="customer.address", read_only=True, default="")
+    company_mobile = serializers.CharField(source="customer.company_mobile", read_only=True, default="")
+    company_address = serializers.CharField(source="customer.business_address", read_only=True, default="")
+    customer_place_of_supply = serializers.CharField(
+        source="customer.place_of_supply",
+        read_only=True,
+        default="",
+    )
+    total_paid = serializers.SerializerMethodField()
+    pending_bill = serializers.SerializerMethodField()
+    payment_status = serializers.SerializerMethodField()
+    purchase_date = serializers.DateField(source="sale_date", read_only=True)
+    billing_address = serializers.SerializerMethodField()
+    shipping_address = serializers.SerializerMethodField()
+    sale_type = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ServiceSale
+        fields = (
+            "id",
+            "sale_type",
+            "customer",
+            "customer_id",
+            "customer_name",
+            "company_name",
+            "customer_mobile",
+            "customer_email",
+            "customer_gst_number",
+            "customer_address",
+            "company_mobile",
+            "company_address",
+            "customer_place_of_supply",
+            "business_name",
+            "reference_no",
+            "invoice_setting",
+            "invoice_setting_id",
+            "invoice_terms_conditions",
+            "invoice_qr_image_url",
+            "sale_date",
+            "purchase_date",
+            "notes",
+            "terms",
+            "billing_address",
+            "shipping_address",
+            "payment_type",
+            "payment_type_name",
+            "total_amount",
+            "total_paid",
+            "pending_bill",
+            "payment_status",
+            "is_paid",
+            "paid_at",
+            "due_date",
+            "is_draft",
+            "is_cancelled",
+            "cancelled_at",
+            "cancellation_date",
+            "cancellation_reason",
+            "items",
+            "payments",
+            "created_at",
+            "updated_at",
+        )
+
+    def get_sale_type(self, obj):
+        return "service"
+
+    def get_billing_address(self, obj):
+        customer = getattr(obj, "customer", None)
+        if not customer:
+            return ""
+        return customer.business_address or customer.address or ""
+
+    def get_shipping_address(self, obj):
+        return self.get_billing_address(obj)
+
+    def get_invoice_qr_image_url(self, obj):
+        setting = getattr(obj, "invoice_setting", None)
+        if not setting or not setting.qr_image:
+            return None
+        request = self.context.get("request")
+        url = setting.qr_image.url
+        if request:
+            return request.build_absolute_uri(url)
+        return url
+
+    def _paid_amount(self, obj):
+        payments = getattr(obj, "_prefetched_objects_cache", {}).get("payments")
+        if payments is not None:
+            return sum(
+                (payment.amount for payment in payments if not payment.is_deleted),
+                Decimal("0"),
+            )
+        total = (
+            ServiceSalePayment.objects.filter(service_sale=obj, is_deleted=False)
+            .aggregate(total=Sum("amount"))
+            .get("total")
+        )
+        return total or Decimal("0")
+
+    def get_total_paid(self, obj):
+        if obj.is_draft or obj.is_cancelled:
+            return "0.00"
+        return _decimal_str(self._paid_amount(obj))
+
+    def get_pending_bill(self, obj):
+        if obj.is_draft or obj.is_cancelled:
+            return "0.00"
+        pending = Decimal(obj.total_amount or 0) - self._paid_amount(obj)
+        if pending < 0:
+            return "0.00"
+        return _decimal_str(pending)
+
+    def get_payment_status(self, obj):
+        if obj.is_draft:
+            return "draft"
+        if obj.is_cancelled:
+            return "cancelled"
+        if obj.is_paid:
+            return "paid"
+        total_paid = self._paid_amount(obj)
+        total_amount = Decimal(obj.total_amount or 0)
+        if total_paid <= 0:
+            return "unpaid"
+        if total_paid + Decimal("0.0001") < total_amount:
+            return "partial"
+        return "paid"
+
+
+class ServiceSaleItemWriteSerializer(serializers.Serializer):
+    service_id = serializers.IntegerField()
+    base_price = serializers.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        required=False,
+        default=0,
+    )
+    sale_tax_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        default=list,
+    )
+    tax_amount = serializers.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        required=False,
+        default=0,
+    )
+    gst_rate = serializers.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        required=False,
+        allow_null=True,
+    )
+    line_total = serializers.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        required=False,
+    )
+
+
+class ServiceSaleWriteSerializer(serializers.Serializer):
+    customer_id = serializers.IntegerField()
+    invoice_setting_id = serializers.IntegerField(required=False, allow_null=True)
+    sale_date = serializers.DateField(required=False)
+    notes = serializers.CharField(required=False, allow_blank=True, default="")
+    terms = serializers.CharField(required=False, allow_blank=True, default="")
+    payment_type_id = serializers.IntegerField(required=False, allow_null=True)
+    is_paid = serializers.BooleanField(required=False, default=False)
+    due_date = OptionalDateField(required=False, allow_null=True)
+    payment_amount = serializers.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        required=False,
+        allow_null=True,
+    )
+    is_draft = serializers.BooleanField(required=False, default=False)
+    items = ServiceSaleItemWriteSerializer(many=True)
+
+    def validate(self, attrs):
+        is_draft = attrs.get("is_draft", False)
+        if not is_draft and not attrs.get("invoice_setting_id"):
+            raise serializers.ValidationError(
+                {"invoice_setting_id": "Invoice setting is required."}
+            )
+        return attrs
+
+
+class ServiceSaleDraftUpdateSerializer(serializers.Serializer):
+    customer_id = serializers.IntegerField(required=False)
+    sale_date = serializers.DateField(required=False, allow_null=True)
+    notes = serializers.CharField(required=False, allow_blank=True)
+    terms = serializers.CharField(required=False, allow_blank=True)
+    payment_type_id = serializers.IntegerField(required=False, allow_null=True)
+    due_date = OptionalDateField(required=False, allow_null=True)
+    items = ServiceSaleItemWriteSerializer(many=True, required=False)
+
+
+class ServiceSaleHeaderWriteSerializer(serializers.Serializer):
+    customer_id = serializers.IntegerField(required=False)
+    sale_date = serializers.DateField(required=False, allow_null=True)
+    reference_no = serializers.CharField(max_length=50, required=False, allow_blank=True)
+    notes = serializers.CharField(required=False, allow_blank=True)
+    terms = serializers.CharField(required=False, allow_blank=True)
+    payment_type_id = serializers.IntegerField(required=False, allow_null=True)
+    due_date = OptionalDateField(required=False, allow_null=True)
+
+
+class ServiceSaleFinalizeSerializer(serializers.Serializer):
+    invoice_setting_id = serializers.IntegerField()
+    is_paid = serializers.BooleanField(required=False, default=False)
+    due_date = OptionalDateField(required=False, allow_null=True)
+    payment_amount = serializers.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        required=False,
+        allow_null=True,
+    )
+
+
+class ServiceSalePaymentWriteSerializer(serializers.Serializer):
+    amount = serializers.DecimalField(max_digits=14, decimal_places=2)
+    payment_date = OptionalDateField(required=False)
+    next_due_date = OptionalDateField(required=False, allow_null=True)
+    payment_type_id = serializers.IntegerField(required=False, allow_null=True)
+    notes = serializers.CharField(required=False, allow_blank=True, default="")
 
 
 class SaleDueSettingSerializer(BaseModelSerializer):

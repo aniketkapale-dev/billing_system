@@ -2070,12 +2070,21 @@ body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sideb
     box-sizing: border-box;
 }
 
-.inv-field-inline .inv-mgmt-select,
-.inv-field-inline .inv-search-select {
+.inv-field-inline > .inv-mgmt-select,
+.inv-field-inline > .inv-search-select {
     flex: 1 1 0%;
     min-width: 0;
     width: auto;
     max-width: 100%;
+}
+
+/* Keep searchable trigger full width of its wrap (not content-sized) */
+.inv-field-inline > .inv-search-select .inv-search-select-trigger,
+.inv-field-inline > .inv-search-select .inv-mgmt-select {
+    flex: none;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .inv-inline-add-btn {
@@ -2347,6 +2356,12 @@ body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sideb
     color: #C62828;
     background: #FFEBEE;
     border: 1px solid #FFCDD2;
+}
+
+.inv-sale-status-badge--service {
+    color: #1565C0;
+    background: #E3F2FD;
+    border: 1px solid #90CAF9;
 }
 
 .inv-mgmt-table-wrap > .inv-mgmt-table--purchases > tbody > tr.inv-sale-row--paid:not(:has(.inv-mgmt-empty)) {
@@ -3128,7 +3143,7 @@ body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sideb
     width: 100%;
 }
 
-.inv-field-inline .inv-search-select {
+.inv-field-inline > .inv-search-select {
     flex: 1 1 0%;
     min-width: 0;
     width: auto;
@@ -3383,6 +3398,17 @@ body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sideb
 
 .inv-mgmt-form-grid--sale-top {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: start;
+    gap: 12px 14px;
+}
+
+.inv-mgmt-form-grid--sale-top .inv-mgmt-field--full {
+    grid-column: 1 / -1;
+    margin-top: 2px;
+}
+
+.inv-mgmt-form-grid--sale-top .inv-mgmt-field--full .inv-mgmt-textarea {
+    min-height: 72px;
 }
 
 .inv-sale-payment-section {
@@ -3424,6 +3450,63 @@ body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sideb
     font-size: 13px;
     font-weight: 600;
     color: var(--inv-primary);
+}
+
+.inv-sale-kind-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 14px;
+    margin-bottom: 18px;
+}
+
+.inv-sale-kind-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--inv-primary);
+}
+
+.inv-sale-kind-segment {
+    display: inline-flex;
+    align-items: stretch;
+    border: var(--inv-border-width) solid var(--inv-input-border);
+    border-radius: var(--inv-radius);
+    overflow: hidden;
+    background: #fff;
+}
+
+.inv-sale-kind-btn {
+    min-width: 120px;
+    min-height: 40px;
+    padding: 0 18px;
+    border: 0;
+    background: transparent;
+    color: var(--inv-secondary);
+    font-size: 14px;
+    font-weight: 700;
+    font-family: inherit;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.inv-sale-kind-btn + .inv-sale-kind-btn {
+    border-left: var(--inv-border-width) solid var(--inv-input-border);
+}
+
+.inv-sale-kind-btn.is-active {
+    background: var(--inv-primary);
+    color: var(--inv-white, #fff);
+}
+
+.inv-sale-kind-btn:not(.is-active):hover {
+    background: rgba(68, 105, 0, 0.08);
+    color: var(--inv-primary);
+}
+
+.inv-sale-kind-btn:focus-visible {
+    outline: 2px solid var(--inv-accent, #c5e84e);
+    outline-offset: -2px;
 }
 
 .inv-sale-paid-segment {
@@ -4081,6 +4164,86 @@ body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sideb
     text-overflow: ellipsis;
 }
 
+.inv-mgmt-items-panel--service {
+    margin-top: 12px;
+    border-radius: 12px;
+    padding: 12px 14px;
+}
+
+#purchase-service-items-container {
+    overflow-x: auto;
+    overflow-y: hidden;
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+    margin-bottom: 0;
+}
+
+.inv-mgmt-item-row.inv-mgmt-item-row--service {
+    grid-template-columns:
+        minmax(150px, 1.15fr)
+        120px
+        minmax(170px, 1fr)
+        110px
+        40px;
+    gap: 10px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    flex-shrink: 0;
+    align-items: end;
+    margin-bottom: 8px;
+}
+
+.inv-mgmt-item-row.inv-mgmt-item-row--service .inv-mgmt-field {
+    min-width: 0;
+}
+
+.inv-mgmt-item-row.inv-mgmt-item-row--service .inv-mgmt-field--sale-tax {
+    min-width: 0;
+}
+
+.inv-mgmt-item-row.inv-mgmt-item-row--service .inv-sale-tax-inline {
+    gap: 8px;
+}
+
+.inv-mgmt-item-row.inv-mgmt-item-row--service .inv-mgmt-field--sale-tax .inv-multi-select {
+    flex: 1 1 0%;
+    min-width: 0;
+    max-width: none;
+}
+
+.inv-mgmt-item-row.inv-mgmt-item-row--service .inv-item-service-tax-amount {
+    flex: 0 0 84px;
+    width: 84px;
+    min-width: 84px;
+    margin-top: 0;
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+.inv-mgmt-item-row.inv-mgmt-item-row--service .inv-sale-tax-labels .inv-sale-tax-amount-label {
+    flex: 0 0 84px;
+    min-width: 84px;
+}
+
+.inv-mgmt-item-row.inv-mgmt-item-row--service .inv-mgmt-item-row-remove {
+    align-self: end;
+    padding-bottom: 0;
+    margin-left: 0;
+}
+
+.inv-mgmt-items-panel--service .inv-mgmt-items-footer-actions {
+    margin-top: 8px;
+    padding-top: 10px;
+}
+
+.inv-mgmt-items-panel--service .inv-stockin-totals {
+    margin-top: 12px;
+    padding-top: 12px;
+    gap: 6px;
+}
+
 @media (max-width: 900px) {
     .inv-mgmt-form-grid,
     .inv-mgmt-form-grid--product,
@@ -4117,18 +4280,21 @@ body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sideb
         flex: 0 0 auto;
     }
 
-    .inv-mgmt-item-row.inv-mgmt-item-row--stockin {
+    .inv-mgmt-item-row.inv-mgmt-item-row--stockin,
+    .inv-mgmt-item-row.inv-mgmt-item-row--service {
         grid-template-columns: 1fr;
         min-width: 0;
         max-width: 100%;
     }
 
-    .inv-mgmt-item-row.inv-mgmt-item-row--stockin .inv-mgmt-field {
+    .inv-mgmt-item-row.inv-mgmt-item-row--stockin .inv-mgmt-field,
+    .inv-mgmt-item-row.inv-mgmt-item-row--service .inv-mgmt-field {
         min-width: 0;
         max-width: 100%;
     }
 
-    .inv-mgmt-item-row.inv-mgmt-item-row--stockin .inv-mgmt-item-row-remove {
+    .inv-mgmt-item-row.inv-mgmt-item-row--stockin .inv-mgmt-item-row-remove,
+    .inv-mgmt-item-row.inv-mgmt-item-row--service .inv-mgmt-item-row-remove {
         margin-left: 0;
         justify-self: end;
         width: 40px;

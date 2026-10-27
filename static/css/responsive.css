@@ -749,9 +749,14 @@ body.inv-dashboard-body.inv-sidebar-drawer-open .inv-sidebar-backdrop {
     /* Forms inside panels */
     .inv-mgmt-form-grid,
     .inv-mgmt-form-grid--product,
-    .inv-mgmt-form-grid--sale-top,
     .inv-mgmt-form-grid--invoice-setting {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .inv-mgmt-form-grid--sale-top {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: start;
+        gap: 10px 12px;
     }
 
     .inv-mgmt-form-grid--sale-addresses {
@@ -904,12 +909,20 @@ body.inv-dashboard-body.inv-sidebar-drawer-open .inv-sidebar-backdrop {
         gap: 6px;
     }
 
-    .inv-field-inline .inv-mgmt-select,
-    .inv-field-inline .inv-search-select {
+    .inv-field-inline > .inv-mgmt-select,
+    .inv-field-inline > .inv-search-select {
         flex: 1 1 0% !important;
         min-width: 0 !important;
         width: auto !important;
         max-width: 100%;
+    }
+
+    .inv-field-inline > .inv-search-select .inv-search-select-trigger,
+    .inv-field-inline > .inv-search-select .inv-mgmt-select {
+        flex: none !important;
+        width: 100% !important;
+        max-width: 100%;
+        box-sizing: border-box;
     }
 
     .inv-inline-add-btn,

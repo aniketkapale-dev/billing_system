@@ -109,6 +109,16 @@ def user_catalog_brands(request):
 
 
 @never_cache
+def user_catalog_services(request):
+    return render(request, "user/catalog.html", {
+        "active_nav": "services",
+        "catalog_resource": "services",
+        "catalog_title": "Services",
+        "catalog_add_label": "Add Service",
+    })
+
+
+@never_cache
 def user_catalog_vendors(request):
     return render(request, "user/catalog.html", {
         "active_nav": "stock-in-vendors",

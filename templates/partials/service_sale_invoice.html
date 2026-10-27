@@ -1,0 +1,56 @@
+{# Service tax invoice print template (replica of product bill; no Transport / Shipped to). #}
+<template id="service-sale-invoice-template">
+    <section class="sale-invoice-page sale-invoice-page--service">
+        <div class="inv-lines-wrap">
+            <table class="inv-lines inv-lines--service" data-slot="lines-table">
+                <colgroup>
+                    <col class="inv-col-sr"/>
+                    <col class="inv-col-product"/>
+                    <col class="inv-col-amount"/>
+                </colgroup>
+                <thead>
+                    <tr class="inv-lines-page-header">
+                        <td colspan="3" class="inv-lines-page-header-cell">
+                            <section class="inv-invoice-header">
+                                <div class="inv-business-heading">
+                                    <div class="inv-business-topline">
+                                        <strong>GSTIN / UIN : <span data-field="business_gstin">—</span></strong>
+                                        <em>Original Copy</em>
+                                    </div>
+                                    <p class="inv-header-panel-title">TAX INVOICE</p>
+                                    <h1 class="inv-header-business-name" data-field="business_name">Business</h1>
+                                    <div class="inv-business-address" data-field="business_address"></div>
+                                    <div class="inv-business-contact" data-field="business_contact"></div>
+                                </div>
+                                {# One row only: Invoice Details | Billed to (no Transport, no Shipped to) #}
+                                <div class="inv-header-row inv-header-row--details inv-header-row--service">
+                                    <div class="inv-header-panel inv-header-panel--invoice">
+                                        <p class="inv-box-title">Invoice Details</p>
+                                        <div data-slot="invoice-details"></div>
+                                    </div>
+                                    <div class="inv-header-panel inv-header-panel--company">
+                                        <p class="inv-party-title">Billed to :</p>
+                                        <p class="inv-header-customer-name" data-field="customer_name">Customer</p>
+                                        <div class="inv-header-address-lines" data-field="customer_address"></div>
+                                        <div data-slot="customer-details"></div>
+                                    </div>
+                                </div>
+                            </section>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th class="num">S.N.</th>
+                        <th>Description of Services</th>
+                        <th class="num">Amount (₹)</th>
+                    </tr>
+                </thead>
+                <tbody data-slot="items"></tbody>
+                <tbody class="inv-invoice-totals" data-slot="totals"></tbody>
+            </table>
+        </div>
+        <section class="inv-tax-section">
+            <div class="inv-amount-words" data-field="amount_words"></div>
+        </section>
+        <div data-slot="footer"></div>
+    </section>
+</template>

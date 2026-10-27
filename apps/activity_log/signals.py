@@ -18,6 +18,7 @@ TRACKED = {
     "catalog.Vendor": ("purchases", "vendor", "name"),
     "catalog.Unit": ("products", "unit", "name short_name"),
     "catalog.Brand": ("products", "brand", "name"),
+    "catalog.Service": ("services", "service", "name"),
     "catalog.Manufacturer": ("products", "manufacturer", "name"),
     "catalog.PaymentType": ("payments", "payment method", "name"),
     "settings.InvoiceSetting": ("settings", "invoice settings", "year prefix suffix counter end_counter terms_conditions qr_image"),

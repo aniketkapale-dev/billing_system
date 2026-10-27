@@ -86,6 +86,32 @@ class Brand(BaseEntity):
         return self.name
 
 
+class Service(BaseEntity):
+    business = models.ForeignKey(
+        "businesses.Business",
+        on_delete=models.CASCADE,
+        related_name="services",
+        db_column="business_id",
+    )
+    name = models.CharField(max_length=150)
+    base_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    class Meta:
+        db_table = "services"
+        verbose_name = "Service"
+        verbose_name_plural = "Services"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["business", "name"],
+                condition=models.Q(is_deleted=False),
+                name="uniq_active_business_service_name",
+            )
+        ]
+
+    def __str__(self):
+        return self.name
+
+
 class Manufacturer(BaseEntity):
     business = models.ForeignKey(
         "businesses.Business",

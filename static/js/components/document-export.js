@@ -596,6 +596,73 @@ var InventoryDocumentExport = (function () {
             buildCustomerCompanyColumn(sale, false) + buildCustomerCompanyColumn(sale, true) + '</div></section>';
     }
 
+    /** Service bill: Invoice Details without Place of Supply / Reverse Charge. */
+    function buildServiceInvoiceDetailsColumn(sale, invoiceNo, invoiceDate) {
+        return wrapHeaderPanel(
+            '<p class="inv-box-title">Invoice Details</p>' +
+            buildInlineDetailField("Invoice No.", invoiceNo, false) +
+            buildInlineDetailField("Dated", invoiceDate, false) +
+            buildInlineDetailField("Due Date", sale.due_date ? formatDisplayDate(sale.due_date) : "", true) +
+            buildInlineDetailField("Terms", sale.invoice_print_terms, true) +
+            buildInlineDetailField("Payment", sale.payment_type_name, true),
+            "inv-header-panel--invoice");
+    }
+
+    /** Service bill: Billed to without GSTIN / UIN. */
+    function buildServiceBilledToColumn(sale) {
+        var billingAddress = sale.billing_address || sale.company_address || sale.customer_address || "";
+        var body = '<p class="inv-party-title">Billed to :</p>' +
+            '<p class="inv-header-customer-name">' + escapeHtml(getCustomerCompanyDisplayName(sale)) + "</p>" +
+            buildHeaderAddressLines(billingAddress) +
+            buildInlineDetailField("Mobile", sale.company_mobile || sale.customer_mobile, true) +
+            buildInlineDetailField("Email", sale.customer_email, true);
+        return wrapHeaderPanel(body, "inv-header-panel--company");
+    }
+
+    /** Service bill print only: Invoice Details + Billed to (no Transport / Shipped to). */
+    function buildServiceInvoiceHeaderRow(sale, business, businessName, invoiceNo, invoiceDate) {
+        return '<section class="inv-invoice-header">' + buildBusinessColumn(business, businessName) +
+            '<div class="inv-header-row inv-header-row--details inv-header-row--service">' +
+            buildServiceInvoiceDetailsColumn(sale, invoiceNo, invoiceDate) +
+            buildServiceBilledToColumn(sale) +
+            '</div></section>';
+    }
+
+    function buildServiceLinesColgroup() {
+        return '<colgroup>' +
+            ['sr', 'product', 'amount'].map(function (name) {
+                return '<col class="inv-col-' + name + '"/>';
+            }).join('') +
+            '</colgroup>';
+    }
+
+    function buildServiceInvoiceItemRowsHtml(rows) {
+        if (!rows.length) {
+            return '<tr class="inv-empty-row"><td colspan="3">No services on this invoice</td></tr>';
+        }
+        return rows.map(function (row) {
+            return '<tr>' +
+                '<td class="num">' + row.serial + '.</td>' +
+                '<td class="item-name">' + displayText(row.product_name) + '</td>' +
+                '<td class="num">' + invoiceMoney(row.amount) + '</td></tr>';
+        }).join('');
+    }
+
+    function buildServiceInvoiceTotalsRows(rows, summary, roundTotals) {
+        var hasTax = Number(summary.totals.tax || 0) > 0 || (summary.additions && summary.additions.length > 0);
+        var html = "";
+        if (hasTax) {
+            html += '<tr class="inv-subtotal"><td colspan="2">Taxable Amount</td><td class="num">' + invoiceMoney(summary.totals.taxable) + '</td></tr>';
+        }
+        (summary.additions || []).forEach(function (tax) {
+            html += '<tr><td colspan="2" class="inv-tax-addition">Add : ' + escapeHtml(tax.name) + ' @ ' + invoiceMoney(tax.rate) + ' %</td><td class="num">' + invoiceMoney(tax.amount) + '</td></tr>';
+        });
+        if (roundTotals.roundOff) {
+            html += '<tr><td colspan="2">Round Off</td><td class="num">' + invoiceMoney(roundTotals.roundOff) + '</td></tr>';
+        }
+        return html + '<tr class="inv-grand-total"><td colspan="2">Grand Total</td><td class="num">' + invoiceMoney(roundTotals.grandTotal) + '</td></tr>';
+    }
+
     function buildMetaLine(label, value, hideIfEmpty) {
         if (hideIfEmpty && (value === null || value === undefined || String(value).trim() === "" || value === "—")) {
             return "";
@@ -948,6 +1015,9 @@ var InventoryDocumentExport = (function () {
             ".inv-lines col.inv-col-sr{width:4%;}.inv-lines col.inv-col-product{width:29%;}.inv-lines col.inv-col-hsn{width:8%;}" +
             ".inv-lines col.inv-col-qty{width:7%;}.inv-lines col.inv-col-unit{width:6%;}.inv-lines col.inv-col-list-price{width:11%;}" +
             ".inv-lines col.inv-col-discount{width:10%;}.inv-lines col.inv-col-price{width:11%;}.inv-lines col.inv-col-amount{width:14%;}" +
+            ".inv-lines.inv-lines--service col.inv-col-sr{width:8%;}.inv-lines.inv-lines--service col.inv-col-product{width:72%;}" +
+            ".inv-lines.inv-lines--service col.inv-col-amount{width:20%;}" +
+            ".inv-lines.inv-lines--service th:nth-child(3),.inv-lines.inv-lines--service td:nth-child(3){white-space:nowrap;}" +
             /* wide qty: Unit/Discount floor keeps header+value on one line; extra space from Description */
             ".inv-lines.inv-lines--wide-qty col.inv-col-product{width:25%;}.inv-lines.inv-lines--wide-qty col.inv-col-qty{width:13%;}" +
             ".inv-lines.inv-lines--wide-qty col.inv-col-unit{width:5%;}.inv-lines.inv-lines--wide-qty col.inv-col-discount{width:9%;}" +
@@ -1100,6 +1170,58 @@ var InventoryDocumentExport = (function () {
         );
     }
 
+    /** Replica of product tax invoice for service sales (no Place of Supply / Reverse Charge / GSTIN / Discount). */
+    function buildServiceSaleInvoiceHtml(sale, taxes) {
+        var business = getBusinessDetails();
+        var businessName = sale.business_name || business.business_name || business.name || "Business";
+        var paymentInfo = getPaymentInfo(business);
+
+        var items = sale.items || [];
+        var subtotal = 0;
+        var totalTax = 0;
+        var totalAmount = 0;
+        items.forEach(function (line) {
+            subtotal += Number(line.line_total || 0);
+            totalTax += Number(line.tax_amount || 0);
+            totalAmount += Math.max(0, Number(line.line_total || 0) - Number(line.tax_amount || 0));
+        });
+
+        var printRows = buildInvoicePrintRows(sale, taxes);
+        var itemRows = buildServiceInvoiceItemRowsHtml(printRows);
+        var taxSummary = buildInvoiceTaxSummary(printRows, sale, business);
+
+        subtotal = roundMoney(subtotal);
+        totalTax = roundMoney(totalTax);
+        totalAmount = roundMoney(totalAmount);
+        var saleTotal = roundMoney(Number(sale.total_amount || subtotal));
+        if (!subtotal && saleTotal) subtotal = saleTotal;
+        var roundTotals = computeInvoiceRoundTotals(totalAmount, totalTax, saleTotal);
+
+        var invoiceNo = sale.reference_no || ("SALE-" + sale.id);
+        var invoiceDate = formatDisplayDate(sale.sale_date || sale.purchase_date);
+        var paymentFooterHtml = buildTermsAndPaymentFooterSection(sale, businessName, paymentInfo);
+        var headerRowHtml = buildServiceInvoiceHeaderRow(sale, business, businessName, invoiceNo, invoiceDate);
+
+        return (
+            '<section class="sale-invoice-page sale-invoice-page--service">' +
+            '<div class="inv-lines-wrap"><table class="inv-lines inv-lines--service">' +
+            buildServiceLinesColgroup() +
+            "<thead>" +
+            '<tr class="inv-lines-page-header"><td colspan="3" class="inv-lines-page-header-cell">' +
+            headerRowHtml +
+            "</td></tr>" +
+            "<tr>" +
+            '<th class="num">S.N.</th><th>Description of Services</th>' +
+            '<th class="num">Amount (&#8377;)</th>' +
+            '</tr></thead><tbody>' + itemRows + '</tbody>' +
+            '<tbody class="inv-invoice-totals">' + buildServiceInvoiceTotalsRows(printRows, taxSummary, roundTotals) + '</tbody></table></div>' +
+            '<section class="inv-tax-section">' +
+            '<div class="inv-amount-words">' + escapeHtml(amountInWordsInr(roundTotals.grandTotal)) + '</div></section>' +
+            paymentFooterHtml +
+            "</section>"
+        );
+    }
+
     function roundMoney(value) {
         return Math.round(Number(value || 0) * 100) / 100;
     }
@@ -1118,6 +1240,9 @@ var InventoryDocumentExport = (function () {
         var taxes = options.taxes || [];
         var list = sales || [];
         var sections = list.map(function (sale) {
+            if (sale && sale.sale_type === "service") {
+                return buildServiceSaleInvoiceHtml(sale, taxes);
+            }
             return buildSaleInvoiceHtml(sale, taxes);
         }).join("");
         var previewStyles = options.preview ? saleInvoicePreviewStyles() : "";

@@ -9,7 +9,7 @@ from django.db.models import Q
 
 from apps.businesses.models import Business
 from apps.business_users.models import BusinessUser
-from apps.catalog.models import Brand, Category, Manufacturer, PaymentType, Unit, Vendor
+from apps.catalog.models import Brand, Category, Manufacturer, PaymentType, Service, Unit, Vendor
 from apps.customers.models import Customer
 from apps.expenses.models import Expense, ExpenseCategory
 from apps.inventory.models import InventoryStock, StockMovement
@@ -22,7 +22,13 @@ from apps.invoicing.models import (
     SalesInvoiceItem,
 )
 from apps.products.models import Product
-from apps.purchases.models import Purchase, PurchaseItem
+from apps.purchases.models import (
+    Purchase,
+    PurchaseItem,
+    ServiceSale,
+    ServiceSaleItem,
+    ServiceSalePayment,
+)
 from apps.roles.models import Role
 from apps.settings.models import InvoiceSetting, Tax
 from apps.user_roles.models import UserRole
@@ -54,6 +60,12 @@ def purge_business(business):
     PurchaseItem.all_objects.filter(purchase__business_id=business_id).delete()
     Purchase.all_objects.filter(business_id=business_id).delete()
 
+    ServiceSalePayment.all_objects.filter(service_sale__business_id=business_id).delete()
+    ServiceSaleItem.all_objects.filter(service_sale__business_id=business_id).delete()
+    service_sales = ServiceSale.all_objects.filter(business_id=business_id)
+    _purge_file_fields(service_sales, "invoice_pdf")
+    service_sales.delete()
+
     SalesInvoiceItem.all_objects.filter(sales_invoice__business_id=business_id).delete()
     SalesInvoice.all_objects.filter(business_id=business_id).delete()
 
@@ -79,7 +91,7 @@ def purge_business(business):
 
     Tax.all_objects.filter(business_id=business_id).delete()
 
-    for model in (Unit, Category, Brand, Manufacturer, PaymentType, Vendor):
+    for model in (Unit, Category, Brand, Service, Manufacturer, PaymentType, Vendor):
         model.all_objects.filter(business_id=business_id).delete()
 
     BusinessUser.all_objects.filter(business_id=business_id).delete()
