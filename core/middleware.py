@@ -5,6 +5,8 @@ automatically inside repositories without threading the request everywhere.
 """
 import threading
 
+from django.db.models import F
+
 _thread_locals = threading.local()
 
 
@@ -39,6 +41,19 @@ class CurrentRequestMiddleware:
         _thread_locals.request = request
         try:
             response = self.get_response(request)
+            business_id = request.headers.get("X-Business-Id")
+            if (
+                request.path.startswith("/api/")
+                and request.method in {"POST", "PUT", "PATCH", "DELETE"}
+                and 200 <= response.status_code < 300
+                and business_id
+                and str(business_id).isdigit()
+            ):
+                from apps.businesses.models import Business
+
+                Business.objects.filter(pk=int(business_id), is_deleted=False).update(
+                    data_revision=F("data_revision") + 1
+                )
             response["Cache-Control"] = "no-cache, no-store, must-revalidate"
             response["Pragma"] = "no-cache"
             response["Expires"] = "0"

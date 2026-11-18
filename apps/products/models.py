@@ -58,6 +58,7 @@ class Product(BaseEntity):
         blank=True,
     )
     sale_tax_ids = models.JSONField(default=list, blank=True)
+    gst_rate = models.DecimalField(max_digits=6, decimal_places=2, null=True, default=Decimal("0"))
     name = models.CharField(max_length=150)
     sku = models.CharField(max_length=50, blank=True, default="")
     hsn_code = models.CharField(max_length=8, blank=True, default="")

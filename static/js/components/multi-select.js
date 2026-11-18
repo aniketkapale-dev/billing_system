@@ -70,6 +70,9 @@ var InventoryMultiSelect = (function () {
             searchInput.addEventListener("input", function () {
                 renderMenu(root, config, getSelected(root));
             });
+            searchInput.addEventListener("keydown", function (e) {
+                handleMenuArrowKeys(root, e);
+            });
         }
 
         var query = (searchWrap.querySelector(".inv-multi-select-search").value || "").trim().toLowerCase();
@@ -104,14 +107,101 @@ var InventoryMultiSelect = (function () {
 
         if (!visibleCount) {
             optionsHost.innerHTML = '<div class="inv-multi-select-empty">No matches found</div>';
+            return;
         }
+        highlightInitialMultiOption(optionsHost);
+    }
+
+    function multiOptions(root) {
+        if (!root) return [];
+        return Array.prototype.slice.call(root.querySelectorAll(".inv-multi-select-option"));
+    }
+
+    function highlightMultiOption(root, option) {
+        multiOptions(root).forEach(function (item) {
+            item.classList.toggle("is-highlighted", item === option);
+        });
+        if (option && typeof option.scrollIntoView === "function") {
+            option.scrollIntoView({ block: "nearest" });
+        }
+        var input = option ? option.querySelector("input") : null;
+        if (input) root.dataset.multiHighlight = input.value;
+    }
+
+    function highlightInitialMultiOption(optionsHost) {
+        var root = optionsHost.closest(".inv-multi-select");
+        var options = multiOptions(root);
+        if (!options.length) return;
+        var saved = root.dataset.multiHighlight || "";
+        var match = saved
+            ? options.find(function (option) {
+                var input = option.querySelector("input");
+                return input && String(input.value) === String(saved);
+            })
+            : null;
+        if (match) {
+            highlightMultiOption(root, match);
+            return;
+        }
+        var checked = options.find(function (option) {
+            var input = option.querySelector("input");
+            return input && input.checked;
+        });
+        highlightMultiOption(root, checked || options[0]);
+    }
+
+    function moveMultiHighlight(root, delta) {
+        var options = multiOptions(root);
+        if (!options.length) return;
+        var current = -1;
+        options.forEach(function (option, index) {
+            if (option.classList.contains("is-highlighted")) current = index;
+        });
+        var nextIndex = current < 0
+            ? (delta > 0 ? 0 : options.length - 1)
+            : (current + delta + options.length) % options.length;
+        highlightMultiOption(root, options[nextIndex]);
+    }
+
+    function toggleHighlightedMultiOption(root) {
+        var option = root.querySelector(".inv-multi-select-option.is-highlighted");
+        var input = option ? option.querySelector("input") : null;
+        if (!input) return;
+        input.checked = !input.checked;
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+
+    function handleMenuArrowKeys(root, e) {
+        if (e.key === "ArrowDown") {
+            e.preventDefault();
+            moveMultiHighlight(root, 1);
+            return;
+        }
+        if (e.key === "ArrowUp") {
+            e.preventDefault();
+            moveMultiHighlight(root, -1);
+            return;
+        }
+        if (e.key === "Enter") {
+            e.preventDefault();
+            toggleHighlightedMultiOption(root);
+        }
+    }
+
+    function applySelectionLimit(selectedIds, config) {
+        selectedIds = normalizeIds(selectedIds);
+        var max = config && config.maxSelections != null ? Number(config.maxSelections) : 0;
+        if (max > 0 && selectedIds.length > max) {
+            return selectedIds.slice(0, max);
+        }
+        return selectedIds;
     }
 
     function updateDisplay(root, selectedIds, silent) {
         var config = getConfig(root);
         if (!config) return;
 
-        selectedIds = normalizeIds(selectedIds);
+        selectedIds = applySelectionLimit(selectedIds, config);
         var hidden = root.querySelector(".inv-multi-select-values");
         var labelEl = root.querySelector(".inv-multi-select-label");
         if (hidden) hidden.value = selectedIds.join(",");
@@ -228,10 +318,17 @@ var InventoryMultiSelect = (function () {
             options: config.options || [],
             placeholder: config.placeholder || "Select...",
             labelFn: config.labelFn || function (item) { return String(item.label || item.id || ""); },
-            onChange: config.onChange || null
+            onChange: config.onChange || null,
+            maxSelections: config.maxSelections != null ? Number(config.maxSelections) : 0
         };
 
         if (root.dataset.multiSelectWired === "1") {
+            root._multiSelectConfig.options = config.options || [];
+            root._multiSelectConfig.placeholder = config.placeholder || root._multiSelectConfig.placeholder;
+            root._multiSelectConfig.labelFn = config.labelFn || root._multiSelectConfig.labelFn;
+            root._multiSelectConfig.onChange = config.onChange || root._multiSelectConfig.onChange;
+            root._multiSelectConfig.maxSelections =
+                config.maxSelections != null ? Number(config.maxSelections) : root._multiSelectConfig.maxSelections;
             setSelected(root, config.selectedIds || [], true);
             return;
         }
@@ -249,25 +346,51 @@ var InventoryMultiSelect = (function () {
                     open(root);
                 }
             });
+            trigger.addEventListener("keydown", function (e) {
+                if (e.key !== "ArrowDown" && e.key !== "ArrowUp" && e.key !== "Enter" && e.key !== " ") return;
+                e.preventDefault();
+                if (!root.classList.contains("is-open")) {
+                    open(root);
+                    return;
+                }
+                if (e.key === "ArrowDown") moveMultiHighlight(root, 1);
+                if (e.key === "ArrowUp") moveMultiHighlight(root, -1);
+                if (e.key === "Enter") toggleHighlightedMultiOption(root);
+            });
         }
 
         if (menu) {
             menu.addEventListener("click", function (e) {
                 e.stopPropagation();
             });
+            menu.addEventListener("mousemove", function (e) {
+                var option = e.target.closest(".inv-multi-select-option");
+                if (!option) return;
+                highlightMultiOption(root, option);
+            });
             menu.addEventListener("change", function (e) {
                 var checkbox = e.target;
                 if (!checkbox || checkbox.type !== "checkbox") return;
+                var cfg = getConfig(root);
+                var max = cfg && cfg.maxSelections != null ? Number(cfg.maxSelections) : 0;
                 var selected = getSelected(root);
                 var id = String(checkbox.value);
                 if (checkbox.checked) {
-                    if (selected.indexOf(id) === -1) selected.push(id);
+                    if (max === 1) {
+                        selected = [id];
+                    } else if (selected.indexOf(id) === -1) {
+                        selected.push(id);
+                        if (max > 0) selected = selected.slice(0, max);
+                    }
                 } else {
                     selected = selected.filter(function (value) {
                         return value !== id;
                     });
                 }
                 updateDisplay(root, selected, false);
+                if (max === 1 && checkbox.checked) {
+                    close(root);
+                }
             });
         }
 

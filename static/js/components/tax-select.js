@@ -29,7 +29,8 @@ var InventoryTaxSelect = (function () {
             labelFn: function (tax) {
                 return InventoryApi.escapeHtml(label(tax));
             },
-            onChange: config.onChange || null
+            onChange: config.onChange || null,
+            maxSelections: config.maxSelections != null ? Number(config.maxSelections) : 0
         });
     }
 

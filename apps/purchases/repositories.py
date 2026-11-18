@@ -1,11 +1,46 @@
-from django.db.models import Prefetch
+from decimal import Decimal
 
-from apps.purchases.models import Purchase, PurchaseItem, PurchasePayment
+from django.db.models import DecimalField, OuterRef, Prefetch, Subquery, Sum, Value
+from django.db.models.functions import Coalesce
+
+from apps.purchases.models import (
+    Purchase,
+    PurchaseItem,
+    PurchasePayment,
+    ServiceSale,
+    ServiceSaleItem,
+    ServiceSalePayment,
+)
 from core.base_repository import BaseRepository
 
 
 class PurchaseRepository(BaseRepository):
     model = Purchase
+
+    def get_list_queryset(self):
+        """Sale table only: customer, line names/qty, and paid total. No batches or payment rows."""
+        item_qs = (
+            PurchaseItem.objects.filter(is_deleted=False)
+            .select_related("product")
+            .only("id", "purchase_id", "product_id", "quantity", "product__id", "product__name")
+        )
+        paid_total = (
+            PurchasePayment.objects.filter(purchase_id=OuterRef("pk"), is_deleted=False)
+            .values("purchase_id")
+            .annotate(total=Sum("amount"))
+            .values("total")
+        )
+        return (
+            self.model.objects.select_related("customer")
+            .prefetch_related(Prefetch("items", queryset=item_qs))
+            .annotate(
+                total_paid_amount=Coalesce(
+                    Subquery(paid_total[:1]),
+                    Value(Decimal("0")),
+                    output_field=DecimalField(max_digits=14, decimal_places=2),
+                )
+            )
+        )
 
     def get_queryset(self):
         return (
@@ -14,7 +49,7 @@ class PurchaseRepository(BaseRepository):
             .select_related("owner", "payment_type", "customer", "invoice_setting")
             .prefetch_related(
                 "items__product",
-                "items__batch_consumptions__inventory_batch",
+                "items__batch_consumptions__inventory_batch__purchase_invoice_item",
                 Prefetch(
                     "payments",
                     queryset=PurchasePayment.objects.filter(is_deleted=False).select_related(
@@ -23,6 +58,17 @@ class PurchaseRepository(BaseRepository):
                 ),
             )
         )
+
+    def get_for_header_update(self, pk):
+        """Header edits do not need line items, payments, or batch consumptions."""
+        try:
+            return self.model.objects.select_related("customer", "invoice_setting").get(pk=pk)
+        except self.model.DoesNotExist as exc:
+            from core.exceptions import NotFoundException
+
+            raise NotFoundException(
+                f"{self.model.__name__} with id {pk} not found"
+            ) from exc
 
     def get_by_id(self, pk, include_deleted=False):
         qs = self.model.all_objects if include_deleted else self.get_queryset()
@@ -34,6 +80,58 @@ class PurchaseRepository(BaseRepository):
             raise NotFoundException(
                 f"{self.model.__name__} with id {pk} not found"
             ) from exc
+
+
+class ServiceSaleRepository(BaseRepository):
+    model = ServiceSale
+
+    def get_list_queryset(self):
+        item_qs = (
+            ServiceSaleItem.objects.filter(is_deleted=False)
+            .select_related("service")
+            .only("id", "service_sale_id", "service_id", "service__id", "service__name")
+        )
+        paid_total = (
+            ServiceSalePayment.objects.filter(service_sale_id=OuterRef("pk"), is_deleted=False)
+            .values("service_sale_id")
+            .annotate(total=Sum("amount"))
+            .values("total")
+        )
+        return (
+            self.model.objects.select_related("customer")
+            .prefetch_related(Prefetch("items", queryset=item_qs))
+            .annotate(
+                total_paid_amount=Coalesce(
+                    Subquery(paid_total[:1]),
+                    Value(Decimal("0")),
+                    output_field=DecimalField(max_digits=14, decimal_places=2),
+                )
+            )
+        )
+
+    def get_queryset(self):
+        return (
+            super()
+            .get_queryset()
+            .select_related("owner", "payment_type", "customer", "invoice_setting")
+            .prefetch_related(
+                "items__service",
+                Prefetch(
+                    "payments",
+                    queryset=ServiceSalePayment.objects.filter(is_deleted=False).select_related(
+                        "payment_type"
+                    ),
+                ),
+            )
+        )
+
+
+class ServiceSaleItemRepository(BaseRepository):
+    model = ServiceSaleItem
+
+
+class ServiceSalePaymentRepository(BaseRepository):
+    model = ServiceSalePayment
 
 
 class PurchaseItemRepository(BaseRepository):

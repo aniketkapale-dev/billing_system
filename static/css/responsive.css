@@ -1,0 +1,1205 @@
+/**
+ * Responsive dashboard layout — shell, header, sidebar, and overflow fixes only.
+ * Does NOT restyle list cards/tables (those stay in inventory-mgmt.css).
+ *
+ * Load after dashboard.css and inventory-mgmt.css.
+ */
+
+:root {
+    --inv-touch-target: 44px;
+}
+
+html {
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+body.inv-dashboard-body {
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+.inv-dashboard-main,
+.inv-chrome-page,
+.inv-mgmt-page,
+.inv-mgmt-page-panel,
+.inv-mgmt-card {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.inv-dashboard-main {
+    box-sizing: border-box;
+}
+
+.inv-mgmt-table-wrap {
+    width: 100%;
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Prevent letter-by-letter wrapping when a card column gets tight */
+.inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td,
+.inv-mgmt-table th,
+.inv-mgmt-table td {
+    overflow-wrap: break-word;
+    word-break: normal;
+    hyphens: none;
+}
+
+.inv-dashboard-pending-total {
+    overflow-wrap: anywhere;
+    word-break: normal;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Sidebar backdrop (created by JS on mobile) */
+.inv-sidebar-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    background: rgba(17, 24, 39, 0.45);
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+}
+
+.inv-sidebar-backdrop:focus-visible {
+    outline: 2px solid var(--inv-accent);
+    outline-offset: -2px;
+}
+
+body.inv-dashboard-body.inv-sidebar-drawer-open .inv-sidebar-backdrop {
+    display: block;
+}
+
+/* -------------------------------------------------------------------------- */
+/* ≤1280px — stack dashboard analytics so Pending Payments keeps width        */
+/* -------------------------------------------------------------------------- */
+
+@media (max-width: 1280px) {
+    .inv-dashboard-analytics-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .inv-dashboard-stat-grid {
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+}
+
+/* -------------------------------------------------------------------------- */
+/* ≤1024px — compact chrome & pending payment scroll                          */
+/* -------------------------------------------------------------------------- */
+
+@media (max-width: 1024px) {
+    .inv-dashboard-main {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .inv-chrome-header-bottom {
+        padding-left: calc(var(--inv-sidebar-current-width, var(--inv-sidebar-width)) + 4px);
+        padding-right: 8px;
+    }
+
+    .inv-business-tab {
+        max-width: 180px;
+    }
+
+    .inv-active-business-name {
+        font-size: 16px;
+    }
+
+    .inv-profile-meta {
+        max-width: 120px;
+    }
+
+    .inv-dashboard-pending-list-wrap {
+        overflow-x: auto !important;
+        overflow-y: auto;
+    }
+
+    .inv-dashboard-pending-card .inv-dashboard-pending-list-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) {
+        grid-template-columns: 88px minmax(120px, 1.1fr) minmax(140px, 1fr) 104px;
+        min-width: 520px;
+    }
+
+    .inv-dashboard-pending-card .inv-dashboard-pending-list-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-name:not(.inv-col-products),
+    .inv-dashboard-pending-card .inv-dashboard-pending-list-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-invoice {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        word-break: normal;
+    }
+
+    .inv-settings-shell {
+        grid-template-columns: 1fr;
+    }
+
+    .inv-settings-nav {
+        flex-direction: row;
+        flex-wrap: wrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* -------------------------------------------------------------------------- */
+/* ≤900px — tablet shell                                                      */
+/* -------------------------------------------------------------------------- */
+
+@media (max-width: 900px) {
+    .inv-dashboard-main {
+        padding: 16px 12px 32px;
+    }
+
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-page-panel:not(.inv-hidden) > .inv-mgmt-tabs {
+        padding-left: 12px;
+        padding-right: 12px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .inv-chrome-header-top {
+        gap: 10px;
+        padding: 0 10px 0 8px;
+    }
+
+    .inv-header-right {
+        gap: 6px;
+        flex-shrink: 0;
+    }
+
+    .inv-quick-access-panel {
+        min-width: min(420px, calc(100vw - 24px));
+        right: 0;
+        left: auto;
+    }
+}
+
+/* -------------------------------------------------------------------------- */
+/* ≤768px — mobile: off-canvas sidebar                                        */
+/* -------------------------------------------------------------------------- */
+
+@media (max-width: 768px) {
+    :root {
+        --inv-sidebar-collapsed-width: 0px;
+        --inv-header-bottom-height: 3rem;
+    }
+
+    body.inv-dashboard-body.inv-sidebar-collapsed {
+        --inv-sidebar-current-width: 0px;
+    }
+
+    body.inv-dashboard-body.inv-sidebar-collapsed.inv-sidebar-pinned,
+    body.inv-dashboard-body.inv-sidebar-collapsed.inv-sidebar-open,
+    body.inv-dashboard-body.inv-sidebar-drawer-open {
+        --inv-sidebar-current-width: 0px;
+    }
+
+    .inv-sidebar {
+        top: 0;
+        height: 100vh;
+        width: min(18rem, 86vw);
+        max-width: 18rem;
+        transform: translateX(-105%);
+        transition: transform 0.22s ease, box-shadow 0.22s ease;
+        z-index: 70;
+        box-shadow: none;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
+    body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) .inv-sidebar,
+    body.inv-dashboard-body.inv-sidebar-collapsed.inv-sidebar-open:not(.inv-sidebar-pinned) .inv-sidebar,
+    body.inv-dashboard-body.inv-sidebar-collapsed.inv-sidebar-pinned .inv-sidebar {
+        width: min(18rem, 86vw);
+    }
+
+    body.inv-dashboard-body.inv-sidebar-drawer-open .inv-sidebar,
+    body.inv-dashboard-body.inv-sidebar-collapsed.inv-sidebar-open .inv-sidebar,
+    body.inv-dashboard-body.inv-sidebar-collapsed.inv-sidebar-pinned .inv-sidebar {
+        transform: translateX(0);
+        box-shadow: 8px 0 28px rgba(17, 24, 39, 0.22);
+    }
+
+    body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) .inv-sidebar-brand,
+    body.inv-dashboard-body.inv-sidebar-drawer-open .inv-sidebar-brand {
+        justify-content: flex-start;
+        padding: 0 20px;
+    }
+
+    body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) .inv-sidebar-brand-text,
+    body.inv-dashboard-body.inv-sidebar-drawer-open .inv-sidebar-brand-text {
+        opacity: 1;
+        width: auto;
+        overflow: visible;
+    }
+
+    body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) .inv-sidebar-nav,
+    body.inv-dashboard-body.inv-sidebar-drawer-open .inv-sidebar-nav {
+        padding: 0 12px;
+    }
+
+    body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) .inv-nav-item,
+    body.inv-dashboard-body.inv-sidebar-drawer-open .inv-nav-item {
+        justify-content: flex-start;
+        padding: 0 12px;
+        font-size: 14px;
+        line-height: normal;
+        min-height: var(--inv-touch-target);
+    }
+
+    body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) .inv-nav-icon,
+    body.inv-dashboard-body.inv-sidebar-drawer-open .inv-nav-icon {
+        margin-right: 10px;
+    }
+
+    body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) .inv-nav-group-chevron,
+    body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) .inv-nav-add-btn,
+    body.inv-dashboard-body.inv-sidebar-drawer-open .inv-nav-group-chevron,
+    body.inv-dashboard-body.inv-sidebar-drawer-open .inv-nav-add-btn {
+        display: inline-flex;
+    }
+
+    body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) .inv-nav-group.inv-nav-group--open > .inv-nav-sub,
+    body.inv-dashboard-body.inv-sidebar-drawer-open .inv-nav-group.inv-nav-group--open > .inv-nav-sub {
+        display: block !important;
+        position: static;
+        min-width: 0;
+        box-shadow: none;
+        border: none;
+        background: transparent;
+        padding: 0 0 0 8px;
+    }
+
+    body.inv-dashboard-body.inv-sidebar-drawer-open .inv-nav-group.inv-nav-group--open .inv-nav-sub {
+        display: block !important;
+    }
+
+    .inv-dashboard-main {
+        margin-left: 0;
+        padding: 12px 12px 28px;
+        width: 100%;
+    }
+
+    .inv-chrome-header-bottom {
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+
+    .inv-chrome-header-top {
+        gap: 8px;
+    }
+
+    .inv-chrome-active-business {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .inv-active-business-label {
+        display: none;
+    }
+
+    .inv-active-business-name {
+        font-size: 15px;
+        max-width: 100%;
+    }
+
+    .inv-active-business-icon {
+        width: 30px;
+        height: 30px;
+    }
+
+    .inv-profile-meta {
+        display: none;
+    }
+
+    .inv-profile-trigger {
+        padding: 4px;
+        min-width: var(--inv-touch-target);
+        min-height: var(--inv-touch-target);
+        justify-content: center;
+    }
+
+    .inv-sidebar-toggle {
+        width: var(--inv-touch-target);
+        height: var(--inv-touch-target);
+    }
+
+    .inv-business-switcher {
+        gap: 4px;
+    }
+
+    .inv-business-tab {
+        max-width: 150px;
+        height: 38px;
+        padding: 0 12px 0 10px;
+        font-size: 13px;
+    }
+
+    .inv-mgmt-header {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .inv-mgmt-header .inv-dashboard-greeting {
+        font-size: 20px;
+    }
+
+    /* Pending payments: stack fields on phone without changing list-page cards */
+    .inv-dashboard-pending-card .inv-dashboard-pending-list-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+        min-width: 0;
+        width: 100%;
+        padding: 12px;
+    }
+
+    .inv-dashboard-pending-card .inv-dashboard-pending-list-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
+        grid-column: auto !important;
+        grid-row: auto !important;
+    }
+
+    .inv-dashboard-pending-card .inv-dashboard-pending-list-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-amount {
+        align-items: flex-start;
+        text-align: left;
+        font-size: 16px;
+    }
+
+    .inv-dashboard-pending-card .inv-dashboard-pending-list-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-name:not(.inv-col-products),
+    .inv-dashboard-pending-card .inv-dashboard-pending-list-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-invoice {
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
+        overflow-wrap: break-word;
+        word-break: normal;
+    }
+
+    .inv-dashboard-pending-total {
+        text-align: left;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        padding: 10px 12px 12px;
+    }
+
+    .inv-dashboard-chart-heading {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .inv-dashboard-chart-filters {
+        flex-wrap: wrap;
+    }
+
+    .inv-quick-access-panel {
+        position: fixed;
+        left: 12px;
+        right: 12px;
+        top: calc(var(--inv-header-top-height) + 8px);
+        min-width: 0;
+        max-width: none;
+        width: auto;
+        max-height: calc(100vh - var(--inv-header-height) - 24px);
+        overflow: auto;
+    }
+
+    .inv-owner-profile-panel {
+        max-width: calc(100vw - 24px);
+    }
+
+    body.inv-dashboard-body.inv-sidebar-drawer-open {
+        overflow: hidden;
+    }
+}
+
+/* -------------------------------------------------------------------------- */
+/* ≤480px — small phones                                                      */
+/* -------------------------------------------------------------------------- */
+
+@media (max-width: 480px) {
+    .inv-dashboard-main {
+        padding: 10px 10px 24px;
+    }
+
+    .inv-chrome-header-top {
+        padding: 0 8px 0 6px;
+        gap: 6px;
+    }
+
+    .inv-active-business-icon {
+        display: none;
+    }
+
+    .inv-business-tab {
+        max-width: 120px;
+        padding: 0 10px;
+        font-size: 12px;
+    }
+
+    .inv-dashboard-greeting {
+        font-size: 18px;
+    }
+
+    .inv-mgmt-btn {
+        min-height: var(--inv-touch-target);
+    }
+
+    .inv-dashboard-stat-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .inv-pagination-summary {
+        white-space: normal;
+    }
+}
+
+@media (max-width: 900px) and (orientation: landscape) {
+    .inv-sidebar {
+        width: min(16rem, 70vw);
+    }
+
+    .inv-quick-access-panel {
+        max-height: calc(100vh - 24px);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .inv-sidebar,
+    .inv-dashboard-main,
+    .inv-chrome-header-bottom {
+        transition: none !important;
+    }
+}
+
+/* ========================================================================== */
+/* App-wide list pages — toolbars, headers, cards (preserve stripe + accent)  */
+/* Covers: Products, Stock, Sales, Purchases, Customers, Catalog, Settings…   */
+/* ========================================================================== */
+
+/* Wide desktop: keep row cards readable without crush */
+@media (min-width: 1101px) {
+    .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-price-with-tax,
+    .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-opening {
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
+    }
+
+    .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-price-with-tax::before {
+        max-width: none;
+        white-space: pre-line;
+    }
+
+    .inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-hsn,
+    .inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-sku,
+    .inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-invoice {
+        overflow-wrap: anywhere;
+    }
+}
+
+/* ≤1100px: shared headers, filters, and card field wrapping */
+@media (max-width: 1100px) {
+    /* Fixed page titles — use available width with sidebar */
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-page-panel:not(.inv-hidden) > .inv-mgmt-header {
+        padding-left: 16px;
+        padding-right: 16px;
+        height: auto;
+        min-height: var(--inv-mgmt-page-title-height);
+        align-content: center;
+    }
+
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-page-panel:not(.inv-hidden) > .inv-mgmt-tabs {
+        padding-left: 16px;
+        padding-right: 16px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        flex-wrap: nowrap;
+        gap: 6px;
+    }
+
+    .inv-mgmt-header,
+    .inv-mgmt-panel-header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+    .inv-mgmt-header-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        max-width: 100%;
+    }
+
+    /* Toolbars — Stock / Sale / Products / etc. */
+    .inv-mgmt-toolbar,
+    .inv-mgmt-toolbar--filters {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: stretch;
+        gap: 10px;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
+    .inv-mgmt-toolbar .inv-mgmt-search,
+    .inv-mgmt-toolbar--filters .inv-mgmt-search {
+        flex: 1 1 100%;
+        width: 100%;
+        max-width: none;
+        min-width: 0;
+    }
+
+    .inv-mgmt-toolbar--filters .inv-mgmt-filter-select,
+    .inv-mgmt-toolbar--filters .inv-search-select,
+    .inv-mgmt-toolbar .inv-mgmt-filter-select,
+    .inv-mgmt-toolbar .inv-search-select,
+    .inv-mgmt-toolbar--filters .inv-list-sort-select {
+        flex: 1 1 calc(50% - 6px);
+        width: auto;
+        min-width: 0;
+        max-width: none;
+    }
+
+    .inv-mgmt-toolbar--filters .inv-mgmt-filter-dates {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        flex: 1 1 100%;
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .inv-mgmt-toolbar--filters .inv-mgmt-filter-date,
+    .inv-mgmt-toolbar--filters .inv-date-field {
+        flex: 1 1 calc(50% - 20px);
+        width: auto;
+        min-width: 0;
+        max-width: none;
+    }
+
+    .inv-mgmt-toolbar--filters .inv-mgmt-btn,
+    .inv-mgmt-toolbar--filters .inv-columns-btn-wrap,
+    .inv-mgmt-toolbar--filters .inv-toolbar-list-actions,
+    .inv-mgmt-toolbar .inv-columns-btn-wrap,
+    .inv-mgmt-toolbar .inv-toolbar-list-actions {
+        flex: 0 0 auto;
+    }
+
+    .inv-mgmt-toolbar--filters .inv-columns-btn-wrap,
+    .inv-mgmt-toolbar .inv-columns-btn-wrap {
+        margin-left: auto;
+    }
+
+    .inv-list-sort-wrap {
+        flex: 1 1 auto;
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .inv-list-sort-select {
+        min-width: 0;
+        max-width: 100%;
+        width: 100%;
+    }
+
+    /* List cards — wrap fields; keep green accent / borders / radius */
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-page-panel:not(.inv-hidden) > .inv-mgmt-card:not(.inv-mgmt-panel-card):has(.inv-mgmt-table-wrap) > .inv-mgmt-table-wrap {
+        overflow-x: visible;
+    }
+
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table--products,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table--inventory,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table--batches,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table--stockin,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table--purchases,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table--customers,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table--products,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table--inventory,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table--batches,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table--stockin,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table--purchases {
+        width: 100%;
+        min-width: 0 !important;
+        max-width: 100%;
+    }
+
+    body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table--products,
+    body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sidebar-open:not(.inv-sidebar-pinned)) .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table--products {
+        width: 100%;
+        min-width: 0 !important;
+    }
+
+    /* Layout only — borders/accent/status colors stay in inventory-mgmt.css.
+       Exclude dashboard widgets (pending/expiring) which use custom grids. */
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table:not(.inv-dashboard-pending-table):not(.inv-dashboard-expiring-table) > tbody > tr:not(:has(.inv-mgmt-empty)),
+    body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)),
+    body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sidebar-open:not(.inv-sidebar-pinned)) .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 2px 0;
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
+    /* Re-assert sale status accents after layout overrides */
+    .inv-mgmt-table-wrap > .inv-mgmt-table--purchases > tbody > tr.inv-sale-row--paid:not(:has(.inv-mgmt-empty)) { border-left-color: #1B5E20; }
+    .inv-mgmt-table-wrap > .inv-mgmt-table--purchases > tbody > tr.inv-sale-row--pending:not(:has(.inv-mgmt-empty)) { border-left-color: #E65100; }
+    .inv-mgmt-table-wrap > .inv-mgmt-table--purchases > tbody > tr.inv-sale-row--partial:not(:has(.inv-mgmt-empty)) { border-left-color: #0D47A1; }
+    .inv-mgmt-table-wrap > .inv-mgmt-table--purchases > tbody > tr.inv-sale-row--draft:not(:has(.inv-mgmt-empty)) { border-left-color: #6A1B9A; }
+    .inv-mgmt-table-wrap > .inv-mgmt-table--purchases > tbody > tr.inv-sale-row--cancelled:not(:has(.inv-mgmt-empty)) { border-left-color: #B71C1C; }
+    .inv-mgmt-table-wrap > .inv-mgmt-table--purchases > tbody > tr[class*="inv-sale-row--"]:not(:has(.inv-mgmt-empty)) { border-left-width: 5px; }
+
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table:not(.inv-dashboard-pending-table):not(.inv-dashboard-expiring-table) > tbody > tr:not(:has(.inv-mgmt-empty)) > td,
+    body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td,
+    body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sidebar-open:not(.inv-sidebar-pinned)) .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: flex-start;
+        flex: 1 1 calc(50% - 4px);
+        min-width: min(100%, 148px);
+        max-width: 100%;
+        padding: 8px 10px;
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
+        overflow-wrap: break-word;
+        word-break: normal;
+        box-sizing: border-box;
+    }
+
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-name,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-customer,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td:first-child:not(.inv-col-action):not(.inv-mgmt-cell--action):not(.inv-col-check):not(.inv-col-date) {
+        flex: 1 1 100%;
+        min-width: 100%;
+        max-width: 100%;
+        font-weight: 700;
+    }
+
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table--purchases > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-date {
+        flex: 1 1 calc(50% - 4px);
+        min-width: min(100%, 140px);
+    }
+
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-price-with-tax::before,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-opening::before {
+        max-width: none;
+        white-space: normal;
+        line-height: 1.3;
+    }
+
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-action,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-mgmt-cell--action,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table--purchases > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-action,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table--purchases > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-mgmt-cell--action,
+    body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-action,
+    body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-mgmt-cell--action,
+    body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sidebar-open:not(.inv-sidebar-pinned)) .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-action,
+    body.inv-dashboard-body.inv-sidebar-collapsed:is(.inv-sidebar-pinned, .inv-sidebar-open:not(.inv-sidebar-pinned)) .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table--products > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-mgmt-cell--action {
+        flex: 1 1 100%;
+        min-width: 100%;
+        max-width: 100%;
+        width: auto;
+        margin-left: 0;
+        align-self: stretch;
+        padding: 8px 10px 4px;
+        overflow: visible;
+    }
+
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-action .inv-row-actions,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-mgmt-cell--action .inv-row-actions {
+        justify-content: flex-start;
+        flex-wrap: wrap;
+        max-width: 100%;
+    }
+
+    .inv-pagination {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    /* Forms inside panels */
+    .inv-mgmt-form-grid,
+    .inv-mgmt-form-grid--product,
+    .inv-mgmt-form-grid--invoice-setting {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .inv-mgmt-form-grid--sale-top {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: start;
+        gap: 10px 12px;
+    }
+
+    .inv-mgmt-form-grid--sale-addresses {
+        grid-template-columns: 1fr;
+    }
+
+    .inv-settings-shell {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ≤767px: stack headers/actions; full-width filters */
+@media (max-width: 767px) {
+    /* Slightly shorter search / filter controls on mobile */
+    .inv-mgmt-toolbar .inv-mgmt-search,
+    .inv-mgmt-toolbar--filters .inv-mgmt-search,
+    .inv-mgmt-toolbar--filters .inv-mgmt-filter-select,
+    .inv-mgmt-toolbar--filters .inv-search-select .inv-search-select-trigger,
+    .inv-mgmt-toolbar--filters .inv-list-sort-select {
+        min-height: 34px;
+        height: 34px;
+        padding-top: 6px;
+        padding-bottom: 6px;
+        font-size: 13px;
+        box-sizing: border-box;
+    }
+
+    .inv-mgmt-toolbar--filters .inv-mgmt-btn {
+        min-height: 34px;
+        padding-top: 6px;
+        padding-bottom: 6px;
+    }
+
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-page-panel:not(.inv-hidden) > .inv-mgmt-header {
+        padding-left: 12px;
+        padding-right: 12px;
+        position: relative;
+        top: auto;
+        left: auto;
+        right: auto;
+        height: auto;
+        min-height: 0;
+        margin-bottom: 10px;
+    }
+
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-page-panel:not(.inv-hidden):has(> .inv-mgmt-header) {
+        padding-top: 0;
+    }
+
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-page-panel:not(.inv-hidden) > .inv-mgmt-tabs {
+        position: relative;
+        top: auto;
+        left: auto;
+        right: auto;
+        padding: 0 0 10px;
+        margin-bottom: 4px;
+    }
+
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-page-panel:not(.inv-hidden):has(> .inv-mgmt-tabs) {
+        --inv-mgmt-page-tabs-height: 0px;
+        padding-top: 0;
+    }
+
+    .inv-mgmt-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .inv-mgmt-header > .inv-mgmt-btn,
+    .inv-mgmt-header-actions {
+        width: 100%;
+    }
+
+    .inv-mgmt-header-actions > .inv-mgmt-btn {
+        flex: 1 1 auto;
+        justify-content: center;
+        min-height: var(--inv-touch-target);
+    }
+
+    .inv-mgmt-header > a.inv-mgmt-btn {
+        width: 100%;
+        justify-content: center;
+        box-sizing: border-box;
+    }
+
+    .inv-mgmt-toolbar--filters .inv-mgmt-filter-select,
+    .inv-mgmt-toolbar--filters .inv-search-select,
+    .inv-mgmt-toolbar .inv-mgmt-filter-select,
+    .inv-mgmt-toolbar .inv-search-select {
+        flex: 1 1 100%;
+    }
+
+    .inv-mgmt-toolbar--filters .inv-mgmt-filter-date,
+    .inv-mgmt-toolbar--filters .inv-date-field {
+        flex: 1 1 calc(50% - 16px);
+    }
+
+    .inv-mgmt-toolbar--filters .inv-columns-btn-wrap,
+    .inv-mgmt-toolbar .inv-columns-btn-wrap {
+        margin-left: 0;
+    }
+
+    .inv-mgmt-toolbar--filters .inv-list-sort-wrap,
+    .inv-mgmt-toolbar .inv-list-sort-wrap,
+    .inv-mgmt-toolbar--filters .inv-toolbar-list-actions {
+        flex: 1 1 100%;
+        margin-left: 0;
+        justify-content: flex-start;
+    }
+
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) {
+        padding: 12px 12px 12px 8px;
+    }
+
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td {
+        flex: 1 1 calc(50% - 4px);
+        min-width: min(100%, 132px);
+        padding: 7px 8px;
+    }
+
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-sku,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-hsn,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-barcode,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-invoice {
+        overflow-wrap: anywhere;
+    }
+
+    .inv-mgmt-form-grid,
+    .inv-mgmt-form-grid--product,
+    .inv-mgmt-form-grid--sale-top,
+    .inv-mgmt-form-grid--invoice-setting,
+    .inv-mgmt-form-grid--sale-invoice-print {
+        grid-template-columns: 1fr;
+    }
+
+    /* Add Purchase / form panels — keep inline + buttons visible */
+    .inv-mgmt-panel-card .inv-mgmt-panel-body {
+        padding: 16px 14px 28px;
+        box-sizing: border-box;
+    }
+
+    .inv-mgmt-panel-card .inv-mgmt-panel-footer {
+        padding: 12px 14px;
+    }
+
+    .inv-field-inline {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        gap: 6px;
+    }
+
+    .inv-field-inline > .inv-mgmt-select,
+    .inv-field-inline > .inv-search-select {
+        flex: 1 1 0% !important;
+        min-width: 0 !important;
+        width: auto !important;
+        max-width: 100%;
+    }
+
+    .inv-field-inline > .inv-search-select .inv-search-select-trigger,
+    .inv-field-inline > .inv-search-select .inv-mgmt-select {
+        flex: none !important;
+        width: 100% !important;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
+    .inv-inline-add-btn,
+    .inv-inline-edit-btn {
+        flex: 0 0 36px;
+        width: 36px;
+        height: 36px;
+        min-width: 36px;
+    }
+
+    .inv-inline-add-btn .material-symbols-outlined,
+    .inv-inline-edit-btn .material-symbols-outlined {
+        font-size: 18px;
+    }
+
+    .inv-mgmt-item-row.inv-mgmt-item-row--stockin,
+    .inv-mgmt-item-row.inv-mgmt-item-row--sale {
+        min-width: 0 !important;
+        max-width: 100%;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .inv-mgmt-item-row .inv-mgmt-field {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    /* Slightly shorter form controls on mobile */
+    .inv-mgmt-panel-body .inv-mgmt-input,
+    .inv-mgmt-panel-body .inv-mgmt-select,
+    .inv-mgmt-panel-body .inv-search-select-trigger,
+    .inv-mgmt-panel-body .inv-multi-select-trigger {
+        min-height: 36px;
+        height: 36px;
+        padding-top: 6px;
+        padding-bottom: 6px;
+        box-sizing: border-box;
+        line-height: 1.25;
+    }
+
+    .inv-mgmt-panel-body .inv-mgmt-textarea {
+        min-height: 72px;
+        height: auto;
+    }
+
+    .inv-mgmt-panel-body .inv-mgmt-field label {
+        margin-bottom: 4px;
+    }
+
+    .inv-mgmt-panel-footer,
+    .inv-modal-footer {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .inv-mgmt-panel-footer .inv-mgmt-btn,
+    .inv-modal-footer .inv-mgmt-btn {
+        flex: 1 1 calc(50% - 8px);
+        min-height: var(--inv-touch-target);
+        margin-left: 0 !important;
+        justify-content: center;
+        box-sizing: border-box;
+    }
+
+    .inv-modal-dialog {
+        width: min(100vw - 16px, 640px);
+        max-height: calc(100vh - 16px);
+        top: 50%;
+    }
+
+    .inv-modal-body {
+        padding: 16px;
+    }
+
+    .inv-modal-header {
+        padding: 16px 16px 0;
+    }
+
+    .inv-confirm-modal {
+        width: min(100vw - 24px, 420px);
+    }
+
+    .inv-dashboard-stat-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .inv-bulk-toolbar {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+}
+
+/* ≤430px: stack most card fields; keep compact pairs where useful */
+@media (max-width: 430px) {
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td {
+        flex: 1 1 100%;
+        min-width: 100%;
+    }
+
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-qty,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-unit,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table--inventory > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-unit,
+    .inv-mgmt-page:not(.inv-dashboard-page) .inv-mgmt-table-wrap > .inv-mgmt-table--purchases > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-date {
+        flex: 1 1 calc(50% - 4px);
+        min-width: min(100%, 120px);
+    }
+
+    .inv-mgmt-toolbar--filters .inv-mgmt-filter-date,
+    .inv-mgmt-toolbar--filters .inv-date-field {
+        flex: 1 1 100%;
+    }
+
+    .inv-mgmt-filter-sep {
+        display: none;
+    }
+
+    .inv-pagination-size {
+        width: 100%;
+    }
+
+    .inv-mgmt-header-actions > .inv-mgmt-btn {
+        flex: 1 1 100%;
+    }
+
+    .inv-mgmt-panel-footer,
+    .inv-modal-footer {
+        flex-direction: column-reverse;
+        align-items: stretch;
+    }
+
+    .inv-mgmt-panel-footer .inv-mgmt-btn,
+    .inv-modal-footer .inv-mgmt-btn {
+        flex: 1 1 100%;
+        width: 100%;
+    }
+
+    .inv-mgmt-panel-card .inv-mgmt-panel-body {
+        padding-left: 12px;
+        padding-right: 12px;
+        padding-bottom: 32px;
+    }
+}
+
+/* ========================================================================== */
+/* Tax Settings + Barcode List — force readable cards on narrow screens       */
+/* ========================================================================== */
+
+#settings-tax-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--settings-tax > colgroup,
+#settings-barcode-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--settings-barcode > colgroup {
+    display: none;
+}
+
+#settings-tax-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--settings-tax > tbody > tr:not(:has(.inv-mgmt-empty)) > td[data-label]::before,
+#settings-barcode-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--settings-barcode > tbody > tr:not(:has(.inv-mgmt-empty)) > td[data-label]::before {
+    white-space: normal !important;
+    overflow: visible !important;
+    max-width: none !important;
+    text-overflow: clip !important;
+}
+
+@media (max-width: 1100px) {
+    #settings-tax-list-panel .inv-mgmt-toolbar--filters,
+    #settings-barcode-list-panel .inv-mgmt-toolbar--filters {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: stretch;
+        gap: 8px 10px;
+    }
+
+    #settings-tax-list-panel .inv-mgmt-toolbar--filters .inv-mgmt-search,
+    #settings-barcode-list-panel .inv-mgmt-toolbar--filters .inv-mgmt-search {
+        flex: 1 1 calc(100% - 100px);
+        width: auto;
+        min-width: 0;
+        max-width: none;
+    }
+
+    #settings-tax-list-panel .inv-mgmt-toolbar--filters .inv-mgmt-btn,
+    #settings-barcode-list-panel .inv-mgmt-toolbar--filters .inv-mgmt-btn {
+        flex: 0 0 auto;
+        align-self: stretch;
+        min-height: 42px;
+    }
+
+    #settings-tax-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--settings-tax > tbody > tr:not(:has(.inv-mgmt-empty)),
+    #settings-barcode-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--settings-barcode > tbody > tr:not(:has(.inv-mgmt-empty)) {
+        flex-wrap: wrap !important;
+        align-items: flex-start !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+    }
+
+    #settings-tax-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--settings-tax > tbody > tr:not(:has(.inv-mgmt-empty)) > td,
+    #settings-barcode-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--settings-barcode > tbody > tr:not(:has(.inv-mgmt-empty)) > td {
+        flex: 1 1 calc(50% - 4px) !important;
+        min-width: min(100%, 140px) !important;
+        max-width: 100% !important;
+        white-space: normal !important;
+        overflow: visible !important;
+        text-overflow: clip !important;
+        overflow-wrap: break-word !important;
+        word-break: normal !important;
+    }
+
+    /* Tax: Key + Value (%) side by side; Action full row */
+    #settings-tax-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--settings-tax > tbody > tr:not(:has(.inv-mgmt-empty)) > td:first-child {
+        flex: 1 1 calc(55% - 4px) !important;
+        min-width: min(100%, 150px) !important;
+        font-weight: 700;
+    }
+
+    #settings-tax-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--settings-tax > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-mgmt-cell--num {
+        flex: 1 1 calc(45% - 4px) !important;
+        min-width: min(100%, 130px) !important;
+    }
+
+    /* Barcode: Product full width; SKU + Code Value share row */
+    #settings-barcode-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--settings-barcode > tbody > tr:not(:has(.inv-mgmt-empty)) > td:first-child {
+        flex: 1 1 100% !important;
+        min-width: 100% !important;
+        font-weight: 700;
+    }
+
+    #settings-barcode-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--settings-barcode > tbody > tr:not(:has(.inv-mgmt-empty)) > td:nth-child(3) {
+        flex: 1 1 calc(55% - 4px) !important;
+        min-width: min(100%, 160px) !important;
+        overflow-wrap: anywhere !important;
+        word-break: normal !important;
+    }
+
+    #settings-tax-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--settings-tax > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-action,
+    #settings-tax-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--settings-tax > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-mgmt-cell--action,
+    #settings-barcode-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--settings-barcode > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-col-action,
+    #settings-barcode-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--settings-barcode > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-mgmt-cell--action {
+        flex: 1 1 100% !important;
+        min-width: 100% !important;
+        max-width: 100% !important;
+        width: auto !important;
+        margin-left: 0 !important;
+        align-self: stretch !important;
+        padding: 8px 10px 4px !important;
+        overflow: visible !important;
+    }
+
+    #settings-tax-list-panel .inv-row-actions,
+    #settings-barcode-list-panel .inv-row-actions {
+        justify-content: flex-start;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+}
+
+@media (max-width: 575px) {
+    #settings-tax-list-panel .inv-mgmt-header,
+    #settings-barcode-list-panel .inv-mgmt-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+
+    #settings-tax-list-panel .inv-mgmt-header .inv-mgmt-btn,
+    #settings-barcode-list-panel .inv-mgmt-header .inv-mgmt-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    #settings-tax-list-panel .inv-mgmt-toolbar--filters .inv-mgmt-search,
+    #settings-barcode-list-panel .inv-mgmt-toolbar--filters .inv-mgmt-search,
+    #settings-tax-list-panel .inv-mgmt-toolbar--filters .inv-mgmt-btn,
+    #settings-barcode-list-panel .inv-mgmt-toolbar--filters .inv-mgmt-btn {
+        flex: 1 1 100%;
+        width: 100%;
+        justify-content: center;
+    }
+
+    #settings-tax-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--settings-tax > tbody > tr:not(:has(.inv-mgmt-empty)) > td,
+    #settings-tax-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--settings-tax > tbody > tr:not(:has(.inv-mgmt-empty)) > td:first-child,
+    #settings-tax-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--settings-tax > tbody > tr:not(:has(.inv-mgmt-empty)) > td.inv-mgmt-cell--num,
+    #settings-barcode-list-panel .inv-mgmt-table-wrap > .inv-mgmt-table--settings-barcode > tbody > tr:not(:has(.inv-mgmt-empty)) > td {
+        flex: 1 1 100% !important;
+        min-width: 100% !important;
+    }
+}

@@ -25,6 +25,7 @@ class BusinessSerializer(BaseModelSerializer):
             "phone",
             "email",
             "address",
+            "bank_details",
             "state_code",
             "pin_code",
             "logo",
@@ -77,6 +78,7 @@ class BusinessWriteSerializer(serializers.ModelSerializer):
             "phone",
             "email",
             "address",
+            "bank_details",
             "state_code",
             "pin_code",
             "logo",
@@ -107,6 +109,9 @@ class BusinessWriteSerializer(serializers.ModelSerializer):
         return validate_mobile_number(value)
 
     def validate_address(self, value):
+        return (value or "").strip()
+
+    def validate_bank_details(self, value):
         return (value or "").strip()
 
     def validate_state_code(self, value):

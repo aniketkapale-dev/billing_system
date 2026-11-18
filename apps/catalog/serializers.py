@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from apps.catalog.models import Brand, Category, Manufacturer, PaymentType, Unit, Vendor
+from apps.catalog.models import Brand, Category, Manufacturer, PaymentType, Service, Unit, Vendor
 from core.base_serializer import BaseModelSerializer
 
 
@@ -51,7 +51,7 @@ class CategorySerializer(BaseModelSerializer):
         read_only_fields = ("business",)
 
     def get_sale_tax_labels(self, obj):
-        tax_ids = obj.sale_tax_ids or []
+        tax_ids = (obj.sale_tax_ids or [])[:1]
         if not tax_ids:
             return []
         from apps.settings.models import Tax
@@ -70,11 +70,17 @@ class CategoryWriteSerializer(serializers.ModelSerializer):
         child=serializers.IntegerField(),
         required=False,
         allow_empty=True,
+        max_length=1,
     )
 
     class Meta:
         model = Category
         fields = ("name", "description", "sale_tax_ids", "is_active")
+
+    def validate_sale_tax_ids(self, value):
+        if value and len(value) > 1:
+            raise serializers.ValidationError("Only one tax can be assigned per category.")
+        return value
 
 
 class BrandSerializer(BaseModelSerializer):
@@ -99,6 +105,38 @@ class BrandWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Brand
         fields = ("name", "is_active")
+
+
+class ServiceSerializer(BaseModelSerializer):
+    business_name = serializers.CharField(source="business.business_name", read_only=True)
+
+    class Meta:
+        model = Service
+        fields = (
+            "id",
+            "business",
+            "business_name",
+            "name",
+            "base_price",
+            "is_active",
+            "is_deleted",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = ("business",)
+
+
+class ServiceWriteSerializer(serializers.ModelSerializer):
+    base_price = serializers.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        required=False,
+        default=0,
+    )
+
+    class Meta:
+        model = Service
+        fields = ("name", "base_price", "is_active")
 
 
 class ManufacturerSerializer(BaseModelSerializer):

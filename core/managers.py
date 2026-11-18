@@ -5,6 +5,26 @@ from django.db import models
 
 
 class SoftDeleteQuerySet(models.QuerySet):
+    def soft_delete(self):
+        from django.utils import timezone
+
+        from core.middleware import get_current_ip, get_current_user
+
+        user = get_current_user()
+        now = timezone.now()
+        user_id = getattr(user, "id", None)
+        ip = get_current_ip()
+        return self.update(
+            is_deleted=True,
+            is_active=False,
+            deleted_at=now,
+            deleted_by=user_id,
+            deleted_ip=ip,
+            updated_at=now,
+            updated_by=user_id,
+            updated_ip=ip,
+        )
+
     def active(self):
         return self.filter(is_active=True, is_deleted=False)
 

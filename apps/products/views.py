@@ -31,6 +31,18 @@ class ProductViewSet(BusinessScopedViewSetMixin, BaseViewSet):
     def get_permissions(self):
         return [IsAuthenticatedUser(), HasRole()]
 
+    def list(self, request):
+        include_deleted = request.query_params.get("include_deleted") == "true"
+        service = self.get_service()
+        queryset = (
+            service.repository.all_with_deleted()
+            if include_deleted
+            else service.repository.get_list_queryset()
+        )
+        queryset = self.filter_queryset(queryset)
+        queryset = self._apply_query(queryset)
+        return self._paginate(queryset)
+
     def filter_queryset(self, queryset):
         queryset = super().filter_queryset(queryset)
         category_id = self.request.query_params.get("category_id")
