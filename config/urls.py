@@ -5,10 +5,12 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import include, path
 
+from django.views.generic import RedirectView
+
 from apps.page_views import (
     inventory_login,
     inventory_register,
-    landing,
+    # landing,
     superadmin_dashboard,
     superadmin_users,
     user_dashboard,
@@ -32,7 +34,9 @@ from apps.page_views import (
 )
 
 urlpatterns = [
-    path("", landing, name="landing"),
+    # Landing page temporarily disabled — open login directly.
+    # path("", landing, name="landing"),
+    path("", RedirectView.as_view(pattern_name="inventory-login", permanent=False), name="landing"),
     path("login/", inventory_login, name="inventory-login"),
     path("register/", inventory_register, name="inventory-register"),
     path("superadmin/dashboard/", superadmin_dashboard, name="superadmin-dashboard"),

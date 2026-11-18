@@ -249,7 +249,7 @@ var InventoryPurchases = (function () {
             });
     }
 
-    function sendSaleInvoicePdf(id, saleType) {
+    function downloadSaleInvoicePdf(id, saleType) {
         saleType = resolveSaleType(saleType, id);
         InventoryLoader.show();
         Promise.all([fetchSale(id, saleType), loadTaxes()])
@@ -258,28 +258,15 @@ var InventoryPurchases = (function () {
                 var taxList = taxes || [];
                 if (!sale) throw new Error("Unable to load this sale.");
                 sale = mergeSalePrintMeta(sale);
-                return InventoryDocumentExport.generateSaleInvoicePdfBlob(sale, taxList).then(function (blob) {
-                    var form = new FormData();
-                    var name = (sale.reference_no || ("sale-" + sale.id)).replace(/[^\w.-]+/g, "_") + ".pdf";
-                    form.append("file", blob, name);
-                    return request(saleActionPath(sale.id, saleType, "invoice-pdf"), {
-                        method: "POST",
-                        body: form
-                    });
+                var name = (sale.reference_no || ("sale-" + sale.id)).replace(/[^\w.-]+/g, "_") + ".pdf";
+                InventoryLoader.hide();
+                return InventoryDocumentExport.downloadSalesPdf([sale], name, taxList).then(function () {
+                    InventoryToast.success("Invoice PDF downloaded.");
                 });
             })
-            .then(function (body) {
-                if (!(body && body.isSuccess && body.data && body.data.url)) {
-                    throw new Error(body && body.message ? body.message : "Unable to save the invoice PDF.");
-                }
-                console.log("Sale invoice PDF:", body.data.url);
-                InventoryToast.success("Invoice PDF saved. Link printed in the browser console.");
-            })
             .catch(function (err) {
-                InventoryToast.error(err && err.message ? err.message : "Unable to create the invoice PDF.");
-            })
-            .finally(function () {
                 InventoryLoader.hide();
+                InventoryToast.error(err && err.message ? err.message : "Unable to download the invoice PDF.");
             });
     }
 
@@ -1180,12 +1167,17 @@ var InventoryPurchases = (function () {
             }
         }
 
+        // Due date UI temporarily disabled (Set Due Date / sale due date field).
+        if (dueWrap) dueWrap.classList.add("inv-hidden");
+        if (dueInput) InventoryApi.setDateInputValue(dueInput, "");
+        /*
         var showDueDate = shouldShowDueDateField();
         if (dueWrap) dueWrap.classList.toggle("inv-hidden", !showDueDate);
         if (!showDueDate && dueInput) InventoryApi.setDateInputValue(dueInput, "");
         if (showDueDate && dueInput && !InventoryApi.getDateInputValue(dueInput) && !editingPurchaseId) {
             applyDefaultDueDateToForm();
         }
+        */
     }
 
     function formatQty(value) {
@@ -1924,6 +1916,8 @@ var InventoryPurchases = (function () {
         if (sale.is_draft) {
             var draftMeta = loadSalePrintMeta(sale.id) || {};
             setSalePaidToggle(draftMeta.is_paid === true);
+            // Due date UI temporarily disabled.
+            /*
             if (draftMeta.due_date) {
                 InventoryApi.setDateInputValue(
                     document.getElementById("purchase-invoice-due-date"),
@@ -1935,12 +1929,16 @@ var InventoryPurchases = (function () {
                     sale.due_date
                 );
             }
+            */
         } else if (!sale.is_paid) {
             toggleUnpaidDueDateEdit(true);
+            // Due date UI temporarily disabled.
+            /*
             InventoryApi.setDateInputValue(
                 document.getElementById("purchase-invoice-due-date"),
                 sale.due_date || ""
             );
+            */
         }
         populateServiceItemRows(sale.items || []);
     }
@@ -1949,6 +1947,7 @@ var InventoryPurchases = (function () {
         var wrap = document.getElementById("purchase-mark-paid-wrap");
         var paidWrap = document.getElementById("purchase-paid-amount-wrap");
         if (wrap) wrap.classList.toggle("inv-hidden", !show);
+        toggleSendBillNotifyField(show);
         if (!show) {
             toggleUnpaidDueDateEdit(false);
             if (paidWrap) paidWrap.classList.add("inv-hidden");
@@ -1970,12 +1969,42 @@ var InventoryPurchases = (function () {
         if (dueWrap) dueWrap.classList.toggle("inv-hidden", !show);
     }
 
+    function isSendBillNotificationChecked() {
+        var el = document.getElementById("purchase-send-bill-notify");
+        return !!(el && el.checked);
+    }
+
+    function setSendBillNotification(checked) {
+        var el = document.getElementById("purchase-send-bill-notify");
+        if (el) el.checked = !!checked;
+    }
+
+    function toggleSendBillNotifyField(show) {
+        var wrap = document.getElementById("purchase-send-bill-notify-wrap");
+        if (wrap) wrap.classList.toggle("inv-hidden", !show);
+        if (!show) setSendBillNotification(false);
+    }
+
+    function maybeSendBillGeneratedNotification(sale) {
+        if (!isSendBillNotificationChecked()) return;
+        var label = sale && (sale.reference_no || ("Sale #" + sale.id)) || "sale";
+        console.log("[Bill Notification] Send bill generated notification requested for " + label);
+        InventoryToast.success("Bill generated notification queued for " + label + ".");
+    }
+
     function setSalePaidToggle(checked) {
         var input = document.getElementById("purchase-mark-paid");
         var paidInput = document.getElementById("purchase-paid-amount");
         if (!input) return;
         input.checked = !!checked;
         if (checked && paidInput) {
+            // On Paid click: always start with full bill amount (user can edit after).
+            paidInput.dataset.manual = "0";
+            var bill = getBillAmount();
+            paidInput.value = bill > 0 ? bill.toFixed(2) : "";
+        } else if (paidInput) {
+            // Unpaid: clear amount received; remaining bill stays unpaid.
+            paidInput.value = "";
             paidInput.dataset.manual = "0";
         }
         syncPaymentFields();
@@ -2303,7 +2332,7 @@ var InventoryPurchases = (function () {
         var typeAttr = ' data-sale-type="' + saleType + '"';
 
         var editBtn = isCancelled
-            ? actionSlot()
+            ? ""
             : isDraft
                 ? (
                     '<button type="button" class="inv-row-action-btn inv-row-action-btn--finalize inv-purchase-edit" data-id="' + purchase.id + '"' + typeAttr + ' title="Finalize sale" aria-label="Finalize sale">' +
@@ -2315,7 +2344,7 @@ var InventoryPurchases = (function () {
                 );
 
         var paidBtn = (isCancelled || isDraft)
-            ? actionSlot()
+            ? ""
             : purchase.is_paid
                 ? (
                     '<button type="button" class="inv-row-action-btn inv-row-action-btn--paid" disabled ' +
@@ -2328,8 +2357,17 @@ var InventoryPurchases = (function () {
                     '<span class="material-symbols-outlined">payments</span></button>'
                 );
 
+        var hasPendingBill = !isCancelled && !isDraft && !purchase.is_paid && getPendingBillAmount(purchase) > 0;
+        var reminderBtn = hasPendingBill
+            ? (
+                '<button type="button" class="inv-row-action-btn inv-row-action-btn--reminder inv-purchase-send-reminder" ' +
+                'data-id="' + purchase.id + '"' + typeAttr + ' title="Send reminder" aria-label="Send reminder">' +
+                '<span class="material-symbols-outlined">notifications_active</span></button>'
+            )
+            : "";
+
         var historyBtn = isDraft
-            ? actionSlot()
+            ? ""
             : (
                 '<button type="button" class="inv-row-action-btn inv-row-action-btn--history inv-purchase-invoice-history" ' +
                 'data-id="' + purchase.id + '"' + typeAttr + ' title="Invoice history" aria-label="Invoice history">' +
@@ -2358,20 +2396,45 @@ var InventoryPurchases = (function () {
             '<button type="button" class="inv-row-action-btn inv-row-action-btn--print inv-purchase-print" data-id="' + purchase.id + '"' + typeAttr + ' title="Print" aria-label="Print sale">' +
             '<span class="material-symbols-outlined">print</span></button>';
 
-        var sendPdfBtn =
-            '<button type="button" class="inv-row-action-btn inv-row-action-btn--print inv-purchase-send-pdf" data-id="' + purchase.id + '"' + typeAttr + ' title="Send sale invoice PDF" aria-label="Send sale invoice PDF">' +
-            '<span class="material-symbols-outlined">picture_as_pdf</span></button>';
+        var downloadPdfBtn =
+            '<button type="button" class="inv-row-action-btn inv-row-action-btn--print inv-purchase-download-pdf" data-id="' + purchase.id + '"' + typeAttr + ' title="Download sale invoice PDF" aria-label="Download sale invoice PDF">' +
+            '<span class="material-symbols-outlined">download</span></button>';
+
+        // Keep only real buttons (no invisible slots) so the grid never leaves empty gaps.
+        var topRow = [viewBtn, editBtn, paidBtn, reminderBtn].filter(Boolean).join("");
+        var bottomRow = [cancelBtn, historyBtn, printBtn, downloadPdfBtn].filter(Boolean).join("");
 
         return (
             '<div class="inv-row-actions inv-row-actions--stacked">' +
-                '<div class="inv-row-actions-row">' +
-                    viewBtn + editBtn + paidBtn +
-                "</div>" +
-                '<div class="inv-row-actions-row">' +
-                    cancelBtn + historyBtn + printBtn + sendPdfBtn +
-                "</div>" +
+                (topRow ? '<div class="inv-row-actions-row">' + topRow + "</div>" : "") +
+                (bottomRow ? '<div class="inv-row-actions-row">' + bottomRow + "</div>" : "") +
             "</div>"
         );
+    }
+
+    function sendPaymentReminder(id, saleType) {
+        if (!id) return;
+        saleType = resolveSaleType(saleType, id);
+        var purchase = findCachedPurchase(id);
+        var label = (purchase && (purchase.reference_no || ("Sale #" + purchase.id))) || ("Sale #" + id);
+        var btnSelector = '.inv-purchase-send-reminder[data-id="' + id + '"]';
+        var btn = document.querySelector(btnSelector);
+        if (btn) btn.disabled = true;
+
+        request(saleActionPath(id, saleType, "send-reminder"), { method: "POST", body: {} })
+            .then(function (body) {
+                if (body && body.isSuccess) {
+                    InventoryToast.success(body.message || ("Payment reminder sent for " + label + "."));
+                } else {
+                    InventoryToast.error((body && body.message) || "Unable to send payment reminder.");
+                }
+            })
+            .catch(function () {
+                InventoryToast.error("Network error. Please try again.");
+            })
+            .finally(function () {
+                if (btn) btn.disabled = false;
+            });
     }
 
 
@@ -2562,6 +2625,8 @@ var InventoryPurchases = (function () {
         if (typeEl && typeEl.value) payload.payment_type_id = Number(typeEl.value);
 
         var clearsBill = amount + 0.0001 >= pending;
+        // Next due date temporarily disabled — partial payments save without it.
+        /*
         if (!clearsBill) {
             var nextDue = dueEl ? InventoryApi.getDateInputValue(dueEl) : "";
             if (!nextDue) {
@@ -2575,6 +2640,11 @@ var InventoryPurchases = (function () {
                 return;
             }
             payload.next_due_date = nextDue;
+        }
+        */
+        if (!clearsBill && dueEl) {
+            var optionalNextDue = InventoryApi.getDateInputValue(dueEl);
+            if (optionalNextDue) payload.next_due_date = optionalNextDue;
         }
 
         var btn = document.getElementById("purchase-add-payment-save-btn");
@@ -2860,9 +2930,16 @@ var InventoryPurchases = (function () {
             };
         }
 
+        // Due date display temporarily disabled.
+        /*
         return {
             label: "Payment Due Date",
             value: displayValue(formatViewDateValue(purchase.due_date))
+        };
+        */
+        return {
+            label: "Payment Status",
+            value: "Unpaid"
         };
     }
 
@@ -2870,7 +2947,8 @@ var InventoryPurchases = (function () {
         var dueDateEl = document.getElementById("purchase-invoice-due-date");
         var payload = {
             is_paid: !!isPaid,
-            due_date: isPaid ? null : (InventoryApi.getDateInputValue(dueDateEl) || null)
+            // Due date field temporarily disabled — unpaid sales send null.
+            due_date: isPaid ? null : (dueDateEl ? (InventoryApi.getDateInputValue(dueDateEl) || null) : null)
         };
         if (isPaidSegmentSelected()) {
             var paidAmount = getPaidAmountValue();
@@ -3408,8 +3486,8 @@ var InventoryPurchases = (function () {
                 loadCustomers(),
                 loadTaxes(),
                 loadServices().catch(function () { services = []; }),
-                loadInvoiceSettings(),
-                loadSaleDueSetting()
+                loadInvoiceSettings()
+                // , loadSaleDueSetting()
             ]);
         }).catch(function () {
             /* Form preload failures must not block the sale list. */
@@ -3552,7 +3630,8 @@ var InventoryPurchases = (function () {
             paidInput.dataset.manual = "0";
         }
         setSalePaidToggle(false);
-        applyDefaultDueDateToForm();
+        setSendBillNotification(false);
+        // applyDefaultDueDateToForm();
         document.getElementById("purchase-items-container").innerHTML = "";
         addItemRow(null, isSilent !== false);
         updateSaleTotals();
@@ -3670,12 +3749,16 @@ var InventoryPurchases = (function () {
     }
 
     function getUnpaidEditDueDatePayload() {
+        // Due date UI temporarily disabled — unpaid edits do not require due_date.
+        return {};
+        /*
         var dueWrap = document.getElementById("purchase-due-date-wrap");
         if (!dueWrap || dueWrap.classList.contains("inv-hidden")) return {};
         var dueDateEl = document.getElementById("purchase-invoice-due-date");
         var dueDate = InventoryApi.getDateInputValue(dueDateEl);
         if (!dueDate) return null;
         return { due_date: dueDate };
+        */
     }
 
     function validatePaidAmountWithinBill() {
@@ -3697,6 +3780,8 @@ var InventoryPurchases = (function () {
 
     function validatePaymentFieldsForFinalize() {
         var isPaid = isFullPaymentReceived();
+        // Due date validation temporarily disabled.
+        /*
         if (shouldShowDueDateField()) {
             var dueDateEl = document.getElementById("purchase-invoice-due-date");
             if (!dueDateEl || !InventoryApi.getDateInputValue(dueDateEl)) {
@@ -3705,6 +3790,7 @@ var InventoryPurchases = (function () {
                 return null;
             }
         }
+        */
 
         if (isPaidSegmentSelected()) {
             var paidAmount = getPaidAmountValue();
@@ -3920,6 +4006,7 @@ var InventoryPurchases = (function () {
 
         var finalizeBtn = document.getElementById("purchase-finalize-btn");
         var updateBtn = document.getElementById("purchase-save-btn");
+        var finalizeSendNotify = isSendBillNotificationChecked();
         InventoryLoader.show();
         InventoryLoader.button(finalizeBtn, true, "Finalizing...");
 
@@ -3927,6 +4014,9 @@ var InventoryPurchases = (function () {
             .then(function (body) {
                 if (body && body.isSuccess) {
                     InventoryToast.success(body.message || "Draft sale finalized.");
+                    if (finalizeSendNotify) {
+                        maybeSendBillGeneratedNotification(body.data || { id: editingPurchaseId });
+                    }
                     resetForm(true);
                     InventoryPagePanel.showList(PURCHASES_LIST_PANEL);
                     loadPurchases(currentPage);
@@ -3988,12 +4078,15 @@ var InventoryPurchases = (function () {
 
             if (editingPurchaseId) {
                 var serviceDuePayload = getUnpaidEditDueDatePayload();
+                // Due date requirement temporarily disabled.
+                /*
                 if (serviceDuePayload === null) {
                     InventoryToast.error("Please enter a due date for unpaid sales.");
                     var serviceDueDateEl = document.getElementById("purchase-invoice-due-date");
                     if (serviceDueDateEl) serviceDueDateEl.focus();
                     return;
                 }
+                */
 
                 var serviceEditBtn = document.getElementById("purchase-save-btn");
                 InventoryLoader.button(serviceEditBtn, true, "Updating...");
@@ -4032,6 +4125,7 @@ var InventoryPurchases = (function () {
             var serviceSaveBtn = document.getElementById("purchase-save-btn");
             InventoryLoader.button(serviceSaveBtn, true, "Saving...");
 
+            var serviceSendNotify = isSendBillNotificationChecked();
             request("/service-sales/", {
                 method: "POST",
                 body: Object.assign(
@@ -4046,6 +4140,7 @@ var InventoryPurchases = (function () {
                             saveSalePrintMeta(body.data.id, getSalePrintMetaFromForm());
                         }
                         InventoryToast.success(body.message || "Service sale added successfully.");
+                        if (serviceSendNotify) maybeSendBillGeneratedNotification(body.data);
                         resetForm(true);
                         InventoryPagePanel.showList(PURCHASES_LIST_PANEL);
                         loadPurchases(1);
@@ -4102,12 +4197,15 @@ var InventoryPurchases = (function () {
 
         if (editingPurchaseId) {
             var duePayload = getUnpaidEditDueDatePayload();
+            // Due date requirement temporarily disabled.
+            /*
             if (duePayload === null) {
                 InventoryToast.error("Please enter a due date for unpaid sales.");
                 var dueDateEl = document.getElementById("purchase-invoice-due-date");
                 if (dueDateEl) dueDateEl.focus();
                 return;
             }
+            */
 
             var btn = document.getElementById("purchase-save-btn");
             InventoryLoader.button(btn, true, "Updating...");
@@ -4146,6 +4244,7 @@ var InventoryPurchases = (function () {
         var btn = document.getElementById("purchase-save-btn");
         InventoryLoader.button(btn, true, "Saving...");
 
+        var productSendNotify = isSendBillNotificationChecked();
         request("", {
             method: "POST",
             body: Object.assign(getSaleHeaderPayload(true), getPaymentPayloadForSave(isPaid), {
@@ -4159,6 +4258,7 @@ var InventoryPurchases = (function () {
                         saveSalePrintMeta(body.data.id, getSalePrintMetaFromForm());
                     }
                     InventoryToast.success(body.message || "Sale added successfully. Stock has been updated.");
+                    if (productSendNotify) maybeSendBillGeneratedNotification(body.data);
                     resetForm(true);
                     InventoryPagePanel.showList(PURCHASES_LIST_PANEL);
                     loadPurchases(1);
@@ -4178,7 +4278,7 @@ var InventoryPurchases = (function () {
 
     function init() {
         InventoryApi.watch(["/api/catalog", "/api/settings", "/api/products", "/api/customers", "/api/invoicing", "/api/purchases"], function () {
-            return Promise.all([loadTaxes(), loadProducts({ includeProductIds: getIncludedEditProductIds() }), loadCustomers(), loadPaymentTypes(), loadInvoiceSettings(), loadSaleDueSetting()]).then(function () {
+            return Promise.all([loadTaxes(), loadProducts({ includeProductIds: getIncludedEditProductIds() }), loadCustomers(), loadPaymentTypes(), loadInvoiceSettings() /* , loadSaleDueSetting() */]).then(function () {
                 refreshAllProductSelects(true);
                 document.querySelectorAll("#purchase-items-container .inv-mgmt-item-row").forEach(function (row) {
                     if (row.dataset.saleLineId) return;
@@ -4224,6 +4324,8 @@ var InventoryPurchases = (function () {
             boot();
         });
 
+        // Set Due Date UI temporarily disabled.
+        /*
         var setDueDateBtn = document.getElementById("purchases-set-due-date-btn");
         if (setDueDateBtn) setDueDateBtn.addEventListener("click", openDueSettingModal);
 
@@ -4238,9 +4340,10 @@ var InventoryPurchases = (function () {
                 }
             });
         }
+        */
 
         if (window.InventoryModal) {
-            InventoryModal.wire("purchase-due-setting-modal");
+            // InventoryModal.wire("purchase-due-setting-modal");
             InventoryModal.wire("purchase-add-service-modal");
         }
 
@@ -4518,11 +4621,11 @@ var InventoryPurchases = (function () {
                     return;
                 }
 
-                var sendPdfBtn = e.target.closest(".inv-purchase-send-pdf");
-                if (sendPdfBtn) {
-                    sendSaleInvoicePdf(
-                        sendPdfBtn.getAttribute("data-id"),
-                        sendPdfBtn.getAttribute("data-sale-type") || "product"
+                var downloadPdfBtn = e.target.closest(".inv-purchase-download-pdf");
+                if (downloadPdfBtn) {
+                    downloadSaleInvoicePdf(
+                        downloadPdfBtn.getAttribute("data-id"),
+                        downloadPdfBtn.getAttribute("data-sale-type") || "product"
                     );
                     return;
                 }
@@ -4532,6 +4635,15 @@ var InventoryPurchases = (function () {
                     openAddPaymentModal(
                         addPaymentBtn.getAttribute("data-id"),
                         addPaymentBtn.getAttribute("data-sale-type") || "product"
+                    );
+                    return;
+                }
+
+                var reminderBtn = e.target.closest(".inv-purchase-send-reminder");
+                if (reminderBtn) {
+                    sendPaymentReminder(
+                        reminderBtn.getAttribute("data-id"),
+                        reminderBtn.getAttribute("data-sale-type") || "product"
                     );
                     return;
                 }

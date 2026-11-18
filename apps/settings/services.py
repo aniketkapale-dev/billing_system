@@ -9,7 +9,7 @@ from apps.invoicing.models import PurchaseInvoiceItem
 from apps.products.models import Product
 from apps.settings.models import ProductBarcode
 
-from apps.purchases.models import Purchase
+from apps.purchases.models import Purchase, ServiceSale
 from apps.settings.models import WhatsAppMessageLog, WhatsAppMessageSetting
 from apps.settings.repositories import (
     InvoiceSettingRepository,
@@ -716,4 +716,106 @@ class WhatsAppMessageSettingService(BaseService):
             "first_time_count": first_time_count,
             "recipients": sent_payload,
             "skipped": skipped,
+        }
+
+    def _recipient_from_purchase(self, sale):
+        pending = self._sale_pending_amount(sale)
+        if pending <= 0:
+            raise ValidationException("This invoice has no pending balance.")
+        customer = sale.customer
+        return {
+            "sale_id": sale.id,
+            "invoice_no": self._invoice_label(sale),
+            "customer_id": customer.id if customer else None,
+            "customer_name": sale.customer_name or "Customer",
+            "mobile": (customer.mobile if customer else "") or "",
+            "total_amount": str((sale.total_amount or Decimal("0")).quantize(Decimal("0.01"))),
+            "pending_amount": str(pending.quantize(Decimal("0.01"))),
+            "sale_date": sale.purchase_date,
+        }
+
+    def _recipient_from_service_sale(self, sale):
+        paid = sum(
+            (payment.amount for payment in sale.payments.all() if not payment.is_deleted),
+            Decimal("0"),
+        )
+        total = sale.total_amount or Decimal("0")
+        pending = max(total - paid, Decimal("0"))
+        if pending <= 0:
+            raise ValidationException("This invoice has no pending balance.")
+        customer = sale.customer
+        invoice_no = sale.reference_no or f"Service Sale #{sale.id}"
+        return {
+            "sale_id": None,
+            "invoice_no": invoice_no,
+            "customer_id": customer.id if customer else None,
+            "customer_name": sale.customer_name or "Customer",
+            "mobile": (customer.mobile if customer else "") or "",
+            "total_amount": str(total.quantize(Decimal("0.01"))),
+            "pending_amount": str(pending.quantize(Decimal("0.01"))),
+            "sale_date": sale.sale_date,
+        }
+
+    def send_single_payment_reminder(self, business_id, *, sale_id=None, service_sale_id=None):
+        if bool(sale_id) == bool(service_sale_id):
+            raise ValidationException("Provide either a product sale or a service sale.")
+
+        if sale_id:
+            sale = (
+                self._sales_base_queryset(business_id)
+                .filter(pk=sale_id)
+                .select_related("customer")
+                .prefetch_related("payments")
+                .first()
+            )
+            if not sale:
+                raise ValidationException("Sale not found.")
+            if sale.is_paid:
+                raise ValidationException("This sale is already paid.")
+            item = self._recipient_from_purchase(sale)
+            last_logs = self._last_log_by_sale(business_id)
+            item["is_first_send"] = sale.id not in last_logs
+        else:
+            sale = (
+                ServiceSale.objects.filter(
+                    business_id=business_id,
+                    pk=service_sale_id,
+                    is_deleted=False,
+                    is_cancelled=False,
+                    is_draft=False,
+                )
+                .select_related("customer")
+                .prefetch_related("payments")
+                .first()
+            )
+            if not sale:
+                raise ValidationException("Service sale not found.")
+            if sale.is_paid:
+                raise ValidationException("This service sale is already paid.")
+            item = self._recipient_from_service_sale(sale)
+            prior = WhatsAppMessageLog.objects.filter(
+                business_id=business_id,
+                is_deleted=False,
+                invoice_no=item["invoice_no"],
+            ).exists()
+            item["is_first_send"] = not prior
+
+        logs = self._store_sent_messages(business_id, [item])
+        log = logs[0]
+        print(
+            "[WhatsApp Reminder] Manual payment reminder sent: "
+            f"Invoice: {item.get('invoice_no') or '—'} | "
+            f"Customer: {item['customer_name']} | "
+            f"Mobile: {item['mobile'] or '—'} | "
+            f"Pending Amount: {item['pending_amount']} | "
+            f"First Send: {'Yes' if log.is_first_send else 'No'}"
+        )
+        return {
+            "sale_id": item.get("sale_id"),
+            "invoice_no": item.get("invoice_no") or "",
+            "customer_name": item["customer_name"],
+            "mobile": item.get("mobile") or "",
+            "total_amount": item["total_amount"],
+            "pending_amount": item["pending_amount"],
+            "is_first_send": bool(item.get("is_first_send")),
         }

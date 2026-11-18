@@ -452,8 +452,9 @@ class PurchaseService(BaseService):
         parsed_due_date = self._parse_optional_date(next_due_date)
         if not parsed_due_date:
             parsed_due_date = purchase.due_date
-        if not parsed_due_date:
-            raise ValidationException("Next due date is required when the bill is not fully paid.")
+        # Next due date requirement temporarily disabled.
+        # if not parsed_due_date:
+        #     raise ValidationException("Next due date is required when the bill is not fully paid.")
 
         purchase.is_paid = False
         purchase.paid_at = None
@@ -503,8 +504,9 @@ class PurchaseService(BaseService):
 
         will_clear = amount + Decimal("0.0001") >= pending
         parsed_next_due = self._parse_optional_date(next_due_date)
-        if not will_clear and not parsed_next_due:
-            raise ValidationException("Next due date is required when payment does not clear the full bill.")
+        # Next due date requirement temporarily disabled.
+        # if not will_clear and not parsed_next_due:
+        #     raise ValidationException("Next due date is required when payment does not clear the full bill.")
         if not will_clear and parsed_next_due and parsed_next_due < payment_date:
             raise ValidationException("Next due date cannot be before the payment date.")
 
@@ -554,8 +556,9 @@ class PurchaseService(BaseService):
             return purchase
 
         parsed_due_date = self._parse_optional_date(due_date)
-        if not parsed_due_date:
-            raise ValidationException("Due date is required for unpaid sales.")
+        # Due date requirement temporarily disabled.
+        # if not parsed_due_date:
+        #     raise ValidationException("Due date is required for unpaid sales.")
         purchase.is_paid = False
         purchase.paid_at = None
         purchase.due_date = parsed_due_date
@@ -618,12 +621,13 @@ class PurchaseService(BaseService):
         else:
             data["is_paid"] = False
             parsed_due_date = self._parse_optional_date(due_date)
-            if not is_draft and not parsed_due_date:
-                sale_date = data.get("purchase_date") or timezone.localdate()
-                parsed_due_date = SaleDueSettingService().default_due_date_for_sale(
-                    business_id,
-                    sale_date,
-                )
+            # Auto due date from Set Due Date setting temporarily disabled.
+            # if not is_draft and not parsed_due_date:
+            #     sale_date = data.get("purchase_date") or timezone.localdate()
+            #     parsed_due_date = SaleDueSettingService().default_due_date_for_sale(
+            #         business_id,
+            #         sale_date,
+            #     )
             data["due_date"] = parsed_due_date
 
         data["is_draft"] = is_draft
@@ -801,8 +805,9 @@ class PurchaseService(BaseService):
             data.pop("due_date", None)
         elif "due_date" in data and not purchase.is_paid:
             parsed_due_date = self._parse_optional_date(data.get("due_date"))
-            if not parsed_due_date:
-                raise ValidationException("Due date is required for unpaid sales.")
+            # Due date requirement temporarily disabled.
+            # if not parsed_due_date:
+            #     raise ValidationException("Due date is required for unpaid sales.")
             data = dict(data)
             data["due_date"] = parsed_due_date
         updates = self._build_header_updates(purchase, data)
@@ -1163,8 +1168,9 @@ class ServiceSaleService(BaseService):
         parsed_due_date = self._parse_optional_date(next_due_date)
         if not parsed_due_date:
             parsed_due_date = service_sale.due_date
-        if not parsed_due_date:
-            raise ValidationException("Next due date is required when the bill is not fully paid.")
+        # Next due date requirement temporarily disabled.
+        # if not parsed_due_date:
+        #     raise ValidationException("Next due date is required when the bill is not fully paid.")
 
         service_sale.is_paid = False
         service_sale.paid_at = None
@@ -1205,10 +1211,11 @@ class ServiceSaleService(BaseService):
 
         will_clear = amount + Decimal("0.0001") >= pending
         parsed_next_due = self._parse_optional_date(next_due_date)
-        if not will_clear and not parsed_next_due:
-            raise ValidationException(
-                "Next due date is required when payment does not clear the full bill."
-            )
+        # Next due date requirement temporarily disabled.
+        # if not will_clear and not parsed_next_due:
+        #     raise ValidationException(
+        #         "Next due date is required when payment does not clear the full bill."
+        #     )
 
         ServiceSalePayment.objects.create(
             service_sale=service_sale,
@@ -1253,8 +1260,9 @@ class ServiceSaleService(BaseService):
             return service_sale
 
         parsed_due_date = self._parse_optional_date(due_date)
-        if not parsed_due_date:
-            raise ValidationException("Due date is required for unpaid sales.")
+        # Due date requirement temporarily disabled.
+        # if not parsed_due_date:
+        #     raise ValidationException("Due date is required for unpaid sales.")
         service_sale.is_paid = False
         service_sale.paid_at = None
         service_sale.due_date = parsed_due_date
@@ -1306,12 +1314,13 @@ class ServiceSaleService(BaseService):
         else:
             data["is_paid"] = False
             parsed_due_date = self._parse_optional_date(due_date)
-            if not parsed_due_date:
-                sale_date = data.get("sale_date") or timezone.localdate()
-                parsed_due_date = SaleDueSettingService().default_due_date_for_sale(
-                    business_id,
-                    sale_date,
-                )
+            # Auto due date from Set Due Date setting temporarily disabled.
+            # if not parsed_due_date:
+            #     sale_date = data.get("sale_date") or timezone.localdate()
+            #     parsed_due_date = SaleDueSettingService().default_due_date_for_sale(
+            #         business_id,
+            #         sale_date,
+            #     )
             data["due_date"] = parsed_due_date
 
         data["is_draft"] = is_draft
@@ -1535,8 +1544,9 @@ class ServiceSaleService(BaseService):
             data.pop("due_date", None)
         elif "due_date" in data and not service_sale.is_paid:
             parsed_due_date = self._parse_optional_date(data.get("due_date"))
-            if not parsed_due_date:
-                raise ValidationException("Due date is required for unpaid sales.")
+            # Due date requirement temporarily disabled.
+            # if not parsed_due_date:
+            #     raise ValidationException("Due date is required for unpaid sales.")
             data = dict(data)
             data["due_date"] = parsed_due_date
 

@@ -144,36 +144,108 @@ var InventoryDocumentExport = (function () {
         });
     }
 
+    function waitForInvoiceImage(img) {
+        return new Promise(function (resolve, reject) {
+            var timer;
+            function cleanup() {
+                window.clearTimeout(timer);
+                img.removeEventListener("load", onLoad);
+                img.removeEventListener("error", onError);
+            }
+            function onLoad() {
+                cleanup();
+                if (img.naturalWidth) resolve();
+                else reject(new Error("empty image"));
+            }
+            function onError() {
+                cleanup();
+                reject(new Error("image error"));
+            }
+            if (img.complete) {
+                if (img.naturalWidth) {
+                    resolve();
+                    return;
+                }
+                reject(new Error("empty image"));
+                return;
+            }
+            img.addEventListener("load", onLoad);
+            img.addEventListener("error", onError);
+            timer = window.setTimeout(function () {
+                cleanup();
+                if (img.complete && img.naturalWidth) resolve();
+                else reject(new Error("image timeout"));
+            }, 15000);
+        });
+    }
+
+    function embedInvoiceImageAsDataUrl(img) {
+        var src = img.currentSrc || img.getAttribute("src") || "";
+        if (!src || src.indexOf("data:") === 0) return Promise.resolve();
+
+        return fetch(src, { credentials: "same-origin", cache: "force-cache" })
+            .then(function (response) {
+                if (!response.ok) throw new Error("fetch failed");
+                return response.blob();
+            })
+            .then(function (blob) {
+                return new Promise(function (resolve, reject) {
+                    var reader = new FileReader();
+                    reader.onload = function () {
+                        img.removeAttribute("crossorigin");
+                        img.onload = function () { resolve(); };
+                        img.onerror = function () { resolve(); };
+                        img.src = String(reader.result || "");
+                    };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(blob);
+                });
+            })
+            .catch(function () {
+                // Fallback: canvas copy when fetch is unavailable (e.g. blob:/data: already).
+                try {
+                    var canvas = img.ownerDocument.createElement("canvas");
+                    canvas.width = img.naturalWidth;
+                    canvas.height = img.naturalHeight;
+                    canvas.getContext("2d").drawImage(img, 0, 0);
+                    img.removeAttribute("crossorigin");
+                    img.src = canvas.toDataURL("image/png");
+                } catch (err) {
+                    throw err;
+                }
+            });
+    }
+
+    function prepareInvoiceImage(img, embedImages) {
+        // Drop CORS attribute — Django media usually has no CORS headers and
+        // crossorigin=anonymous then fails the load entirely.
+        if (img.hasAttribute("crossorigin")) {
+            var src = img.getAttribute("src") || "";
+            img.removeAttribute("crossorigin");
+            if (src) {
+                img.src = "";
+                img.src = src;
+            }
+        }
+
+        return waitForInvoiceImage(img)
+            .then(function () {
+                if (!embedImages) return;
+                return embedInvoiceImageAsDataUrl(img);
+            })
+            .catch(function () {
+                // Soft-fail: keep print/PDF working without the broken image.
+                try {
+                    img.removeAttribute("src");
+                    img.alt = "";
+                    img.style.display = "none";
+                } catch (err) { /* ignore */ }
+            });
+    }
+
     function prepareSalesDocument(doc, embedImages) {
         var assets = Array.prototype.map.call(doc.images, function (img) {
-            return new Promise(function (resolve, reject) {
-                var timer;
-                function finish() {
-                    window.clearTimeout(timer);
-                    img.removeEventListener("load", finish);
-                    img.removeEventListener("error", finish);
-                    if (!img.complete || !img.naturalWidth) {
-                        reject(new Error("Unable to load the invoice image. Please try again."));
-                        return;
-                    }
-                    if (!embedImages) { resolve(); return; }
-                    try {
-                        var canvas = doc.createElement("canvas");
-                        canvas.width = img.naturalWidth;
-                        canvas.height = img.naturalHeight;
-                        canvas.getContext("2d").drawImage(img, 0, 0);
-                        img.src = canvas.toDataURL("image/png");
-                        if (img.decode) img.decode().then(resolve, reject);
-                        else resolve();
-                    } catch (err) {
-                        reject(new Error("Unable to prepare the invoice image. Please try again."));
-                    }
-                }
-                if (img.complete) { finish(); return; }
-                img.addEventListener("load", finish);
-                img.addEventListener("error", finish);
-                timer = window.setTimeout(finish, 15000);
-            });
+            return prepareInvoiceImage(img, embedImages);
         });
         if (doc.fonts) assets.push(doc.fonts.ready);
         return Promise.all(assets).then(function () {
@@ -569,7 +641,8 @@ var InventoryDocumentExport = (function () {
             buildInlineDetailField("Dated", invoiceDate, false) +
             buildInlineDetailField("Place of Supply", sale.customer_place_of_supply || sale.place_of_supply, false) +
             buildInlineDetailField("Reverse Charge", sale.reverse_charge || "N", false) +
-            buildInlineDetailField("Due Date", sale.due_date ? formatDisplayDate(sale.due_date) : "", true) +
+            // Due date on invoice print temporarily disabled.
+            // buildInlineDetailField("Due Date", sale.due_date ? formatDisplayDate(sale.due_date) : "", true) +
             buildInlineDetailField("Terms", sale.invoice_print_terms, true) +
             buildInlineDetailField("PO Number", sale.po_number || sale.po_no, true) +
             buildInlineDetailField("Payment", sale.payment_type_name, true),
@@ -602,7 +675,8 @@ var InventoryDocumentExport = (function () {
             '<p class="inv-box-title">Invoice Details</p>' +
             buildInlineDetailField("Invoice No.", invoiceNo, false) +
             buildInlineDetailField("Dated", invoiceDate, false) +
-            buildInlineDetailField("Due Date", sale.due_date ? formatDisplayDate(sale.due_date) : "", true) +
+            // Due date on invoice print temporarily disabled.
+            // buildInlineDetailField("Due Date", sale.due_date ? formatDisplayDate(sale.due_date) : "", true) +
             buildInlineDetailField("Terms", sale.invoice_print_terms, true) +
             buildInlineDetailField("Payment", sale.payment_type_name, true),
             "inv-header-panel--invoice");
@@ -727,7 +801,7 @@ var InventoryDocumentExport = (function () {
             '<h3>' + getTermsCaption() + '</h3>' +
             '<div class="inv-terms-body">' + (termsBodyHtml || '&mdash;') + '</div></section>' +
             '<section class="inv-invoice-bottom-qr"><h3>Payment QR Code</h3>' +
-            (qrUrl ? '<div class="inv-qr-wrap"><img class="inv-qr" crossorigin="anonymous" src="' + escapeHtml(qrUrl) + '" alt="Payment QR Code"/></div>' : '') +
+            (qrUrl ? '<div class="inv-qr-wrap"><img class="inv-qr" src="' + escapeHtml(qrUrl) + '" alt="Payment QR Code"/></div>' : '') +
             '</section>' + buildAuthorizedSignatureSection(businessName) +
             '</div></footer>';
     }
@@ -1358,17 +1432,19 @@ var InventoryDocumentExport = (function () {
             });
     }
 
-    function downloadSalesPdf(sales, filename) {
-        if (!sales || !sales.length) return;
+    function downloadSalesPdf(sales, filename, taxes) {
+        if (!sales || !sales.length) return Promise.resolve();
         if (window.InventoryLoader) InventoryLoader.show();
+        var taxList = taxes || [];
         var chain = Promise.resolve(null);
         sales.forEach(function (sale) {
-            chain = chain.then(function (pdf) { return appendSaleInvoicePdf(sale, [], pdf); });
+            chain = chain.then(function (pdf) { return appendSaleInvoicePdf(sale, taxList, pdf); });
         });
         return chain.then(function (pdf) {
             pdf.save(filename || "sales.pdf");
         }).catch(function (err) {
             if (window.InventoryToast) InventoryToast.error(err && err.message ? err.message : "Unable to generate PDF.");
+            throw err;
         }).finally(function () {
             if (window.InventoryLoader) InventoryLoader.hide();
         });

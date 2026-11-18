@@ -4,30 +4,6 @@
 var InventorySidebar = (function () {
     "use strict";
 
-    var HOVER_OPEN_DELAY_MS = 180;
-    var HOVER_CLOSE_DELAY_MS = 400;
-
-    function clearGroupTimers(group) {
-        clearTimeout(group._openTimer);
-        clearTimeout(group._closeTimer);
-        group._openTimer = null;
-        group._closeTimer = null;
-    }
-
-    function shouldKeepGroupOpen(group) {
-        if (isCollapsedRail()) return false;
-        if (group.classList.contains("inv-nav-group--has-active-child")) return true;
-        return group.dataset.clickOpen === "1";
-    }
-
-    function scheduleCloseGroup(group) {
-        clearTimeout(group._closeTimer);
-        group._closeTimer = setTimeout(function () {
-            group._closeTimer = null;
-            if (shouldKeepGroupOpen(group)) return;
-            setGroupOpen(group, false);
-        }, HOVER_CLOSE_DELAY_MS);
-    }
     function isCollapsedRail() {
         var body = document.body;
         if (isMobileDrawer()) {
@@ -122,9 +98,16 @@ var InventorySidebar = (function () {
         document.querySelectorAll(".inv-nav-group").forEach(function (group) {
             if (group === except) return;
             if (!isCollapsedRail() && group.classList.contains("inv-nav-group--has-active-child")) return;
-            if (!isCollapsedRail() && group.dataset.clickOpen === "1") return;
-            clearGroupTimers(group);
-            scheduleCloseGroup(group);
+            group.dataset.clickOpen = "0";
+            setGroupOpen(group, false);
+        });
+    }
+
+    function closeAllCollapsedFlyouts() {
+        if (!isCollapsedRail()) return;
+        document.querySelectorAll(".inv-nav-group").forEach(function (group) {
+            group.dataset.clickOpen = "0";
+            setGroupOpen(group, false);
         });
     }
 
@@ -138,31 +121,24 @@ var InventorySidebar = (function () {
                 group.dataset.clickOpen = isCollapsedRail() ? "0" : "1";
             }
 
-            group.addEventListener("mouseenter", function () {
-                if (!group.querySelector(".inv-nav-sub")) return;
-                clearGroupTimers(group);
-                ensureGroupFullyVisible(group);
-                group._openTimer = setTimeout(function () {
-                    group._openTimer = null;
-                    closeOtherGroups(group);
-                    setGroupOpen(group, true);
-                }, HOVER_OPEN_DELAY_MS);
-            });
-
-            group.addEventListener("mouseleave", function () {
-                clearGroupTimers(group);
-                resetFlyoutPosition(group);
-                scheduleCloseGroup(group);
-            });
-
-            toggle.addEventListener("click", function () {
-                clearGroupTimers(group);
+            toggle.addEventListener("click", function (e) {
+                e.preventDefault();
+                e.stopPropagation();
                 var isOpen = !group.classList.contains("inv-nav-group--open");
                 setGroupOpen(group, isOpen);
                 group.dataset.clickOpen = isOpen ? "1" : "0";
                 if (isOpen) closeOtherGroups(group);
             });
         });
+
+        if (!initGroups._outsideWired) {
+            initGroups._outsideWired = true;
+            document.addEventListener("click", function (e) {
+                if (!isCollapsedRail()) return;
+                if (e.target.closest(".inv-nav-group")) return;
+                closeAllCollapsedFlyouts();
+            });
+        }
     }
 
     function wireAddButtons() {

@@ -321,6 +321,32 @@ class PurchaseViewSet(BusinessScopedViewSetMixin, BaseViewSet):
             message="Sale invoice PDF saved.",
         )
 
+    def send_reminder(self, request, pk=None):
+        from apps.settings.services import WhatsAppMessageSettingService
+        from core.exceptions import ValidationException
+
+        business = self.get_active_business()
+        purchase = self.get_service().get(pk)
+        if purchase.business_id != business.id:
+            return ApiResponse.error(
+                message="Sale not found.",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+        try:
+            data = WhatsAppMessageSettingService().send_single_payment_reminder(
+                business.id,
+                sale_id=purchase.id,
+            )
+        except ValidationException as exc:
+            return ApiResponse.error(
+                message=exc.message,
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+        return ApiResponse.success(
+            data=data,
+            message="Payment reminder sent for this invoice.",
+        )
+
     def destroy(self, request, pk=None):
         return ApiResponse.error(
             message="Purchase delete is not supported.",
@@ -545,6 +571,32 @@ class ServiceSaleViewSet(BusinessScopedViewSetMixin, BaseViewSet):
         return ApiResponse.success(
             data={"url": url},
             message="Service sale invoice PDF saved.",
+        )
+
+    def send_reminder(self, request, pk=None):
+        from apps.settings.services import WhatsAppMessageSettingService
+        from core.exceptions import ValidationException
+
+        business = self.get_active_business()
+        sale = self.get_service().get(pk)
+        if sale.business_id != business.id:
+            return ApiResponse.error(
+                message="Service sale not found.",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+        try:
+            data = WhatsAppMessageSettingService().send_single_payment_reminder(
+                business.id,
+                service_sale_id=sale.id,
+            )
+        except ValidationException as exc:
+            return ApiResponse.error(
+                message=exc.message,
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+        return ApiResponse.success(
+            data=data,
+            message="Payment reminder sent for this invoice.",
         )
 
     def destroy(self, request, pk=None):

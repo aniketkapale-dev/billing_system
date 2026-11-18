@@ -274,11 +274,6 @@ body.inv-dashboard-body.inv-sidebar-drawer-open .inv-sidebar-backdrop {
         padding: 0 0 0 8px;
     }
 
-    body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) .inv-nav-group:hover .inv-nav-sub {
-        display: none !important;
-    }
-
-    body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) .inv-nav-group.inv-nav-group--open:hover .inv-nav-sub,
     body.inv-dashboard-body.inv-sidebar-drawer-open .inv-nav-group.inv-nav-group--open .inv-nav-sub {
         display: block !important;
     }

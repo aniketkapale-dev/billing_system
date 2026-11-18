@@ -173,7 +173,7 @@ var InventoryServiceSaleInvoiceExport = (function () {
             '<div class="inv-terms-body">' + termsBody + "</div></section>" +
             '<section class="inv-invoice-bottom-qr"><h3>Payment QR Code</h3>' +
             (qrUrl
-                ? '<div class="inv-qr-wrap"><img class="inv-qr" crossorigin="anonymous" src="' +
+                ? '<div class="inv-qr-wrap"><img class="inv-qr" src="' +
                   escapeHtml(qrUrl) +
                   '" alt="Payment QR Code"/></div>'
                 : "") +
@@ -397,7 +397,8 @@ var InventoryServiceSaleInvoiceExport = (function () {
             invoiceDetails.innerHTML =
                 detailField("Invoice No.", invoiceNo, false) +
                 detailField("Dated", invoiceDate, false) +
-                detailField("Due Date", sale.due_date ? formatDisplayDate(sale.due_date) : "", true) +
+                // Due date on invoice print temporarily disabled.
+                // detailField("Due Date", sale.due_date ? formatDisplayDate(sale.due_date) : "", true) +
                 detailField("Terms", sale.invoice_print_terms, true) +
                 detailField("Payment", sale.payment_type_name, true);
         }

@@ -268,6 +268,13 @@ var InventorySalePrintPreview = (function () {
         window.setTimeout(fitPreviewToFrame, 60);
     }
 
+    function invoicePdfFilename(sales) {
+        if (sales.length === 1) {
+            return (sales[0].reference_no || ("sale-" + sales[0].id)).replace(/[^\w.-]+/g, "_") + ".pdf";
+        }
+        return "sales-invoices.pdf";
+    }
+
     function printCurrentPreview() {
         if (!window.InventoryDocumentExport || !state.sales.length) return;
 
@@ -287,6 +294,34 @@ var InventorySalePrintPreview = (function () {
         if (window.InventoryModal) {
             InventoryModal.close("sale-invoice-print-preview-modal");
         }
+    }
+
+    function downloadCurrentPreview() {
+        if (!window.InventoryDocumentExport || !state.sales.length) return;
+        if (typeof InventoryDocumentExport.downloadSalesPdf !== "function") {
+            if (window.InventoryToast) InventoryToast.error("PDF download is unavailable.");
+            return;
+        }
+
+        var salesToDownload = buildPreviewSales();
+        if (isSingleSale() && typeof state.onSaveOverrides === "function") {
+            state.onSaveOverrides(state.sales[0].id, getOverridesFromEditor());
+        }
+
+        var downloadBtn = document.getElementById("sale-print-preview-download-btn");
+        if (downloadBtn) downloadBtn.disabled = true;
+
+        InventoryDocumentExport.downloadSalesPdf(
+            salesToDownload,
+            invoicePdfFilename(salesToDownload),
+            state.taxes
+        ).then(function () {
+            if (window.InventoryToast) InventoryToast.success("Invoice PDF downloaded.");
+        }).catch(function () {
+            /* toast handled in downloadSalesPdf */
+        }).finally(function () {
+            if (downloadBtn) downloadBtn.disabled = false;
+        });
     }
 
     function init(options) {
@@ -310,6 +345,11 @@ var InventorySalePrintPreview = (function () {
         var resetBtn = document.getElementById("sale-print-terms-reset-btn");
         if (resetBtn) {
             resetBtn.addEventListener("click", resetEditorToSettings);
+        }
+
+        var downloadBtn = document.getElementById("sale-print-preview-download-btn");
+        if (downloadBtn) {
+            downloadBtn.addEventListener("click", downloadCurrentPreview);
         }
 
         var printBtn = document.getElementById("sale-print-preview-print-btn");

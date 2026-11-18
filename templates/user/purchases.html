@@ -8,10 +8,12 @@
         <div class="inv-mgmt-header">
             <h2 class="inv-dashboard-greeting">Sale</h2>
             <div class="inv-mgmt-header-actions">
+                {% comment %}Due date setting temporarily disabled
                 <button id="purchases-set-due-date-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--secondary">
                     <span class="material-symbols-outlined">event</span>
                     Set Due Date
                 </button>
+                {% endcomment %}
                 <button id="purchase-open-modal-btn" type="button" class="inv-mgmt-btn inv-mgmt-btn--primary">
                     <span class="material-symbols-outlined">add</span>
                     Add Sale
@@ -237,13 +239,21 @@
                                 </div>
                                 <input type="checkbox" id="purchase-mark-paid" class="inv-hidden" tabindex="-1" aria-hidden="true"/>
                             </div>
+                            {% comment %}Sale due date field temporarily disabled
                             <div id="purchase-due-date-wrap" class="inv-sale-payment-due inv-hidden">
                                 <label for="purchase-invoice-due-date">Due Date</label>
                                 <input id="purchase-invoice-due-date" class="inv-mgmt-input inv-date-input" type="text" placeholder="dd/mm/yyyy" autocomplete="off" inputmode="numeric"/>
                             </div>
+                            {% endcomment %}
                             <div id="purchase-paid-amount-wrap" class="inv-sale-payment-due inv-hidden">
                                 <label for="purchase-paid-amount">Amount Received</label>
                                 <input id="purchase-paid-amount" class="inv-mgmt-input" type="number" step="0.01" min="0" placeholder="0.00"/>
+                            </div>
+                            <div id="purchase-send-bill-notify-wrap" class="inv-sale-notify-wrap">
+                                <label class="inv-mgmt-checkbox-label" for="purchase-send-bill-notify">
+                                    <input id="purchase-send-bill-notify" type="checkbox"/>
+                                    Send the bill generated notification
+                                </label>
                             </div>
                         </div>
                     </div>
@@ -406,6 +416,7 @@
     </div>
 </div>
 
+{% comment %}Set Due Date modal temporarily disabled
 <div id="purchase-due-setting-modal" class="inv-modal inv-hidden" aria-hidden="true">
     <div class="inv-modal-backdrop" data-modal-close></div>
     <div class="inv-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="purchase-due-setting-title">
@@ -428,6 +439,7 @@
         </div>
     </div>
 </div>
+{% endcomment %}
 {% endblock %}
 
 {% block page_scripts %}
@@ -438,9 +450,9 @@
 <script src="{% static 'js/inventory/customers.js' %}?v=20261001-cross-tab-refresh"></script>
 <script src="{% static 'js/inventory/settings-tax.js' %}?v=20261001-cross-tab-refresh"></script>
 <script src="{% static 'js/inventory/settings-invoice.js' %}?v=20261001-cross-tab-refresh"></script>
-<script src="{% static 'js/components/sale-invoice-print-preview.js' %}?v=20260311-no-caption"></script>
-<script src="{% static 'js/components/service-sale-invoice-export.js' %}?v=20261027-service-no-taxable-row"></script>
-<script src="{% static 'js/inventory/purchases.js' %}?v=20261027-service-base-price"></script>
+<script src="{% static 'js/components/sale-invoice-print-preview.js' %}?v=20261028-invoice-download"></script>
+<script src="{% static 'js/components/service-sale-invoice-export.js' %}?v=20261028-due-date-disabled"></script>
+<script src="{% static 'js/inventory/purchases.js' %}?v=20261028-action-gap"></script>
 <script>
 InventoryPagePanel.init();
 InventoryCustomers.init();

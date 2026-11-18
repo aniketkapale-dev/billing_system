@@ -39,6 +39,11 @@ urlpatterns = [
         ServiceSaleViewSet.as_view({"post": "save_invoice_pdf"}),
         name="service-sale-invoice-pdf",
     ),
+    path(
+        "service-sales/<int:pk>/send-reminder/",
+        ServiceSaleViewSet.as_view({"post": "send_reminder"}),
+        name="service-sale-send-reminder",
+    ),
     path("", PurchaseViewSet.as_view({"get": "list", "post": "create"}), name="purchase-list"),
     path(
         "<int:pk>/",
@@ -69,5 +74,10 @@ urlpatterns = [
         "<int:pk>/invoice-pdf/",
         PurchaseViewSet.as_view({"post": "save_invoice_pdf"}),
         name="purchase-invoice-pdf",
+    ),
+    path(
+        "<int:pk>/send-reminder/",
+        PurchaseViewSet.as_view({"post": "send_reminder"}),
+        name="purchase-send-reminder",
     ),
 ]
