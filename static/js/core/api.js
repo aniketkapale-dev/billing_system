@@ -10,6 +10,78 @@ var InventoryApi = (function () {
     var LOGIN_URL = "/login/";
     var AUTH_API = "/api/auth";
 
+    // Invalidate reference data after writes, across tabs, and on returning online.
+    var dataWatchers = [];
+    var CHANGE_KEY = "billing:data-change";
+    var observedRevision = null;
+    var observedRevisionBusiness = "";
+    var revisionRequest = null;
+    function activeBusinessId() {
+        return window.InventoryBusiness ? String(InventoryBusiness.getActiveId() || "") : "";
+    }
+    function refreshWatchers(change) {
+        if (document.hidden) return;
+        dataWatchers.forEach(function (watcher) {
+            if (change && change.business && change.business !== activeBusinessId()) return;
+            if (change && !watcher.paths.some(function (path) { return change.path.indexOf(path) === 0; })) return;
+            clearTimeout(watcher.timer);
+            watcher.timer = setTimeout(function run() {
+                if (document.hidden) return;
+                if (watcher.running) { watcher.timer = setTimeout(run, 300); return; }
+                watcher.running = true;
+                Promise.resolve().then(watcher.refresh).catch(function () {
+                    // Keep the current form intact; retry on the next notification/focus.
+                }).finally(function () { watcher.running = false; });
+            }, 400);
+        });
+    }
+    function publishChange(path, business) {
+        var change = { path: path, business: business, revision: Date.now() + Math.random() };
+        refreshWatchers(change);
+        try { localStorage.setItem(CHANGE_KEY, JSON.stringify(change)); } catch (e) {}
+    }
+    function watch(paths, refresh) {
+        dataWatchers.push({ paths: paths, refresh: refresh, running: false, timer: null });
+    }
+    function pollDataRevision() {
+        var business = activeBusinessId();
+        if (document.hidden || !business || revisionRequest) return;
+        if (observedRevisionBusiness !== business) {
+            observedRevisionBusiness = business;
+            observedRevision = null;
+        }
+        revisionRequest = request("/api/businesses", "/revision/", { skipBusiness: false })
+            .then(function (body) {
+                if (!body || !body.isSuccess || !body.data) return;
+                var revision = String(body.data.revision);
+                if (observedRevision !== null && revision !== observedRevision) refreshWatchers();
+                observedRevision = revision;
+            })
+            .catch(function () {})
+            .finally(function () { revisionRequest = null; });
+    }
+    window.addEventListener("storage", function (event) {
+        if (event.key !== CHANGE_KEY || !event.newValue) return;
+        try { refreshWatchers(JSON.parse(event.newValue)); } catch (e) {}
+    });
+    window.addEventListener("focus", function () { refreshWatchers(); });
+    window.addEventListener("online", function () { refreshWatchers(); });
+    document.addEventListener("visibilitychange", function () {
+        if (!document.hidden) {
+            refreshWatchers();
+            pollDataRevision();
+        }
+    });
+    window.addEventListener("inventory:business-changed", function () {
+        observedRevision = null;
+        observedRevisionBusiness = activeBusinessId();
+        pollDataRevision();
+    });
+    // The revision endpoint is shared by browser profiles; localStorage handles same-profile tabs immediately.
+    setInterval(function () {
+        pollDataRevision();
+    }, 3000);
+
     var refreshPromise = null;
     var expiryTimer = null;
     var loggingOut = false;
@@ -200,7 +272,13 @@ var InventoryApi = (function () {
             });
         }
 
-        return execute(false);
+        var writeBusiness = skipBusiness ? "" : activeBusinessId();
+        return execute(false).then(function (response) {
+            if (["POST", "PUT", "PATCH", "DELETE"].indexOf(String(opts.method || "GET").toUpperCase()) !== -1 && response && response.isSuccess) {
+                publishChange(buildUrl(basePath, path), writeBusiness);
+            }
+            return response;
+        });
     }
 
     function authFetch(url, fetchOpts, retrying) {
@@ -325,6 +403,7 @@ var InventoryApi = (function () {
     }
 
     return {
+        watch: watch,
         buildUrl: buildUrl,
         request: request,
         authFetch: authFetch,

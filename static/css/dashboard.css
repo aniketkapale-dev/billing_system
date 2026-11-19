@@ -204,24 +204,7 @@ body.inv-dashboard-body {
     max-height: 320px;
 }
 
-/* Hover opens submenu (expanded sidebar / flyout sidebar) */
-.inv-nav-group:hover > .inv-nav-group-toggle {
-    background: var(--inv-accent-container);
-    color: var(--inv-primary-dark);
-}
-
-.inv-nav-group:hover > .inv-nav-group-toggle .inv-nav-icon,
-.inv-nav-group:hover > .inv-nav-group-toggle .inv-nav-group-chevron {
-    color: var(--inv-primary);
-}
-
-.inv-nav-group:hover .inv-nav-group-toggle .inv-nav-group-chevron {
-    transform: rotate(180deg);
-}
-
-.inv-nav-group:hover .inv-nav-sub {
-    max-height: 320px;
-}
+/* Submenus open on click via .inv-nav-group--open (not hover) */
 
 .inv-nav-sub li + li {
     margin-top: 2px;
@@ -1096,12 +1079,12 @@ body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-si
     overflow: visible;
 }
 
-/* Collapsed rail — flyout submenu when hovering a group icon */
+/* Collapsed rail — flyout submenu on click (.inv-nav-group--open) */
 body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) .inv-nav-group {
     position: relative;
 }
 
-body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) .inv-nav-group:hover .inv-nav-sub {
+body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) .inv-nav-group.inv-nav-group--open > .inv-nav-sub {
     display: block !important;
     position: absolute;
     left: calc(100% + 6px);
@@ -1118,7 +1101,7 @@ body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-si
     z-index: 81;
 }
 
-body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) .inv-nav-group:hover .inv-nav-sub::before {
+body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) .inv-nav-group.inv-nav-group--open > .inv-nav-sub::before {
     content: "";
     position: absolute;
     top: 0;
@@ -1127,7 +1110,7 @@ body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-si
     height: 100%;
 }
 
-body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) .inv-nav-group:hover .inv-nav-sub .inv-nav-item {
+body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) .inv-nav-group.inv-nav-group--open > .inv-nav-sub .inv-nav-item {
     font-size: 14px;
     line-height: normal;
     justify-content: flex-start;
@@ -1135,21 +1118,16 @@ body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-si
     height: 40px;
 }
 
-body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) .inv-nav-group:hover .inv-nav-sub .inv-nav-add-btn {
+body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) .inv-nav-group.inv-nav-group--open > .inv-nav-sub .inv-nav-add-btn {
     display: inline-flex;
 }
 
-/* Collapsed rail — never keep flyout open for active/selected pages */
-body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) .inv-nav-group.inv-nav-group--open:not(:hover) > .inv-nav-group-toggle {
-    background: transparent;
-}
-
-body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) .inv-nav-group.inv-nav-group--has-active-child:not(:hover) > .inv-nav-group-toggle {
+body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) .inv-nav-group.inv-nav-group--has-active-child:not(.inv-nav-group--open) > .inv-nav-group-toggle {
     background: var(--inv-accent-container);
     color: var(--inv-primary);
 }
 
-body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) .inv-nav-group.inv-nav-group--has-active-child:not(:hover) > .inv-nav-group-toggle .inv-nav-icon {
+body.inv-dashboard-body.inv-sidebar-collapsed:not(.inv-sidebar-open):not(.inv-sidebar-pinned) .inv-nav-group.inv-nav-group--has-active-child:not(.inv-nav-group--open) > .inv-nav-group-toggle .inv-nav-icon {
     color: var(--inv-primary);
 }
 

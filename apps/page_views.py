@@ -10,18 +10,19 @@ import logging
 from django.shortcuts import redirect, render
 from django.views.decorators.cache import never_cache
 
-from apps.businesses.models import Business
+# from apps.businesses.models import Business
 
 logger = logging.getLogger(__name__)
 
 
-def landing(request):
-    businesses = list(
-        Business.objects.filter(is_active=True, is_deleted=False)
-        .exclude(business_name="")
-        .order_by("-created_at")[:24]
-    )
-    return render(request, "landing.html", {"businesses": businesses})
+# Landing page temporarily disabled — root URL redirects to login.
+# def landing(request):
+#     businesses = list(
+#         Business.objects.filter(is_active=True, is_deleted=False)
+#         .exclude(business_name="")
+#         .order_by("-created_at")[:24]
+#     )
+#     return render(request, "landing.html", {"businesses": businesses})
 
 
 @never_cache
@@ -69,6 +70,11 @@ def user_stock_in(request):
 
 
 @never_cache
+def user_purchase_returns(request):
+    return render(request, "user/purchase-returns.html", {"active_nav": "purchase-returns"})
+
+
+@never_cache
 def user_business(request):
     return render(request, "user/business.html", {"active_nav": "business"})
 
@@ -105,6 +111,16 @@ def user_catalog_brands(request):
         "catalog_resource": "brands",
         "catalog_title": "Brands",
         "catalog_add_label": "Add Brand",
+    })
+
+
+@never_cache
+def user_catalog_services(request):
+    return render(request, "user/catalog.html", {
+        "active_nav": "services",
+        "catalog_resource": "services",
+        "catalog_title": "Services",
+        "catalog_add_label": "Add Service",
     })
 
 
@@ -166,4 +182,3 @@ def user_settings_whatsapp(request):
         "settings_section": "whatsapp",
         "settings_title": "WhatsApp Message Send",
     })
-

@@ -1,0 +1,66 @@
+{% extends "user_layout.html" %}
+{% load static %}
+{% block title %}Returned Products - Billing System{% endblock %}
+{% block content %}
+<div class="inv-mgmt-page">
+    <div id="purchase-returns-list-panel" class="inv-mgmt-page-panel">
+        <div class="inv-mgmt-header">
+            <h2 class="inv-dashboard-greeting">Returned Products</h2>
+        </div>
+        <div class="inv-mgmt-card">
+            <div class="inv-mgmt-toolbar">
+                <input id="purchase-returns-search" type="search" class="inv-mgmt-search" placeholder="Search invoice or product..." aria-label="Search returned products"/>
+            </div>
+            <div class="inv-mgmt-table-wrap">
+                <table class="inv-mgmt-table">
+                    <thead>
+                        <tr>
+                            <th>Returned on</th><th>Purchase invoice</th><th>Product</th>
+                            <th>Batch</th><th>Returned quantity</th><th>Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody id="purchase-returns-table-body" aria-live="polite">
+                        <tr><td colspan="6" class="inv-mgmt-empty">Loading returned products...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="purchase-returns-pagination" class="inv-pagination"></div>
+        </div>
+    </div>
+
+    <div id="purchase-return-items-panel" class="inv-mgmt-page-panel inv-hidden">
+        <div class="inv-mgmt-panel-header">
+            <div>
+                <h2 class="inv-dashboard-greeting">Return Purchase Products</h2>
+                <p id="purchase-return-invoice-label" class="inv-mgmt-panel-subtitle"></p>
+            </div>
+            <a class="inv-mgmt-btn inv-page-back-btn" href="/dashboard/stock-in/">
+                <span class="material-symbols-outlined">arrow_back</span>
+                Back to Purchases
+            </a>
+        </div>
+        <div class="inv-mgmt-card">
+            <div class="inv-mgmt-toolbar">
+                <label for="purchase-return-reason">Return reason <span class="inv-field-optional">(optional)</span></label>
+                <input id="purchase-return-reason" type="text" class="inv-mgmt-input" maxlength="500" placeholder="Reason for return"/>
+            </div>
+            <div class="inv-mgmt-table-wrap">
+                <table class="inv-mgmt-table">
+                    <thead>
+                        <tr>
+                            <th>Product</th><th>Batch</th><th>Purchased</th>
+                            <th>Already returned</th><th>Available to return</th>
+                            <th>Return quantity</th><th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="purchase-return-items-body" aria-live="polite"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block page_scripts %}
+<script src="{% static 'js/inventory/purchase-returns.js' %}?v=20261119-return-history"></script>
+<script>InventoryPurchaseReturns.init();</script>
+{% endblock %}

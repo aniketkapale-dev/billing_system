@@ -108,6 +108,59 @@ var InventorySearchableSelect = (function () {
 
         list.innerHTML = html;
         syncTriggerState(wrap);
+        highlightInitialOption(list, select.value);
+    }
+
+    function visibleOptions(list) {
+        if (!list) return [];
+        return Array.prototype.filter.call(
+            list.querySelectorAll(".inv-search-select-option"),
+            function (option) {
+                return !option.classList.contains("inv-search-select-empty");
+            }
+        );
+    }
+
+    function highlightOption(list, option) {
+        visibleOptions(list).forEach(function (item) {
+            item.classList.toggle("is-highlighted", item === option);
+        });
+        if (option && typeof option.scrollIntoView === "function") {
+            option.scrollIntoView({ block: "nearest" });
+        }
+    }
+
+    function highlightInitialOption(list, selectedValue) {
+        var options = visibleOptions(list);
+        if (!options.length) return;
+        var selected = options.find(function (option) {
+            return String(option.getAttribute("data-value")) === String(selectedValue);
+        });
+        highlightOption(list, selected || options[0]);
+    }
+
+    function moveHighlight(list, delta) {
+        var options = visibleOptions(list);
+        if (!options.length) return;
+        var current = -1;
+        options.forEach(function (option, index) {
+            if (option.classList.contains("is-highlighted")) current = index;
+        });
+        var nextIndex;
+        if (current < 0) {
+            nextIndex = delta > 0 ? 0 : options.length - 1;
+        } else {
+            nextIndex = (current + delta + options.length) % options.length;
+        }
+        highlightOption(list, options[nextIndex]);
+    }
+
+    function chooseHighlighted(wrap, list) {
+        if (!list) return;
+        var highlighted = list.querySelector(".inv-search-select-option.is-highlighted");
+        var option = highlighted || list.querySelector(".inv-search-select-option:not(.inv-search-select-empty)");
+        if (!option) return;
+        choose(wrap, option.getAttribute("data-value"));
     }
 
     function resetMenuPosition(wrap) {
@@ -273,6 +326,21 @@ var InventorySearchableSelect = (function () {
             }
         });
 
+        trigger.addEventListener("keydown", function (e) {
+            if (e.key !== "ArrowDown" && e.key !== "ArrowUp" && e.key !== "Enter" && e.key !== " ") {
+                return;
+            }
+            e.preventDefault();
+            var wasOpen = wrap.classList.contains("is-open");
+            if (!wasOpen) {
+                open(wrap);
+                return;
+            }
+            if (e.key === "ArrowDown") moveHighlight(list, 1);
+            if (e.key === "ArrowUp") moveHighlight(list, -1);
+            if (e.key === "Enter") chooseHighlighted(wrap, list);
+        });
+
         if (menu) {
             menu.addEventListener("click", function (e) {
                 e.stopPropagation();
@@ -284,16 +352,38 @@ var InventorySearchableSelect = (function () {
                 renderOptions(wrap);
             });
             searchInput.addEventListener("keydown", function (e) {
-                e.stopPropagation();
+                if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    moveHighlight(list, 1);
+                    return;
+                }
+                if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    moveHighlight(list, -1);
+                    return;
+                }
                 if (e.key === "Enter") {
                     e.preventDefault();
-                    var first = list.querySelector(".inv-search-select-option:not(.inv-search-select-empty)");
-                    if (first) choose(wrap, first.getAttribute("data-value"));
+                    e.stopPropagation();
+                    chooseHighlighted(wrap, list);
+                    return;
+                }
+                if (e.key === "Escape") {
+                    e.preventDefault();
+                    close(wrap);
+                    trigger.focus();
                 }
             });
         }
 
         if (list) {
+            list.addEventListener("mousemove", function (e) {
+                var option = e.target.closest(".inv-search-select-option");
+                if (!option || option.classList.contains("inv-search-select-empty")) return;
+                highlightOption(list, option);
+            });
             list.addEventListener("click", function (e) {
                 var option = e.target.closest(".inv-search-select-option");
                 if (!option || option.classList.contains("inv-search-select-empty")) return;

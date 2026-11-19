@@ -269,6 +269,7 @@ var InventorySettingsWhatsApp = (function () {
     }
 
     function init() {
+        InventoryApi.watch(["/api/settings/whatsapp"], function () { if (!isEditing) return loadSettings(); });
         if (!isPageActive()) return;
 
         var saveBtn = document.getElementById("settings-whatsapp-save-btn");

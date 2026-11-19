@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from rest_framework import serializers
 
 from apps.invoicing.models import InventoryBatch, PurchaseInvoice, PurchaseInvoiceItem
@@ -37,6 +39,7 @@ class PurchaseInvoiceItemSerializer(BaseModelSerializer):
             "purchase_price",
             "discount",
             "tax",
+            "gst_rate",
             "batch_number",
             "vendor",
             "vendor_name",
@@ -162,6 +165,21 @@ class PurchaseInvoiceWriteSerializer(serializers.Serializer):
 
     def validate_attachment(self, value):
         return validate_purchase_attachment(value)
+
+
+class PurchaseReturnItemWriteSerializer(serializers.Serializer):
+    purchase_invoice_item_id = serializers.IntegerField(min_value=1)
+    quantity = serializers.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        min_value=Decimal("0.01"),
+    )
+
+
+class PurchaseReturnWriteSerializer(serializers.Serializer):
+    purchase_invoice_id = serializers.IntegerField(min_value=1)
+    items = PurchaseReturnItemWriteSerializer(many=True, allow_empty=False)
+    reason = serializers.CharField(max_length=500, required=False, allow_blank=True, default="")
 
 
 class InventoryBatchSerializer(BaseModelSerializer):

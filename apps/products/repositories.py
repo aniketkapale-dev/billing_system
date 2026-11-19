@@ -1,19 +1,49 @@
 from decimal import Decimal
 
-from django.db.models import Max, OuterRef, Prefetch, Q, Subquery, Sum, Value, DecimalField
+from django.db.models import Exists, Max, OuterRef, Prefetch, Q, Subquery, Sum, Value, DecimalField
 from django.db.models.functions import Coalesce
 
 from apps.inventory.models import InventoryStock
 from apps.invoicing.models import InventoryBatch
 from apps.products.models import Product
+from apps.purchases.models import PurchaseItem
 from core.base_repository import BaseRepository
 
 
 class ProductRepository(BaseRepository):
     model = Product
 
+    def _base_queryset(self):
+        active_stocks = InventoryStock.objects.filter(is_deleted=False).only(
+            "id", "product_id", "quantity"
+        )
+        return (
+            super()
+            .get_queryset()
+            .select_related("owner", "business", "category", "brand", "manufacturer", "unit", "tax")
+            .prefetch_related(Prefetch("inventory_stocks", queryset=active_stocks))
+        )
+
+    def get_list_queryset(self):
+        """Product table and pickers. Stock qty and batch MRP only; no sale/opening totals."""
+        sales_exist = PurchaseItem.objects.filter(
+            product_id=OuterRef("pk"),
+            is_deleted=False,
+            purchase__is_deleted=False,
+        )
+        return self._base_queryset().annotate(
+            sales_exist=Exists(sales_exist),
+            max_batch_mrp=Coalesce(
+                Max(
+                    "inventory_batches__mrp",
+                    filter=Q(inventory_batches__is_deleted=False),
+                ),
+                Value(Decimal("0")),
+                output_field=DecimalField(max_digits=12, decimal_places=2),
+            ),
+        )
+
     def get_queryset(self):
-        active_stocks = InventoryStock.objects.filter(is_deleted=False)
         opening_batches = InventoryBatch.objects.filter(
             product_id=OuterRef("pk"),
             is_deleted=False,
@@ -23,12 +53,7 @@ class ProductRepository(BaseRepository):
             total=Sum("purchased_quantity"),
         ).values("total")
         opening_batch_first_added = opening_batches.order_by("created_at").values("created_at")
-        return (
-            super()
-            .get_queryset()
-            .select_related("owner", "business", "category", "brand", "manufacturer", "unit", "tax")
-            .prefetch_related(Prefetch("inventory_stocks", queryset=active_stocks))
-            .annotate(
+        return self._base_queryset().annotate(
                 sold_quantity=Coalesce(
                     Sum(
                         "purchase_items__quantity",
@@ -54,5 +79,4 @@ class ProductRepository(BaseRepository):
                     Value(Decimal("0")),
                     output_field=DecimalField(max_digits=12, decimal_places=2),
                 ),
-            )
         )

@@ -7,6 +7,9 @@ var InventoryBusinessUsers = (function () {
     var tabOptions = [];
     var roles = [];
     var members = [];
+    var USERS_PAGINATION_ID = "business-users-pagination";
+    var usersPage = 1;
+    var usersSearch = "";
     var editingId = null;
 
     function isBusinessOwner() {
@@ -159,16 +162,41 @@ var InventoryBusinessUsers = (function () {
         }).join("");
     }
 
-    function loadMembers() {
+    function buildMembersQuery(page) {
+        var params = new URLSearchParams();
+        params.set("page", String(page || 1));
+        params.set("page_size", String(InventoryPagination.getPageSize(USERS_PAGINATION_ID)));
+        params.set("ordering", "full_name");
+        if (usersSearch) params.set("search", usersSearch);
+        return "?" + params.toString();
+    }
+
+    function loadMembers(page) {
+        usersPage = page || 1;
         if (!isBusinessOwner()) {
             members = [];
             renderRows(members);
+            InventoryPagination.render(USERS_PAGINATION_ID, null, function () {});
             return Promise.resolve();
         }
-        return request("?page_size=100")
+        return request(buildMembersQuery(usersPage))
             .then(function (body) {
-                members = body && body.isSuccess ? (body.data.items || []) : [];
+                if (body && body.isSuccess && body.data) {
+                    members = body.data.items || [];
+                    if (body.data.pagination && body.data.pagination.page) {
+                        usersPage = body.data.pagination.page;
+                    }
+                    renderRows(members);
+                    InventoryPagination.render(USERS_PAGINATION_ID, body.data.pagination, loadMembers, {
+                        onPageSizeChange: function () {
+                            loadMembers(1);
+                        }
+                    });
+                    return;
+                }
+                members = [];
                 renderRows(members);
+                InventoryPagination.render(USERS_PAGINATION_ID, null, function () {});
             });
     }
 
@@ -205,7 +233,7 @@ var InventoryBusinessUsers = (function () {
             e.stopPropagation();
             setPasswordVisible(input.type === "password");
             input.focus();
-        });
+            });
     }
 
     function resetForm() {
@@ -370,6 +398,18 @@ var InventoryBusinessUsers = (function () {
         if (roleSaveBtn) roleSaveBtn.addEventListener("click", saveRole);
         if (roleCancelBtn) roleCancelBtn.addEventListener("click", function () { toggleRolePanel(false); });
 
+        var usersSearchEl = document.getElementById("business-users-search");
+        if (usersSearchEl) {
+            var usersSearchTimer = null;
+            usersSearchEl.addEventListener("input", function () {
+                window.clearTimeout(usersSearchTimer);
+                usersSearchTimer = window.setTimeout(function () {
+                    usersSearch = usersSearchEl.value.trim();
+                    loadMembers(1);
+                }, 300);
+            });
+        }
+
         if (tbody) {
             tbody.addEventListener("click", function (e) {
                 var editBtn = e.target.closest("[data-user-edit]");
@@ -406,6 +446,7 @@ var InventoryBusinessUsers = (function () {
     }
 
     function init() {
+        InventoryApi.watch(["/api/business-users"], function () { if (true) return loadMembers(usersPage); });
         if (init._wired) return;
         init._wired = true;
         wireEvents();

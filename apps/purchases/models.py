@@ -63,12 +63,31 @@ class Purchase(BaseEntity):
     cancelled_at = models.DateTimeField(null=True, blank=True)
     cancellation_date = models.DateField(null=True, blank=True)
     cancellation_reason = models.TextField(blank=True, default="")
+    invoice_pdf = models.FileField(
+        upload_to="sale_invoices/",
+        blank=True,
+        null=True,
+    )
 
     class Meta:
         db_table = "purchases"
         verbose_name = "Purchase"
         verbose_name_plural = "Purchases"
         ordering = ("-purchase_date", "-created_at")
+        indexes = [
+            models.Index(
+                fields=["business", "is_deleted", "is_draft", "purchase_date"],
+                name="idx_purch_biz_status_date",
+            ),
+            models.Index(
+                fields=["business", "reference_no"],
+                name="idx_purch_biz_reference",
+            ),
+            models.Index(
+                fields=["business", "customer_name"],
+                name="idx_purch_biz_customer",
+            ),
+        ]
 
     def __str__(self):
         return self.reference_no or f"Purchase #{self.pk}"
@@ -98,6 +117,7 @@ class PurchaseItem(BaseEntity):
     distributor_discount_value = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0"))
     sale_tax_ids = models.JSONField(default=list, blank=True)
     tax_amount = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
+    gst_rate = models.DecimalField(max_digits=6, decimal_places=2, null=True, default=Decimal("0"))
     cost_amount = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
     profit_amount = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
 
@@ -166,3 +186,128 @@ class SaleDueSetting(BaseEntity):
 
     def __str__(self):
         return f"Sale due after {self.default_due_days_after_sale} day(s)"
+
+
+class ServiceSale(BaseEntity):
+    owner = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="service_sales",
+        db_column="owner_id",
+    )
+    business = models.ForeignKey(
+        "businesses.Business",
+        on_delete=models.CASCADE,
+        related_name="service_sales",
+        db_column="business_id",
+    )
+    customer_name = models.CharField(max_length=150)
+    customer = models.ForeignKey(
+        "customers.Customer",
+        on_delete=models.SET_NULL,
+        related_name="service_sales",
+        db_column="customer_id",
+        null=True,
+        blank=True,
+    )
+    reference_no = models.CharField(max_length=50, blank=True, default="")
+    invoice_setting = models.ForeignKey(
+        "settings.InvoiceSetting",
+        on_delete=models.SET_NULL,
+        related_name="service_sales",
+        db_column="invoice_setting_id",
+        null=True,
+        blank=True,
+    )
+    sale_date = models.DateField(default=timezone.localdate)
+    notes = models.TextField(blank=True, default="")
+    terms = models.TextField(blank=True, default="")
+    payment_type = models.ForeignKey(
+        "catalog.PaymentType",
+        on_delete=models.SET_NULL,
+        related_name="service_sales",
+        db_column="payment_type_id",
+        null=True,
+        blank=True,
+    )
+    total_amount = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
+    is_paid = models.BooleanField(default=False)
+    paid_at = models.DateTimeField(null=True, blank=True)
+    due_date = models.DateField(null=True, blank=True)
+    is_draft = models.BooleanField(default=False)
+    is_cancelled = models.BooleanField(default=False)
+    cancelled_at = models.DateTimeField(null=True, blank=True)
+    cancellation_date = models.DateField(null=True, blank=True)
+    cancellation_reason = models.TextField(blank=True, default="")
+    invoice_pdf = models.FileField(
+        upload_to="service_sale_invoices/",
+        blank=True,
+        null=True,
+    )
+
+    class Meta:
+        db_table = "service_sales"
+        verbose_name = "Service Sale"
+        verbose_name_plural = "Service Sales"
+        ordering = ("-sale_date", "-created_at")
+
+    def __str__(self):
+        return self.reference_no or f"Service Sale #{self.pk}"
+
+
+class ServiceSaleItem(BaseEntity):
+    service_sale = models.ForeignKey(
+        ServiceSale,
+        on_delete=models.CASCADE,
+        related_name="items",
+        db_column="service_sale_id",
+    )
+    service = models.ForeignKey(
+        "catalog.Service",
+        on_delete=models.PROTECT,
+        related_name="service_sale_items",
+        db_column="service_id",
+    )
+    base_price = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0"))
+    sale_tax_ids = models.JSONField(default=list, blank=True)
+    tax_amount = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
+    gst_rate = models.DecimalField(max_digits=6, decimal_places=2, null=True, default=Decimal("0"))
+    line_total = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
+
+    class Meta:
+        db_table = "service_sale_items"
+        verbose_name = "Service Sale Item"
+        verbose_name_plural = "Service Sale Items"
+
+    def __str__(self):
+        return f"{self.service_id} @ {self.base_price}"
+
+
+class ServiceSalePayment(BaseEntity):
+    service_sale = models.ForeignKey(
+        ServiceSale,
+        on_delete=models.CASCADE,
+        related_name="payments",
+        db_column="service_sale_id",
+    )
+    amount = models.DecimalField(max_digits=14, decimal_places=2)
+    payment_date = models.DateField(default=timezone.localdate)
+    next_due_date = models.DateField(null=True, blank=True)
+    payment_type = models.ForeignKey(
+        "catalog.PaymentType",
+        on_delete=models.SET_NULL,
+        related_name="service_sale_payments",
+        db_column="payment_type_id",
+        null=True,
+        blank=True,
+    )
+    notes = models.TextField(blank=True, default="")
+
+    class Meta:
+        db_table = "service_sale_payments"
+        verbose_name = "Service Sale Payment"
+        verbose_name_plural = "Service Sale Payments"
+        ordering = ("payment_date", "created_at")
+
+    def __str__(self):
+        return f"Payment {self.amount} for service sale {self.service_sale_id}"

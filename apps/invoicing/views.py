@@ -1,20 +1,30 @@
 import json
 
+from django.db.models import Q
 from rest_framework import status
 
-from apps.invoicing.models import InventoryBatch, PurchaseInvoice, PurchaseInvoiceItem
+from apps.invoicing.models import (
+    InventoryBatch,
+    PurchaseInvoice,
+    PurchaseInvoiceItem,
+    PurchaseReturnItem,
+)
 from apps.invoicing.serializers import (
     InventoryBatchSerializer,
     PurchaseInvoiceHeaderWriteSerializer,
     PurchaseInvoiceSerializer,
     PurchaseInvoiceWriteSerializer,
+    PurchaseReturnWriteSerializer,
 )
 from apps.invoicing.services import PurchaseInvoiceService
+from apps.invoicing.return_services import PurchaseReturnService
 from apps.invoicing.repositories import InventoryBatchRepository
 from core.base_response import ApiResponse
 from core.base_viewset import BaseViewSet
 from core.business_viewset import BusinessScopedViewSetMixin
+from core.pagination import StandardPagination
 from core.permissions import HasRole, IsAuthenticatedUser
+from core.exceptions import NotFoundException, ValidationException
 
 
 class PurchaseInvoiceViewSet(BusinessScopedViewSetMixin, BaseViewSet):
@@ -125,6 +135,99 @@ class PurchaseInvoiceViewSet(BusinessScopedViewSetMixin, BaseViewSet):
             return ApiResponse.success(message="Unsold purchase lines removed for re-create.")
         self.get_service().soft_delete(pk)
         return ApiResponse.success(message="Purchase invoice deleted.")
+
+
+class PurchaseReturnViewSet(BusinessScopedViewSetMixin, BaseViewSet):
+    required_roles = ["Business Owner", "Business Staff"]
+    required_tab = "stock-in"
+
+    def get_permissions(self):
+        return [IsAuthenticatedUser(), HasRole()]
+
+    def list(self, request):
+        business_id = self.get_active_business().id
+        purchase_invoice_id = request.query_params.get("purchase_invoice_id")
+        service = PurchaseReturnService()
+        if purchase_invoice_id:
+            try:
+                invoice_id = int(purchase_invoice_id)
+            except (TypeError, ValueError) as exc:
+                raise ValidationException("Purchase invoice id must be a valid number.") from exc
+            invoices = service.list_returnable_purchases(business_id, [invoice_id])
+            if not invoices:
+                raise NotFoundException("Purchase invoice not found.")
+            return ApiResponse.success(data=invoices[0])
+
+        queryset = PurchaseReturnItem.objects.filter(
+            purchase_return__business_id=business_id,
+            purchase_return__is_deleted=False,
+            purchase_return__is_active=True,
+            is_deleted=False,
+            is_active=True,
+        ).select_related(
+            "purchase_return",
+            "purchase_return__purchase_invoice",
+            "purchase_invoice_item",
+            "purchase_invoice_item__product",
+        )
+        search = request.query_params.get("search", "").strip()
+        if search:
+            queryset = queryset.filter(
+                Q(purchase_return__purchase_invoice__invoice_number__icontains=search)
+                | Q(purchase_return__reason__icontains=search)
+                | Q(purchase_invoice_item__product__name__icontains=search)
+                | Q(purchase_invoice_item__product__sku__icontains=search)
+            )
+        paginator = StandardPagination()
+        page = paginator.paginate_queryset(
+            queryset.order_by("-purchase_return__created_at", "-id"),
+            request,
+            view=self,
+        )
+        rows = [
+            {
+                "id": item.id,
+                "returned_at": item.purchase_return.created_at,
+                "invoice_id": item.purchase_return.purchase_invoice_id,
+                "invoice_number": item.purchase_return.purchase_invoice.invoice_number,
+                "product_name": item.purchase_invoice_item.product.name,
+                "product_sku": item.purchase_invoice_item.product.sku,
+                "batch_number": item.purchase_invoice_item.batch_number,
+                "quantity": item.quantity,
+                "reason": item.purchase_return.reason,
+            }
+            for item in page
+        ]
+        return paginator.get_paginated_response(rows)
+
+    def create(self, request):
+        serializer = PurchaseReturnWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        purchase_return = PurchaseReturnService().return_items(
+            business_id=self.get_active_business().id,
+            purchase_invoice_id=data["purchase_invoice_id"],
+            items=data["items"],
+            reason=data["reason"],
+        )
+        return ApiResponse.success(
+            data={
+                "id": purchase_return.id,
+                "purchase_invoice_id": purchase_return.purchase_invoice_id,
+                "items": [
+                    {
+                        "purchase_invoice_item_id": item.purchase_invoice_item_id,
+                        "product_name": item.purchase_invoice_item.product.name,
+                        "quantity": str(item.quantity),
+                    }
+                    for item in purchase_return.items.select_related(
+                        "purchase_invoice_item__product"
+                    )
+                ],
+            },
+            message="Purchase return recorded and stock updated.",
+            status_code=status.HTTP_201_CREATED,
+        )
 
 
 class InventoryBatchViewSet(BusinessScopedViewSetMixin, BaseViewSet):

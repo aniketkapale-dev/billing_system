@@ -7,6 +7,8 @@ from apps.catalog.serializers import (
     ManufacturerWriteSerializer,
     PaymentTypeSerializer,
     PaymentTypeWriteSerializer,
+    ServiceSerializer,
+    ServiceWriteSerializer,
     UnitSerializer,
     UnitWriteSerializer,
     VendorSerializer,
@@ -17,6 +19,7 @@ from apps.catalog.services import (
     CategoryService,
     ManufacturerService,
     PaymentTypeService,
+    ServiceService,
     UnitService,
     VendorService,
 )
@@ -25,6 +28,7 @@ from core.base_viewset import BaseViewSet
 from core.business_access import resolve_business_access, user_has_tab
 from core.business_viewset import BusinessScopedViewSetMixin
 from core.permissions import HasRole, IsAuthenticatedUser
+from django.db.models import Q
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied
 
@@ -68,6 +72,24 @@ class CategoryViewSet(BusinessScopedViewSetMixin, BaseViewSet):
 
     def get_permissions(self):
         return [IsAuthenticatedUser(), HasRole()]
+
+    def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
+        assignment = (self.request.query_params.get("tax_assignment") or "").strip().lower()
+        if assignment == "with":
+            queryset = queryset.exclude(sale_tax_ids=[]).exclude(sale_tax_ids__isnull=True)
+        elif assignment == "without":
+            queryset = queryset.filter(Q(sale_tax_ids=[]) | Q(sale_tax_ids__isnull=True))
+
+        sale_tax_id = self.request.query_params.get("sale_tax_id")
+        if sale_tax_id:
+            try:
+                tax_id = int(sale_tax_id)
+            except (TypeError, ValueError):
+                tax_id = None
+            if tax_id is not None:
+                queryset = queryset.filter(sale_tax_ids__contains=[tax_id])
+        return queryset
 
     def get_active_business(self):
         if hasattr(self, "_active_business"):
@@ -117,6 +139,32 @@ class BrandViewSet(BusinessScopedViewSetMixin, BaseViewSet):
         return ApiResponse.success(
             data=payload,
             message="Brand created",
+            status_code=status.HTTP_201_CREATED,
+        )
+
+
+class ServiceViewSet(BusinessScopedViewSetMixin, BaseViewSet):
+    service_class = ServiceService
+    serializer_class = ServiceSerializer
+    write_serializer_class = ServiceWriteSerializer
+    search_fields = ("name",)
+    ordering_default = ("name",)
+    ordering_fields = {"name": "name"}
+    required_roles = ["Business Owner", "Business Staff"]
+    required_tab = "services"
+
+    def get_permissions(self):
+        return [IsAuthenticatedUser(), HasRole()]
+
+    def create(self, request):
+        serializer = self.get_write_serializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        data = self.inject_business_scope(dict(serializer.validated_data))
+        instance = self.get_service().create(data)
+        payload = self.serializer_class(instance, context={"request": request}).data
+        return ApiResponse.success(
+            data=payload,
+            message="Service created",
             status_code=status.HTTP_201_CREATED,
         )
 

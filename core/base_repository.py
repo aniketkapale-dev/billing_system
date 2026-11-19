@@ -53,9 +53,11 @@ class BaseRepository:
         return instance
 
     def update(self, instance, **data):
+        if not data:
+            return instance
         for field, value in data.items():
             setattr(instance, field, value)
-        instance.save()
+        instance.save(update_fields=list(data.keys()))
         return instance
 
     def soft_delete(self, instance):
