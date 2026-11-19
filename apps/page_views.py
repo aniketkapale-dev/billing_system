@@ -70,6 +70,11 @@ def user_stock_in(request):
 
 
 @never_cache
+def user_purchase_returns(request):
+    return render(request, "user/purchase-returns.html", {"active_nav": "purchase-returns"})
+
+
+@never_cache
 def user_business(request):
     return render(request, "user/business.html", {"active_nav": "business"})
 
@@ -177,4 +182,3 @@ def user_settings_whatsapp(request):
         "settings_section": "whatsapp",
         "settings_title": "WhatsApp Message Send",
     })
-

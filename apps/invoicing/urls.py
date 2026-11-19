@@ -1,8 +1,17 @@
 from django.urls import path
 
-from apps.invoicing.views import InventoryBatchViewSet, PurchaseInvoiceViewSet
+from apps.invoicing.views import (
+    InventoryBatchViewSet,
+    PurchaseInvoiceViewSet,
+    PurchaseReturnViewSet,
+)
 
 urlpatterns = [
+    path(
+        "purchase-returns/",
+        PurchaseReturnViewSet.as_view({"get": "list", "post": "create"}),
+        name="purchase-return-list",
+    ),
     path(
         "purchase-invoices/",
         PurchaseInvoiceViewSet.as_view({"get": "list", "post": "create"}),

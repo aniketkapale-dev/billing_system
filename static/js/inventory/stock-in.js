@@ -818,6 +818,8 @@ var InventoryStockIn = (function () {
     function actionButtons(item) {
         return (
             '<div class="inv-row-actions">' +
+            '<a class="inv-row-action-btn inv-row-action-btn--history" href="/dashboard/purchase-returns/?purchase_invoice_id=' + encodeURIComponent(item.id) + '" title="Return products" aria-label="Return products from purchase">' +
+            '<span class="material-symbols-outlined">assignment_return</span></a>' +
             '<button type="button" class="inv-row-action-btn inv-row-action-btn--view inv-stockin-view" data-id="' + item.id + '" title="View" aria-label="View purchase">' +
             '<span class="material-symbols-outlined">visibility</span></button>' +
             '<button type="button" class="inv-row-action-btn inv-row-action-btn--edit inv-stockin-edit" data-id="' + item.id + '" title="Edit" aria-label="Edit purchase">' +

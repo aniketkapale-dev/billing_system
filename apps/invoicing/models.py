@@ -86,6 +86,51 @@ class PurchaseInvoiceItem(BaseEntity):
         return f"{self.product_id} x {self.quantity}"
 
 
+class PurchaseReturn(BaseEntity):
+    business = models.ForeignKey(
+        "businesses.Business",
+        on_delete=models.CASCADE,
+        related_name="purchase_returns",
+        db_column="business_id",
+    )
+    purchase_invoice = models.ForeignKey(
+        PurchaseInvoice,
+        on_delete=models.PROTECT,
+        related_name="returns",
+        db_column="purchase_invoice_id",
+    )
+    reason = models.CharField(max_length=500, blank=True, default="")
+
+    class Meta:
+        db_table = "purchase_returns"
+        ordering = ("-created_at", "-id")
+
+    def __str__(self):
+        return f"Return for purchase {self.purchase_invoice_id} #{self.pk}"
+
+
+class PurchaseReturnItem(BaseEntity):
+    purchase_return = models.ForeignKey(
+        PurchaseReturn,
+        on_delete=models.CASCADE,
+        related_name="items",
+        db_column="purchase_return_id",
+    )
+    purchase_invoice_item = models.ForeignKey(
+        PurchaseInvoiceItem,
+        on_delete=models.PROTECT,
+        related_name="return_lines",
+        db_column="purchase_invoice_item_id",
+    )
+    quantity = models.DecimalField(max_digits=12, decimal_places=2)
+
+    class Meta:
+        db_table = "purchase_return_items"
+
+    def __str__(self):
+        return f"{self.purchase_invoice_item_id} returned x {self.quantity}"
+
+
 class InventoryBatch(BaseEntity):
     business = models.ForeignKey(
         "businesses.Business",

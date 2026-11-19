@@ -3,7 +3,12 @@ from decimal import Decimal, ROUND_HALF_UP
 from django.db import transaction
 from django.db.models import Sum
 
-from apps.invoicing.models import BatchConsumption, InventoryBatch, PurchaseInvoiceItem
+from apps.invoicing.models import (
+    BatchConsumption,
+    InventoryBatch,
+    PurchaseInvoiceItem,
+    PurchaseReturnItem,
+)
 from apps.invoicing.repositories import PurchaseInvoiceRepository
 from apps.inventory.batch_service import BatchInventoryService
 from apps.inventory.services import InventoryStockService
@@ -256,6 +261,22 @@ class PurchaseInvoiceService(BaseService):
         if not product_ids:
             return blockers
 
+        return_rows = PurchaseReturnItem.objects.filter(
+            purchase_invoice_item__purchase_invoice=invoice,
+            purchase_return__is_deleted=False,
+            is_deleted=False,
+        ).values(
+            "purchase_invoice_item__product_id",
+            "purchase_invoice_item__product__name",
+        ).distinct()
+        for row in return_rows:
+            self._append_blocker(
+                blockers,
+                seen_products,
+                row["purchase_invoice_item__product_id"],
+                row["purchase_invoice_item__product__name"],
+            )
+
         consumption_rows = (
             BatchConsumption.objects.filter(
                 inventory_batch__purchase_invoice_item__purchase_invoice=invoice,
@@ -370,6 +391,14 @@ class PurchaseInvoiceService(BaseService):
     def soft_delete(self, pk):
         invoice = self.repository.get_by_id(pk)
         business_id = invoice.business_id
+        if PurchaseReturnItem.objects.filter(
+            purchase_invoice_item__purchase_invoice=invoice,
+            purchase_return__is_deleted=False,
+            is_deleted=False,
+        ).exists():
+            raise ValidationException(
+                "Cannot delete this purchase because a return has already been recorded."
+            )
         blockers = self.get_delete_blockers(invoice)
         if blockers:
             raise ValidationException(self._format_delete_blocker_message(blockers))
@@ -384,6 +413,14 @@ class PurchaseInvoiceService(BaseService):
     def soft_delete_for_recreate(self, pk):
         invoice = self.repository.get_by_id(pk)
         business_id = invoice.business_id
+        if PurchaseReturnItem.objects.filter(
+            purchase_invoice_item__purchase_invoice=invoice,
+            purchase_return__is_deleted=False,
+            is_deleted=False,
+        ).exists():
+            raise ValidationException(
+                "Cannot re-create this purchase because a return has already been recorded."
+            )
         blockers = self.get_delete_blockers(invoice)
         blocked_ids = {blocker["product_id"] for blocker in blockers}
 
